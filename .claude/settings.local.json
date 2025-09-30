@@ -1,0 +1,37 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run dev:*)",
+      "Bash(npx tsc:*)",
+      "Bash(npm run build:*)",
+      "Bash(curl:*)",
+      "Bash(xargs sed:*)",
+      "Bash(PORT=3012 npm run dev)",
+      "Bash(netstat:*)",
+      "Bash(findstr:*)",
+      "Bash(taskkill:*)",
+      "Bash(cmd /c:*)",
+      "Bash(PORT=3011 npm run dev)",
+      "Bash(npx next build:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(npm install:*)",
+      "Bash(npx next:*)",
+      "Bash(npx supabase db reset:*)",
+      "Bash(psql:*)",
+      "Bash(where node)",
+      "Bash(\"C:\\Program Files\\nodejs\\node.exe\" --version)",
+      "Bash(\"C:\\Program Files\\nodejs\\npm.cmd\" run dev)",
+      "Bash(vercel:*)",
+      "Bash(dir:*)",
+      "Bash(copy trusted-contractors-migration.sql supabasemigrations20250930000000_trusted_contractors.sql)",
+      "Bash(cp:*)",
+      "Bash(npx supabase db dump:*)",
+      "Bash(git push:*)",
+      "Bash(git remote remove:*)",
+      "Bash(git config:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
