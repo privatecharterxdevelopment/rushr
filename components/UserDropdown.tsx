@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '../contexts/AuthContext'
 import { useProAuth } from '../contexts/ProAuthContext'
+import { showGlobalToast } from './Toast'
 
 function ChevronDown(props: any) {
   return (
@@ -69,7 +70,7 @@ export default function UserDropdown() {
   const router = useRouter()
 
   // Determine which user is logged in
-  const isContractor = !!contractorUser && !!contractorProfile
+  const isContractor = !!contractorUser
   const isHomeowner = !!homeownerUser && !!userProfile
 
   const user = isContractor ? contractorUser : homeownerUser
@@ -77,21 +78,38 @@ export default function UserDropdown() {
   const signOut = isContractor ? contractorSignOut : homeownerSignOut
 
   useEffect(() => {
+    if (!showDropdown) return
+
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setShowDropdown(false)
       }
     }
 
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [])
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setShowDropdown(false)
+      }
+    }
 
-  if (!user || !profile) {
+    // Use setTimeout to avoid immediate closure on the same click
+    const timer = setTimeout(() => {
+      document.addEventListener('click', handleClickOutside)
+      document.addEventListener('keydown', handleEscape)
+    }, 0)
+
+    return () => {
+      clearTimeout(timer)
+      document.removeEventListener('click', handleClickOutside)
+      document.removeEventListener('keydown', handleEscape)
+    }
+  }, [showDropdown])
+
+  if (!user) {
     return null
   }
 
-  const displayName = profile.name || user.email?.split('@')[0] || 'User'
+  const displayName = profile?.name || user.email?.split('@')[0] || 'User'
   const roleLabel = isContractor ? 'Contractor' : 'Homeowner'
   const roleCls = isContractor
     ? 'bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-200'
@@ -136,7 +154,7 @@ export default function UserDropdown() {
       >
         {/* Avatar */}
         <div className="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-500 to-blue-500 flex items-center justify-center text-white text-sm font-semibold overflow-hidden">
-          {profile.avatar_url ? (
+          {profile?.avatar_url ? (
             <img
               src={profile.avatar_url}
               alt={`${displayName}'s avatar`}
@@ -153,7 +171,7 @@ export default function UserDropdown() {
             <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${roleCls}`}>
               {roleLabel}
             </span>
-            {profile.subscription_type === 'pro' && (
+            {profile?.subscription_type === 'pro' && (
               <span className="text-xs px-2 py-0.5 rounded-full bg-gradient-to-r from-yellow-400 to-orange-500 text-white font-bold">
                 ⚡ PRO
               </span>
@@ -170,7 +188,7 @@ export default function UserDropdown() {
           <div className="px-4 py-3 bg-slate-50 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-500 to-blue-500 flex items-center justify-center text-white font-semibold overflow-hidden">
-                {profile.avatar_url ? (
+                {profile?.avatar_url ? (
                   <img
                     src={profile.avatar_url}
                     alt={`${displayName}'s avatar`}
@@ -183,7 +201,7 @@ export default function UserDropdown() {
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-1">
                   <p className="text-sm font-medium text-slate-900 dark:text-slate-100 truncate">{displayName}</p>
-                  {profile.subscription_type === 'pro' && (
+                  {profile?.subscription_type === 'pro' && (
                     <span className="text-xs px-1.5 py-0.5 rounded bg-gradient-to-r from-yellow-400 to-orange-500 text-white font-bold">
                       PRO
                     </span>
@@ -191,7 +209,7 @@ export default function UserDropdown() {
                 </div>
                 <p className="text-xs text-slate-600 dark:text-slate-400 truncate">{user.email}</p>
                 <p className="text-xs text-slate-500 dark:text-slate-500 capitalize">
-                  {profile.subscription_type} • {roleLabel}
+                  {profile?.subscription_type || 'free'} • {roleLabel}
                 </p>
               </div>
             </div>
@@ -220,9 +238,11 @@ export default function UserDropdown() {
           {/* Sign out */}
           <div className="border-t border-slate-200 dark:border-slate-700 py-2">
             <button
-              onClick={() => {
+              onClick={async () => {
                 setShowDropdown(false)
-                signOut()
+                await signOut()
+                showGlobalToast('Successfully logged out', 'success')
+                router.push('/')
               }}
               className="flex items-center gap-3 w-full px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
             >
