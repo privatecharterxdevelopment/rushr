@@ -34,9 +34,9 @@ export default function Hero(){
       <div className="absolute inset-0 bg-gradient-to-br from-emerald-800 via-emerald-700 to-teal-800" />
 
       <div className="relative container-max px-5 md:px-10 lg:px-16 py-10 md:py-14 lg:py-16">
-        <div className="grid lg:grid-cols-2 gap-8 lg:gap-12 items-center">
+        <div className="grid lg:grid-cols-2 gap-8 lg:gap-12">
           {/* Left Column - Content */}
-          <div className="text-white space-y-3 lg:space-y-4">
+          <div className="text-white space-y-3 lg:space-y-4 flex flex-col justify-center">
             <h1 className="text-3xl md:text-4xl lg:text-4xl font-bold leading-tight">
               Emergency help,<br />
               <span className="text-emerald-200">on the way in minutes</span>
@@ -96,8 +96,8 @@ export default function Hero(){
           </div>
 
           {/* Right Column - Phone Mockup Animation */}
-          <div className="hidden lg:flex justify-center items-center">
-            <div className="scale-[0.65]">
+          <div className="hidden lg:flex justify-center items-end relative">
+            <div className="absolute bottom-0" style={{ transform: 'scale(0.75)', transformOrigin: 'bottom center' }}>
               <AnimatedPhoneMockup />
             </div>
           </div>
