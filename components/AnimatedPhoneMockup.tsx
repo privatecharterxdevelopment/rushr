@@ -1,43 +1,56 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import Image from 'next/image'
+import { useEffect, useState, useRef } from 'react'
 
 export default function AnimatedPhoneMockup() {
   const [currentFrame, setCurrentFrame] = useState(0)
-  const [isPlaying, setIsPlaying] = useState(false)
   const totalFrames = 881
   const fps = 30
+  const imgRef = useRef<HTMLImageElement>(null)
 
   useEffect(() => {
-    // Start playing after component mounts
-    const timer = setTimeout(() => setIsPlaying(true), 100)
-    return () => clearTimeout(timer)
-  }, [])
+    let animationFrame: number
+    let lastTime = performance.now()
+    const frameInterval = 1000 / fps
 
-  useEffect(() => {
-    if (!isPlaying) return
+    const animate = (currentTime: number) => {
+      const deltaTime = currentTime - lastTime
 
-    const interval = setInterval(() => {
-      setCurrentFrame((prev) => (prev + 1) % totalFrames)
-    }, 1000 / fps)
+      if (deltaTime >= frameInterval) {
+        setCurrentFrame((prev) => (prev + 1) % totalFrames)
+        lastTime = currentTime - (deltaTime % frameInterval)
+      }
 
-    return () => clearInterval(interval)
-  }, [isPlaying, totalFrames, fps])
+      animationFrame = requestAnimationFrame(animate)
+    }
+
+    animationFrame = requestAnimationFrame(animate)
+
+    return () => {
+      if (animationFrame) {
+        cancelAnimationFrame(animationFrame)
+      }
+    }
+  }, [totalFrames, fps])
 
   const frameNumber = currentFrame.toString().padStart(6, '0')
 
   return (
     <div className="relative flex items-center justify-center">
       <div className="relative" style={{ filter: 'drop-shadow(0 30px 60px rgba(0,0,0,0.5))' }}>
-        <Image
+        <img
+          ref={imgRef}
           src={`/gif_screenmockup/frame_${frameNumber}.png`}
-          alt="Phone mockup animation"
+          alt="Phone mockup"
           width={390}
           height={844}
-          priority
-          unoptimized
-          style={{ display: 'block' }}
+          loading="eager"
+          decoding="async"
+          style={{
+            display: 'block',
+            imageRendering: 'crisp-edges',
+            WebkitImageRendering: '-webkit-optimize-contrast'
+          }}
         />
       </div>
     </div>
