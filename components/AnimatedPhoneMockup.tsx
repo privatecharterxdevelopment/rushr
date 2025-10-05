@@ -48,8 +48,7 @@ export default function AnimatedPhoneMockup() {
           decoding="async"
           style={{
             display: 'block',
-            imageRendering: 'crisp-edges',
-            WebkitImageRendering: '-webkit-optimize-contrast'
+            imageRendering: 'auto'
           }}
         />
       </div>
