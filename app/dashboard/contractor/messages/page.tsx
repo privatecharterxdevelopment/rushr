@@ -90,7 +90,7 @@ export default function ContractorMessagesPage() {
 
   // Messaging hooks
   const { conversations, loading: conversationsLoading, error: conversationsError } = useConversations(user?.id, 'pro')
-  const { conversation, messages, loading: messagesLoading, error: messagesError, sendMessage, deleteMessage } = useConversation(conversationId)
+  const { conversation, messages, loading: messagesLoading, error: messagesError, sendMessage, deleteMessage } = useConversation(conversationId, user?.id)
   const { typingUsers, setTyping } = useTypingIndicator(conversationId)
 
   // UI state

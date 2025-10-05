@@ -6,8 +6,11 @@ import { useAuth } from '../../contexts/AuthContext'
 import { SupportMessagesAPI } from '../supportMessages'
 
 // Hook for managing conversations list
-export function useConversations() {
-  const { user } = useAuth()
+export function useConversations(userId?: string, role?: 'homeowner' | 'pro') {
+  const { user: homeownerUser } = useAuth()
+  const user = userId ? { id: userId } : homeownerUser
+  const userRole = role || 'homeowner'
+
   const [conversations, setConversations] = useState<Conversation[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -31,20 +34,41 @@ export function useConversations() {
       setLoading(true)
 
       // Mock conversation data with welcome message
-      const welcomeConversation: Conversation = {
-        id: 'welcome-conv-001',
-        homeowner_id: user.id,
-        pro_id: '00000000-0000-0000-0000-000000000000',
-        title: 'Welcome to Rushr!',
-        status: 'active',
-        last_message_at: new Date().toISOString(),
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        pro_name: 'Rushr Support',
-        pro_email: 'support@rushr.com',
-        message_count: 1,
-        unread_count: 1
-      }
+      const welcomeConversation: Conversation = userRole === 'pro'
+        ? {
+            id: 'welcome-conv-pro-001',
+            homeowner_id: '00000000-0000-0000-0000-000000000000',
+            pro_id: user.id,
+            title: 'Welcome to Rushr Pro!',
+            status: 'active',
+            last_message_at: new Date().toISOString(),
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+            homeowner_name: 'Rushr Support',
+            homeowner_email: 'support@rushr.com',
+            pro_name: null,
+            pro_email: null,
+            message_count: 1,
+            unread_count: 1,
+            last_message_content: 'Welcome to Rushr Pro! Start accepting jobs from homeowners.'
+          }
+        : {
+            id: 'welcome-conv-001',
+            homeowner_id: user.id,
+            pro_id: '00000000-0000-0000-0000-000000000000',
+            title: 'Welcome to Rushr!',
+            status: 'active',
+            last_message_at: new Date().toISOString(),
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+            pro_name: 'Rushr Support',
+            pro_email: 'support@rushr.com',
+            homeowner_name: null,
+            homeowner_email: null,
+            message_count: 1,
+            unread_count: 1,
+            last_message_content: 'Welcome to Rushr! Get help from verified professionals.'
+          }
 
       const mockConversations: Conversation[] = [welcomeConversation]
 
@@ -108,8 +132,9 @@ export function useConversations() {
 }
 
 // Hook for managing a specific conversation
-export function useConversation(conversationId: string | null) {
-  const { user } = useAuth()
+export function useConversation(conversationId: string | null, userId?: string) {
+  const { user: homeownerUser } = useAuth()
+  const user = userId ? { id: userId } : homeownerUser
   const [conversation, setConversation] = useState<Conversation | null>(null)
   const [messages, setMessages] = useState<Message[]>([])
   const [loading, setLoading] = useState(true)
@@ -124,7 +149,7 @@ export function useConversation(conversationId: string | null) {
     try {
       setLoading(true)
 
-      // Mock conversation data
+      // Mock conversation data for homeowner welcome
       if (conversationId === 'welcome-conv-001') {
         const mockConversation: Conversation = {
           id: 'welcome-conv-001',
@@ -156,6 +181,54 @@ We're excited to help you get your home projects done quickly and reliably. Here
 If you have any questions or need help, just reply to this message and our support team will assist you.
 
 Thanks for choosing Rushr!
+The Rushr Team`,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        }
+
+        setConversation(mockConversation)
+        setMessages([welcomeMessage])
+        setError(null)
+      } else if (conversationId === 'welcome-conv-pro-001') {
+        // Pro welcome conversation
+        const mockConversation: Conversation = {
+          id: 'welcome-conv-pro-001',
+          homeowner_id: '00000000-0000-0000-0000-000000000000',
+          pro_id: user.id,
+          title: 'Welcome to Rushr Pro!',
+          status: 'active',
+          last_message_at: new Date().toISOString(),
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          homeowner_name: 'Rushr Support',
+          homeowner_email: 'support@rushr.com',
+          pro_name: null,
+          pro_email: null
+        }
+
+        const welcomeMessage: Message = {
+          id: 'msg-pro-001',
+          conversation_id: conversationId,
+          sender_id: '00000000-0000-0000-0000-000000000000',
+          message_type: 'system',
+          content: `Welcome to Rushr Pro! 🚀
+
+Thank you for joining our network of trusted professionals! Here's how to get started:
+
+1. **Complete your profile** - Make sure all your details are up to date
+2. **Browse available jobs** - Check the Jobs tab for opportunities in your area
+3. **Send quotes** - Respond to job requests with competitive quotes
+4. **Get hired** - Build your reputation and grow your business
+
+**Tips for success:**
+• Respond quickly to job requests
+• Provide detailed, accurate quotes
+• Maintain high quality work
+• Build great relationships with clients
+
+If you have any questions or need assistance, our support team is here to help!
+
+Best of luck,
 The Rushr Team`,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
