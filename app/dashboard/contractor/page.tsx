@@ -348,21 +348,12 @@ export default function ContractorDashboardPage() {
               )}
             </div>
             <div className="ml-4">
-              {!contractorData ? (
-                <Link
-                  href="/pro/contractor-signup"
-                  className="px-4 py-2 bg-[var(--brand-text)] text-white rounded-md hover:bg-[var(--brand-border)] inline-block"
-                >
-                  Setup Profile
-                </Link>
-              ) : (
-                <button
-                  onClick={handleStartKYC}
-                  className="px-4 py-2 bg-[var(--brand-text)] text-white rounded-md hover:bg-[var(--brand-border)]"
-                >
-                  Start KYC Verification
-                </button>
-              )}
+              <Link
+                href="/pro/wizard"
+                className="px-4 py-2 bg-[var(--brand-text)] text-white rounded-md hover:bg-[var(--brand-border)] inline-block"
+              >
+                {!contractorData ? 'Setup Profile' : 'Start KYC Verification'}
+              </Link>
             </div>
           </div>
         </div>
