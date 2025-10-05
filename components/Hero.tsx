@@ -97,7 +97,7 @@ export default function Hero(){
 
           {/* Right Column - Phone Mockup Animation */}
           <div className="hidden lg:flex justify-center items-end relative min-h-[500px]">
-            <div className="absolute" style={{ bottom: '-60px', transform: 'scale(0.75)', transformOrigin: 'bottom center' }}>
+            <div className="absolute" style={{ bottom: '-60px', transform: 'scale(0.95)', transformOrigin: 'bottom center' }}>
               <AnimatedPhoneMockup />
             </div>
           </div>
