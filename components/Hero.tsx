@@ -38,7 +38,7 @@ export default function Hero(){
           {/* Left Column - Content */}
           <div className="text-white space-y-2 lg:space-y-2.5">
             <h1 className="text-3xl md:text-4xl lg:text-4xl font-bold leading-tight">
-              Emergency home help,<br />
+              Emergency help,<br />
               <span className="text-emerald-200">on the way in minutes</span>
             </h1>
 
