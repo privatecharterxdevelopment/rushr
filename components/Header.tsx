@@ -278,11 +278,11 @@ export default function Header() {
     { label: 'Calendar',                  href: '/dashboard/contractor/calendar' },
     { label: 'Signals ★',                 href: '/dashboard/contractor/signals' },
   ] : [
-    // Not logged in - go to marketing pages
-    { label: 'Browse Jobs',               onClick: () => window.location.href = '/pro/jobs' },
-    { label: 'How it Works (for Pros)',   onClick: () => window.location.href = '/pro/how-it-works' },
-    { label: 'Rushr Teams',               onClick: () => window.location.href = '/pro/teams' },
-    { label: 'Signals ★',                 onClick: () => window.location.href = '/pro/signals' },
+    // Not logged in - open Pro login modal
+    { label: 'Browse Jobs',               onClick: () => openProAuth() },
+    { label: 'Messages',                  onClick: () => openProAuth() },
+    { label: 'Calendar',                  onClick: () => openProAuth() },
+    { label: 'Signals ★',                 onClick: () => openProAuth() },
   ]
   const moreItems = [
     { label: 'About',   href: '/about' },
