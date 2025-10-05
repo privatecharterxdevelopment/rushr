@@ -11,6 +11,8 @@ const supabase = supabaseBrowser()
 import { useHydrated } from '../lib/useHydrated'
 import LogoWordmark from './LogoWordmark'
 import { openAuth } from './AuthModal'
+import { openProAuth } from './ProAuthModal'
+import ProAuthModal from './ProAuthModal'
 import UserDropdown from './UserDropdown'
 import BidNotificationSystem from './BidNotification'
 
@@ -40,17 +42,7 @@ function MenuIcon(props: any) {
 export default function Header() {
   const router = useRouter()
   const { user: homeownerUser, userProfile } = useAuth()
-
-  // Safely get ProAuth data
-  let contractorUser = null
-  let contractorProfile = null
-  try {
-    const proAuth = useProAuth()
-    contractorUser = proAuth.user
-    contractorProfile = proAuth.contractorProfile
-  } catch (error) {
-    console.log('ProAuth not available in Header:', error)
-  }
+  const { user: contractorUser, contractorProfile } = useProAuth()
 
   const pathname = usePathname() || ''
 
@@ -59,7 +51,7 @@ export default function Header() {
 
   // Determine user type and signed in status
   const isSignedInAsHomeowner = !!homeownerUser && !!userProfile
-  const isSignedInAsContractor = !!contractorUser && !!contractorProfile
+  const isSignedInAsContractor = !!contractorUser  // Don't require profile, just user is enough
   const signedIn = isSignedInAsHomeowner || isSignedInAsContractor
 
   // Theme: Pro routes get blue, everything else gets green
@@ -127,10 +119,10 @@ export default function Header() {
 
   const isActive = (href: string) => pathname === href || (href !== '/' && pathname.startsWith(href))
 
-  // Function to switch to Pro - GO TO /PRO ROUTE
+  // Function to switch to Pro - GO TO /PRO ROUTE (stays on marketing page)
   const switchToPro = () => {
     console.log('Switching to Pro - going to /pro route')
-    window.location.href = '/pro'
+    router.push('/pro')
   }
 
   // Function to switch to Homeowner (just navigate, keep user logged in)
@@ -279,10 +271,18 @@ export default function Header() {
     { label: 'Search for a Pro',      href: '/find-pro' },
     { label: 'How it Works',          href: '/how-it-works' },
   ]
-  const findWorkItems = [
-    { label: 'Browse Jobs',               href: '/jobs' },
-    { label: 'How it Works (for Pros)',   href: '/pro/how-it-works' },
-    { label: 'Signals ★',                 href: '/signals' },
+  const findWorkItems = isSignedInAsContractor ? [
+    // Contractor is logged in - go to dashboard pages
+    { label: 'Browse Jobs',               href: '/dashboard/contractor/jobs' },
+    { label: 'Messages',                  href: '/dashboard/contractor/messages' },
+    { label: 'Calendar',                  href: '/dashboard/contractor/calendar' },
+    { label: 'Signals ★',                 href: '/dashboard/contractor/signals' },
+  ] : [
+    // Not logged in - go to marketing pages
+    { label: 'Browse Jobs',               onClick: () => window.location.href = '/pro/jobs' },
+    { label: 'How it Works (for Pros)',   onClick: () => window.location.href = '/pro/how-it-works' },
+    { label: 'Rushr Teams',               onClick: () => window.location.href = '/pro/teams' },
+    { label: 'Signals ★',                 onClick: () => window.location.href = '/pro/signals' },
   ]
   const moreItems = [
     { label: 'About',   href: '/about' },
@@ -321,10 +321,11 @@ export default function Header() {
   } as React.CSSProperties
 
   return (
+    <>
     <header className="sticky top-0 z-50 backdrop-blur-md border-b border-slate-200 dark:bg-slate-900/90 dark:border-slate-700 shadow-sm" style={headerStyle}>
       <div className="container-max py-3 flex items-center gap-2 sm:gap-4">
-        {/* Keep logo linking to site root on current host */}
-        <Link href="/" className="flex items-center gap-2">
+        {/* Logo links to /pro on Pro pages, / on homeowner pages */}
+        <Link href={isProRoute ? '/pro' : '/'} className="flex items-center gap-2">
           <LogoWordmark />
         </Link>
 
@@ -338,14 +339,13 @@ export default function Header() {
             active={findProActive}
           />
           <HoverDrop
-            label="For Pros"
+            label="Rushr Pro"
             keyName="work"
             open={openFindWork}
             setOpen={setOpenFindWork}
             items={findWorkItems}
             active={findWorkActive}
           />
-          <NavA href="/teams">Rushr Teams</NavA>
           <HoverDrop
             label="More"
             keyName="more"
@@ -354,8 +354,17 @@ export default function Header() {
             items={moreItems}
             active={moreActive}
           />
-          {/* Dashboard (role-aware absolute link) */}
-          <NavA href={dashboardHref}>Dashboard</NavA>
+          {/* Dashboard (role-aware) */}
+          {signedIn ? (
+            <NavA href={dashboardHref}>Dashboard</NavA>
+          ) : (
+            <button
+              onClick={() => isProRoute ? openProAuth() : openAuth()}
+              className={`relative inline-flex items-center hover:text-ink dark:hover:text-white pb-1 font-medium text-slate-700 dark:text-slate-200 transition-colors`}
+            >
+              Dashboard
+            </button>
+          )}
         </nav>
 
         <div className="ml-auto flex items-center gap-1 sm:gap-2 relative z-10 min-w-0 flex-shrink-0">
@@ -372,7 +381,7 @@ export default function Header() {
                   </button>
                   <button
                     className="inline-flex items-center px-3 sm:px-4 py-2 rounded-lg border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-slate-400 font-medium text-sm whitespace-nowrap"
-                    onClick={() => router.push('/pro/sign-in')}
+                    onClick={() => openProAuth()}
                   >
                     Sign in
                   </button>
@@ -445,7 +454,7 @@ export default function Header() {
                     <button
                       className="w-full text-left px-3 py-2 rounded-lg border border-slate-300 text-slate-700 font-medium text-sm"
                       onClick={() => {
-                        router.push('/pro/sign-in')
+                        openProAuth()
                         setMobileMenuOpen(false)
                       }}
                     >
@@ -502,5 +511,7 @@ export default function Header() {
         </div>
       )}
     </header>
+    <ProAuthModal />
+    </>
   )
 }

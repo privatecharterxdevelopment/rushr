@@ -33,10 +33,10 @@ export default function Hero(){
       {/* Dark emerald gradient background */}
       <div className="absolute inset-0 bg-gradient-to-br from-emerald-800 via-emerald-700 to-teal-800" />
 
-      <div className="relative container-max px-5 md:px-10 lg:px-16 pt-12 pb-8 md:pt-16 md:pb-12">
-        <div className="grid lg:grid-cols-2 gap-4 lg:gap-6 items-center">
+      <div className="relative container-max px-5 md:px-10 lg:px-16 py-8 md:py-12">
+        <div className="grid lg:grid-cols-2 gap-6 lg:gap-8 items-center">
           {/* Left Column - Content */}
-          <div className="text-white space-y-2 lg:space-y-2.5">
+          <div className="text-white space-y-3 lg:space-y-4">
             <h1 className="text-3xl md:text-4xl lg:text-4xl font-bold leading-tight">
               Emergency help,<br />
               <span className="text-emerald-200">on the way in minutes</span>
@@ -96,8 +96,8 @@ export default function Hero(){
           </div>
 
           {/* Right Column - Phone Mockup Animation */}
-          <div className="hidden lg:flex justify-center items-end h-full">
-            <div className="scale-[1.26] md:scale-[1.36] lg:scale-[1.46] origin-bottom translate-y-[86px]">
+          <div className="hidden lg:flex justify-center items-center">
+            <div className="scale-90 lg:scale-100">
               <AnimatedPhoneMockup />
             </div>
           </div>
