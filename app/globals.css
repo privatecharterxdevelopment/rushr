@@ -1,6 +1,32 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Smooth page transitions */
+* {
+  transition: opacity 0.15s ease-in-out, transform 0.15s ease-in-out;
+}
+
+/* Smooth view transitions for Next.js */
+@view-transition {
+  navigation: auto;
+}
+
+/* Fade animation for page transitions */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 0.2s;
+}
+
+/* Override transitions for specific elements */
+input, textarea, select, button {
+  transition: background-color 0.15s ease-in-out, border-color 0.15s ease-in-out, color 0.15s ease-in-out !important;
+}
+
+/* Smooth scrolling */
+html {
+  scroll-behavior: smooth;
+}
 @import url('https://unpkg.com/leaflet@1.9.4/dist/leaflet.css');
 
 /* =======================
