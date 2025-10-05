@@ -4,9 +4,12 @@ import React, { useMemo, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useAuth } from '../../../contexts/AuthContext'
 import { useHomeownerStats } from '../../../lib/hooks/useHomeownerStats'
-import { supabase } from '../../../lib/supabaseClient'
+import { supabaseHomeowner as supabase } from '../../../lib/supabaseClient'
 import NotificationBell from '../../../components/NotificationBell'
 import LoadingSpinner from '../../../components/LoadingSpinner'
+import dynamic from 'next/dynamic'
+
+const ContractorTracker = dynamic(() => import('../../../components/ContractorTracker'), { ssr: false })
 import {
   CalendarDays,
   CheckCircle2,
@@ -123,6 +126,10 @@ export default function HomeownerDashboardPage() {
   // Get real trusted contractors from database - MUST BE BEFORE CONDITIONAL RETURNS
   const [savedPros, setSavedPros] = useState<any[]>([])
   const [loadingTrustedPros, setLoadingTrustedPros] = useState(true)
+
+  // Contractor tracking state
+  const [activeJob, setActiveJob] = useState<any>(null)
+  const [showTracker, setShowTracker] = useState(false)
 
   // Move all useMemo hooks to the top to avoid React hooks error
   const completeness: CompletenessField[] = useMemo(() => {
@@ -307,6 +314,39 @@ export default function HomeownerDashboardPage() {
     fetchTrustedPros()
   }, [user])
 
+  // Auto-detect jobs with accepted bids for tracking
+  useEffect(() => {
+    if (!user || !realJobs || realJobs.length === 0) return
+
+    // Find jobs with accepted bids that are in progress
+    const jobInProgress = realJobs.find(job =>
+      (job.status === 'in_progress' || job.status === 'In Progress') && job.contractor_id
+    )
+
+    if (jobInProgress) {
+      // Fetch contractor details for this job
+      const fetchContractorDetails = async () => {
+        const { data: contractor } = await supabase
+          .from('contractor_profiles')
+          .select('name, phone')
+          .eq('id', jobInProgress.contractor_id)
+          .single()
+
+        setActiveJob({
+          ...jobInProgress,
+          contractor_name: contractor?.name,
+          contractor_phone: contractor?.phone
+        })
+        setShowTracker(true)
+      }
+
+      fetchContractorDetails()
+    } else {
+      setShowTracker(false)
+      setActiveJob(null)
+    }
+  }, [user, realJobs])
+
   // NOW SAFE TO HAVE CONDITIONAL RETURNS AFTER ALL HOOKS
   // Show loading while auth is being determined
   if (loading) {
@@ -347,7 +387,7 @@ export default function HomeownerDashboardPage() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 pt-8">
       {/* header */}
       <div className="mb-2 flex items-center justify-between">
         <div className="flex items-center gap-4">
@@ -380,6 +420,7 @@ export default function HomeownerDashboardPage() {
           </div>
         </div>
         <div className="flex items-center gap-3">
+          <NotificationBell />
           <div className="flex gap-2">
             <Link href="/post-job?urgent=1" className="btn-primary">Emergency Help</Link>
             <Link href="/dashboard/homeowner/bids" className="btn">Manage Bids</Link>
@@ -754,6 +795,18 @@ export default function HomeownerDashboardPage() {
           )}
         </div>
       </section>
+
+      {/* Contractor Tracker - Shows when job has accepted bid */}
+      {showTracker && activeJob && (
+        <ContractorTracker
+          jobId={activeJob.id}
+          contractorId={activeJob.contractor_id}
+          homeownerAddress={activeJob.address || userProfile?.address || ''}
+          contractorName={activeJob.contractor_name || 'Contractor'}
+          contractorPhone={activeJob.contractor_phone}
+          onClose={() => setShowTracker(false)}
+        />
+      )}
     </div>
   )
 }
