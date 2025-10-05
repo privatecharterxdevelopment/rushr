@@ -33,7 +33,7 @@ export default function Hero(){
       {/* Dark emerald gradient background */}
       <div className="absolute inset-0 bg-gradient-to-br from-emerald-800 via-emerald-700 to-teal-800" />
 
-      <div className="relative container-max px-5 md:px-10 lg:px-16 pt-16 pb-16 md:pt-20 md:pb-20">
+      <div className="relative container-max px-5 md:px-10 lg:px-16 pt-12 pb-8 md:pt-16 md:pb-12">
         <div className="grid lg:grid-cols-2 gap-4 lg:gap-6 items-center">
           {/* Left Column - Content */}
           <div className="text-white space-y-2 lg:space-y-2.5">
