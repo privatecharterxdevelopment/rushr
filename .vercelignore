@@ -1,0 +1,14 @@
+*.zip
+*.sql
+*.mp4
+rushr-main-new.zip/
+rushr-main.zip
+AirLink - 4.5 (8.22).zip
+nul
+scripts/
+public/iphone-spin-up.mp4
+public/iphone-zoom-out-middle-move-out-extended.mp4
+public/mockup-standalone.html
+public/phone-straight.html
+public/record-and-download.html
+.env

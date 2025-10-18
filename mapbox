@@ -1,0 +1,1547 @@
+mapboxgl from 'mapbox-gl'
+import * as turf from '@turf/turf'
+import { Filter, MapPin, Menu, Plus, Search, Clock, Phone, MessageSquare, BadgeCheck, ArrowLeft, CreditCard, Building2, Home, ChevronRight, Bell, X, Info } from 'lucide-react'
+import 'mapbox-gl/dist/mapbox-gl.css'
+
+type Priority = 'emergency' | 'high' | 'medium' | 'low'
+type Category = 'plumbing' | 'electrical' | 'hvac' | 'general'
+
+interface Bid {
+  id: string
+  contractorId: string
+  contractorName: string
+  amount: number
+  message?: string
+  createdAt: number
+  status: 'pending' | 'accepted' | 'declined'
+}
+
+interface JobLocation {
+  id: string
+  title: string
+  address: string
+  lat: number
+  lng: number
+  category: Category
+  priority: Priority
+  estimatedCost: number
+  distance: number
+  description: string
+  budget: string
+  status: 'open' | 'accepted' | 'completed'
+  bids?: Bid[]
+  acceptedContractorId?: string | null
+}
+
+interface Contractor {
+  id: string
+  name: string
+  lat: number
+  lng: number
+  rating: number
+  specialty: string
+  distance: number
+}
+
+interface Notification {
+  id: string
+  title: string
+  message: string
+  type: 'bid_accepted' | 'new_bid' | 'info'
+  jobId?: string
+  contractorId?: string
+  read: boolean
+  timestamp: number
+}
+
+type UserType = 'homeowner' | 'contractor'
+
+export default function RushrMap() {
+  const mapContainer = useRef<HTMLDivElement | null>(null)
+  const map = useRef<mapboxgl.Map | null>(null)
+
+  const [mapReady, setMapReady] = useState(false)
+  const [mapError, setMapError] = useState<string | null>(null)
+  const [userType, setUserType] = useState<UserType>('homeowner')
+  const [currentView, setCurrentView] = useState<'main' | 'jobs' | 'job-detail' | 'tracking'>('main')
+
+  const [selectedAddress, setSelectedAddress] = useState('')
+  const [addressSuggestions, setAddressSuggestions] = useState<any[]>([])
+  const [selectedCenter, setSelectedCenter] = useState<[number, number] | null>(null)
+  const [selectedZip, setSelectedZip] = useState<string>('')
+  const [radiusMi, setRadiusMi] = useState<number>(3)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [filterCategory, setFilterCategory] = useState<'all' | Category>('all')
+
+  const [jobs, setJobs] = useState<JobLocation[]>([])
+  const [contractors, setContractors] = useState<Contractor[]>([])
+  const [contractorsInCircle, setContractorsInCircle] = useState<Contractor[]>([])
+  const [selectedJob, setSelectedJob] = useState<JobLocation | null>(null)
+  const [newJob, setNewJob] = useState({ 
+    title: '', 
+    description: '', 
+    budget: '', 
+    category: 'general',
+    paymentMethod: 'bank',
+    cardNumber: '',
+    cardName: '',
+    cardExpiry: '',
+    cardCvv: ''
+  })
+  const [showPostJobWizard, setShowPostJobWizard] = useState(false)
+  const [postStep, setPostStep] = useState(1)
+  const [elapsedSec, setElapsedSec] = useState(0)
+  const [activeContractor, setActiveContractor] = useState<Contractor | null>(null)
+  const [activeJob, setActiveJob] = useState<JobLocation | null>(null)
+
+  const [trackingActive, setTrackingActive] = useState(false)
+  const [trackingError, setTrackingError] = useState<string | null>(null)
+  const [etaMinutes, setEtaMinutes] = useState<number>(0)
+  const [etaDistanceMi, setEtaDistanceMi] = useState<number>(0)
+  const tracking = useRef<{
+    coords: [number, number][]
+    idx: number
+    totalDistance: number
+    totalDuration: number
+    marker: mapboxgl.Marker | null
+    interval: number | null
+    contractor: Contractor | null
+    job: JobLocation | null
+    startedAt: number
+  }>({ coords: [], idx: 0, totalDistance: 0, totalDuration: 0, marker: null, interval: null, contractor: null, job: null, startedAt: 0 })
+
+  const contractorMarkers = useRef<Map<string, mapboxgl.Marker>>(new Map())
+
+  const [notifications, setNotifications] = useState<Notification[]>([])
+  const [showNotifications, setShowNotifications] = useState(false)
+  const [showAcceptedPopup, setShowAcceptedPopup] = useState(false)
+  const [acceptedBidInfo, setAcceptedBidInfo] = useState<{ job: JobLocation; contractor: string } | null>(null)
+  const [pendingBids, setPendingBids] = useState<Bid[]>([])
+
+  useEffect(() => {
+    if (map.current) {
+      (window as any).rushrMap = map.current
+    }
+  }, [mapReady])
+
+  useMemo(() => {
+    if (!mapboxgl.accessToken) {
+      const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN
+      if (token) {
+        mapboxgl.accessToken = token
+      } else {
+        setMapError('Missing NEXT_PUBLIC_MAPBOX_TOKEN')
+      }
+    }
+  }, [])
+
+  useEffect(() => {
+    if (map.current || !mapContainer.current || !mapboxgl.accessToken) return
+    try {
+      map.current = new mapboxgl.Map({
+        container: mapContainer.current,
+        style: 'mapbox://styles/mapbox/light-v11',
+        center: [-74.0060, 40.7128],
+        zoom: 12,
+        pitch: 45,
+        bearing: -17.6,
+        attributionControl: false,
+      })
+
+      map.current.on('load', () => {
+        setMapReady(true)
+        map.current?.addControl(new mapboxgl.NavigationControl({ visualizePitch: true }), 'top-right')
+        map.current?.addControl(new mapboxgl.FullscreenControl(), 'top-right')
+        map.current?.addControl(new mapboxgl.ScaleControl({ maxWidth: 120, unit: 'imperial' }))
+        map.current?.addControl(new mapboxgl.GeolocateControl({
+          positionOptions: { enableHighAccuracy: true },
+          trackUserLocation: true,
+          showUserHeading: true,
+        }), 'top-right')
+        loadJobsAndContractors()
+      })
+
+      map.current.on('style.load', () => {
+        setMapReady(true)
+        const layers = map.current?.getStyle().layers
+        const labelLayerId = layers?.find((l: any) => l.type === 'symbol' && l.layout && l.layout['text-field'])?.id
+        if (map.current && labelLayerId) {
+          map.current.addLayer({
+            id: '3d-buildings',
+            source: 'composite',
+            'source-layer': 'building',
+            filter: ['==', 'extrude', 'true'],
+            type: 'fill-extrusion',
+            minzoom: 15,
+            paint: {
+              'fill-extrusion-color': '#aaa',
+              'fill-extrusion-height': ['interpolate', ['linear'], ['zoom'], 15, 0, 15.05, ['get', 'height']],
+              'fill-extrusion-base': ['interpolate', ['linear'], ['zoom'], 15, 0, 15.05, ['get', 'min_height']],
+              'fill-extrusion-opacity': 0.6,
+            },
+          }, labelLayerId)
+        }
+      })
+
+      map.current.on('error', (e) => {
+        try {
+          const msg = (e && (e as any).error && (e as any).error.message) || JSON.stringify(e)
+          setMapError(msg)
+        } catch {
+          setMapError('Unknown map error')
+        }
+      })
+    } catch (err: any) {
+      setMapError(err?.message ?? 'Failed to initialize map')
+    }
+
+    return () => {
+      map.current?.remove()
+      map.current = null
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!map.current) return
+    const t = setTimeout(() => map.current?.resize(), 200)
+    return () => clearTimeout(t)
+  }, [])
+
+  useEffect(() => {
+    const onResize = () => map.current?.resize()
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, [])
+
+  const loadJobsAndContractors = () => {
+    const mockJobs: JobLocation[] = [
+      { id: '1', title: 'Emergency Plumbing - Burst Pipe', address: '123 Main St, New York, NY 10001', lat: 40.7128, lng: -74.0060, category: 'plumbing', priority: 'emergency', estimatedCost: 350, distance: 2.5, description: 'Urgent repair needed for burst pipe in basement', budget: '$350', status: 'open' },
+      { id: '2', title: 'Electrical Outlet Repair', address: '456 Oak Ave, New York, NY 10002', lat: 40.7209, lng: -73.9896, category: 'electrical', priority: 'medium', estimatedCost: 150, distance: 4.2, description: 'Multiple outlets not working in kitchen', budget: '$150', status: 'open' },
+      { id: '3', title: 'HVAC System Check', address: '789 Pine Rd, New York, NY 10003', lat: 40.7282, lng: -73.9942, category: 'hvac', priority: 'low', estimatedCost: 200, distance: 6.1, description: 'Annual maintenance check for heating system', budget: '$200', status: 'open' },
+    ]
+
+    const mockContractors: Contractor[] = [
+      { id: '1', name: 'John Doe Construction', lat: 40.7649, lng: -74.0294, rating: 4.8, specialty: 'General Contractor', distance: 3.2 },
+      { id: '2', name: "Mike's Plumbing", lat: 40.7949, lng: -73.9994, rating: 4.5, specialty: 'Plumbing', distance: 5.1 },
+      { id: '3', name: 'Bright Sparks Electric', lat: 40.7312, lng: -73.9973, rating: 4.6, specialty: 'Electrical', distance: 2.1 },
+      { id: '4', name: 'CoolAir HVAC Pros', lat: 40.7189, lng: -74.0125, rating: 4.4, specialty: 'HVAC', distance: 4.7 },
+      { id: '5', name: 'Ace Handyman Services', lat: 40.7463, lng: -73.9822, rating: 4.7, specialty: 'General Repair', distance: 3.9 },
+      { id: '6', name: 'Rapid Rooter', lat: 40.7055, lng: -74.0167, rating: 4.3, specialty: 'Plumbing', distance: 5.8 },
+      { id: '7', name: 'Manhattan Mechanics', lat: 40.741, lng: -74.0048, rating: 4.2, specialty: 'General Contractor', distance: 2.8 },
+      { id: '8', name: 'Northside Heating', lat: 40.7622, lng: -73.9725, rating: 4.1, specialty: 'HVAC', distance: 6.2 },
+      { id: '9', name: '5 Boroughs Electrical', lat: 40.7245, lng: -73.9781, rating: 4.5, specialty: 'Electrical', distance: 4.0 },
+      { id: '10', name: 'GreenPipe Plumbing', lat: 40.7367, lng: -73.9891, rating: 4.6, specialty: 'Plumbing', distance: 3.4 },
+    ]
+
+    setJobs(mockJobs)
+    setContractors(mockContractors)
+
+    if (!map.current) return
+
+    mockJobs.forEach((job) => {
+      const markerEl = createMarker('#22c55e', { blink: true, priority: job.priority })
+      new mapboxgl.Marker(markerEl)
+        .setLngLat([job.lng, job.lat])
+        .setPopup(new mapboxgl.Popup({ offset: 16 }).setHTML(buildJobPopup(job)))
+        .addTo(map.current!)
+    })
+
+    mockContractors.forEach((c) => {
+      const markerEl = createMarker('#3b82f6', { blink: false })
+      const mk = new mapboxgl.Marker(markerEl)
+        .setLngLat([c.lng, c.lat])
+        .setPopup(new mapboxgl.Popup({ offset: 16 }).setHTML(buildContractorPopup(c)))
+        .addTo(map.current!)
+      contractorMarkers.current.set(c.id, mk)
+    })
+
+    setTimeout(() => {
+      if (!trackingActive) {
+        startDemoTracking(mockContractors, mockJobs)
+      }
+    }, 800)
+  }
+
+  const CIRCLE_SOURCE_ID = 'zip-circle-src'
+  const CIRCLE_FILL_LAYER_ID = 'zip-circle-fill'
+  const CIRCLE_LINE_LAYER_ID = 'zip-circle-line'
+
+  function drawCircle(center: [number, number], miles: number) {
+    if (!map.current) return
+    const circle = turf.circle(center, miles, { units: 'miles', steps: 128 }) as unknown as GeoJSON.Feature<GeoJSON.Polygon>
+    const data = circle as GeoJSON.Feature<GeoJSON.Polygon>
+    if (!map.current.getSource(CIRCLE_SOURCE_ID)) {
+      map.current.addSource(CIRCLE_SOURCE_ID, { type: 'geojson', data })
+      map.current.addLayer({ id: CIRCLE_FILL_LAYER_ID, type: 'fill', source: CIRCLE_SOURCE_ID, paint: { 'fill-color': '#1f2937', 'fill-opacity': 0.07 } })
+      map.current.addLayer({ id: CIRCLE_LINE_LAYER_ID, type: 'line', source: CIRCLE_SOURCE_ID, paint: { 'line-color': '#111827', 'line-width': 2, 'line-opacity': 0.3 } })
+    } else {
+      (map.current.getSource(CIRCLE_SOURCE_ID) as mapboxgl.GeoJSONSource).setData(data)
+    }
+    const inside = contractors.filter(c => turf.booleanPointInPolygon([c.lng, c.lat], circle as any))
+    setContractorsInCircle(inside)
+    contractorMarkers.current.forEach((mk, id) => {
+      const isIn = !!inside.find(c => c.id === id)
+      const el = mk.getElement()
+      el.style.opacity = isIn ? '1' : '0.25'
+      el.style.filter = isIn ? '' : 'grayscale(0.3)'
+    })
+  }
+
+  const ROUTE_SOURCE_ID = 'live-route-src'
+  const ROUTE_LAYER_ID = 'live-route-line'
+  const ROUTE_GLOW_LAYER_ID = 'live-route-glow'
+  const PROGRESS_SOURCE_ID = 'live-route-progress-src'
+  const PROGRESS_LAYER_ID = 'live-route-progress-line'
+
+  const clearRouteLayers = () => {
+    if (!map.current) return
+    const m = map.current
+    ;[PROGRESS_LAYER_ID, ROUTE_LAYER_ID, ROUTE_GLOW_LAYER_ID].forEach((layerId) => {
+      if (m.getLayer(layerId)) m.removeLayer(layerId)
+    })
+    ;[PROGRESS_SOURCE_ID, ROUTE_SOURCE_ID].forEach((srcId) => {
+      if (m.getSource(srcId)) m.removeSource(srcId)
+    })
+  }
+
+  const startDemoTracking = async (availableContractors: Contractor[] = contractors, availableJobs: JobLocation[] = jobs) => {
+    try {
+      if (!map.current) return
+      setTrackingError(null)
+      const c = availableContractors[Math.floor(Math.random() * availableContractors.length)]
+      const j = availableJobs[Math.floor(Math.random() * availableJobs.length)]
+      if (!c || !j) return
+
+      const route = await fetchRoute([c.lng, c.lat], [j.lng, j.lat])
+
+      addOrUpdateGeojson(map.current, ROUTE_SOURCE_ID, lineString(route.coords), { color: '#2563eb', width: 4, opacity: 0.9 })
+      if (!map.current.getLayer(ROUTE_GLOW_LAYER_ID)) {
+        map.current.addLayer({
+          id: ROUTE_GLOW_LAYER_ID,
+          type: 'line',
+          source: ROUTE_SOURCE_ID,
+          layout: { 'line-cap': 'round', 'line-join': 'round' },
+          paint: { 'line-color': '#93c5fd', 'line-width': 10, 'line-opacity': 0.25 },
+        }, ROUTE_LAYER_ID)
+      }
+
+      if (!map.current.getSource(PROGRESS_SOURCE_ID)) {
+        map.current.addSource(PROGRESS_SOURCE_ID, { type: 'geojson', data: featureLineString([route.coords[0], route.coords[0]]) })
+        map.current.addLayer({
+          id: PROGRESS_LAYER_ID,
+          type: 'line',
+          source: PROGRESS_SOURCE_ID,
+          layout: { 'line-cap': 'round', 'line-join': 'round' },
+          paint: { 'line-color': '#16a34a', 'line-width': 5, 'line-opacity': 0.9 },
+        })
+      }
+
+      const vehicleEl = createVehicleMarker()
+      vehicleEl.style.cursor = 'pointer'
+      vehicleEl.title = 'View trip details'
+      const vehicleMarker = new mapboxgl.Marker(vehicleEl).setLngLat(route.coords[0]).addTo(map.current)
+      vehicleEl.addEventListener('click', () => {
+        setCurrentView('tracking')
+        setActiveContractor(c)
+        setActiveJob(j)
+      })
+
+      tracking.current = {
+        coords: route.coords,
+        idx: 0,
+        totalDistance: route.distance,
+        totalDuration: route.duration,
+        marker: vehicleMarker,
+        interval: null,
+        contractor: c,
+        job: j,
+        startedAt: Date.now(),
+      }
+      setTrackingActive(true)
+      setActiveContractor(c)
+      setActiveJob(j)
+
+      const bounds = new mapboxgl.LngLatBounds()
+      route.coords.forEach((p) => bounds.extend(p as any))
+      map.current.fitBounds(bounds, { padding: { top: 140, bottom: 60, left: 420, right: 60 }, duration: 800 })
+
+      const step = Math.max(1, Math.floor(route.coords.length / Math.max(30, route.duration / 2)))
+      const tickMs = 500
+      const srcProgress = map.current.getSource(PROGRESS_SOURCE_ID) as mapboxgl.GeoJSONSource
+      tracking.current.interval = window.setInterval(() => {
+        const t = tracking.current
+        if (!t || !map.current) return
+        t.idx = Math.min(t.coords.length - 1, t.idx + step)
+        const pos = t.coords[t.idx]
+        t.marker?.setLngLat(pos)
+        const partial = t.coords.slice(0, t.idx + 1)
+        srcProgress.setData(featureLineString(partial) as any)
+        const progress = t.idx / (t.coords.length - 1)
+        const remDist = t.totalDistance * (1 - progress)
+        const remDur = t.totalDuration * (1 - progress)
+        setEtaDistanceMi(miles(remDist))
+        setEtaMinutes(remDur / 60)
+        if (t.idx >= t.coords.length - 1) {
+          stopDemoTracking()
+        }
+      }, tickMs) as unknown as number
+    } catch (e: any) {
+      console.error('Tracking failed', e)
+      setTrackingError(e?.message || 'Tracking failed')
+      setTrackingActive(false)
+    }
+  }
+
+  const stopDemoTracking = () => {
+    const t = tracking.current
+    if (t.interval) window.clearInterval(t.interval as any)
+    t.interval = null
+    t.marker?.remove()
+    t.marker = null
+    clearRouteLayers()
+    setTrackingActive(false)
+    setEtaDistanceMi(0)
+    setEtaMinutes(0)
+    setActiveContractor(null)
+    setActiveJob(null)
+    setElapsedSec(0)
+  }
+
+  const searchAddress = async (query: string) => {
+    if (query.length < 3 || !mapboxgl.accessToken) return
+    try {
+      const resp = await fetch(`https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?access_token=${mapboxgl.accessToken}&country=US&limit=5`)
+      const data = await resp.json()
+      setAddressSuggestions(data.features || [])
+    } catch (e) {
+      console.error('Address search failed', e)
+    }
+  }
+
+  function handleSelectSuggestion(s: any) {
+    setSelectedAddress(s.place_name)
+    setAddressSuggestions([])
+    const center = s.center as [number, number]
+    setSelectedCenter(center)
+    const ctx = s.context || []
+    const zip = (ctx.find((c: any) => (c.id || '').startsWith('postcode'))?.text) || ''
+    setSelectedZip(zip)
+    map.current?.flyTo({ center, zoom: 13 })
+    drawCircle(center, radiusMi)
+  }
+
+  const submitJob = () => {
+    if (!selectedCenter || !selectedZip) {
+      alert('Please select a location first')
+      return
+    }
+
+    if (!newJob.title.trim()) {
+      alert('Please enter a job title')
+      return
+    }
+
+    if (!newJob.budget || parseInt(newJob.budget.replace(/\D/g, '')) <= 0) {
+      alert('Please enter a valid budget')
+      return
+    }
+
+    if (newJob.paymentMethod === 'card') {
+      if (!newJob.cardNumber || !newJob.cardName || !newJob.cardExpiry || !newJob.cardCvv) {
+        alert('Please complete all payment details')
+        return
+      }
+    }
+
+    const job: JobLocation = {
+      id: Date.now().toString(),
+      title: newJob.title,
+      description: newJob.description || 'Posted via form',
+      budget: `$${newJob.budget.replace(/\D/g, '')}`,
+      category: (newJob.category as Category) || 'general',
+      address: selectedAddress,
+      lat: selectedCenter[1],
+      lng: selectedCenter[0],
+      distance: 0,
+      estimatedCost: parseInt(newJob.budget.replace(/\D/g, '')) || 0,
+      priority: 'medium',
+      status: 'open',
+      bids: [],
+      acceptedContractorId: null,
+    }
+    setJobs((prev) => [...prev, job])
+    setNewJob({ 
+      title: '', 
+      description: '', 
+      budget: '', 
+      category: 'general',
+      paymentMethod: 'bank',
+      cardNumber: '',
+      cardName: '',
+      cardExpiry: '',
+      cardCvv: ''
+    })
+    setShowPostJobWizard(false)
+    setPostStep(1)
+    setCurrentView('jobs')
+
+    if (map.current) {
+      const el = createMarker('#22c55e', { blink: true, priority: job.priority })
+      new mapboxgl.Marker(el)
+        .setLngLat([job.lng, job.lat])
+        .setPopup(new mapboxgl.Popup().setHTML(`<div class="p-3"><h3 class="font-bold text-sm">${job.title}</h3><p class="text-xs text-gray-600 mt-1">${job.description}</p><p class="font-semibold text-green-600 mt-2">${job.budget}</p></div>`))
+        .addTo(map.current)
+    }
+  }
+
+  const filteredJobs = useMemo(() => {
+    return jobs.filter((job) => {
+      const matchesSearch = job.title.toLowerCase().includes(searchQuery.toLowerCase()) || job.address.toLowerCase().includes(searchQuery.toLowerCase())
+      const matchesCategory = filterCategory === 'all' || job.category === filterCategory
+      return matchesSearch && matchesCategory
+    })
+  }, [jobs, searchQuery, filterCategory])
+
+  function handleBid(jobId: string, amount: number, message?: string) {
+    const contractor = contractors[0] || { id: 'unknown', name: 'Unknown', lat: 0, lng: 0, rating: 0, specialty: 'General', distance: 0 }
+    const newBid: Bid = { 
+      id: Date.now().toString(), 
+      contractorId: contractor.id, 
+      contractorName: contractor.name, 
+      amount, 
+      message, 
+      createdAt: Date.now(), 
+      status: 'pending' 
+    }
+    
+    setJobs(prev => prev.map(j => j.id === jobId ? {
+      ...j,
+      bids: [...(j.bids || []), newBid]
+    } : j))
+    
+    setPendingBids(prev => [...prev, newBid])
+    
+    setTimeout(() => {
+      setPendingBids(prev => prev.filter(b => b.id !== newBid.id))
+    }, 5000)
+  }
+
+  function handleAcceptBid(jobId: string, bid: Bid) {
+    const job = jobs.find(j => j.id === jobId)
+    if (!job) return
+    
+    setJobs(prev => prev.map(j => j.id === jobId ? {
+      ...j,
+      status: 'accepted',
+      acceptedContractorId: bid.contractorId,
+      bids: (j.bids || []).map(b => ({ ...b, status: b.id === bid.id ? 'accepted' : b.status }))
+    } : j))
+
+    const notification: Notification = {
+      id: Date.now().toString(),
+      title: 'Bid Accepted!',
+      message: `Mr. Clark accepted your bid for "${job.title}"`,
+      type: 'bid_accepted',
+      jobId: job.id,
+      contractorId: bid.contractorId,
+      read: false,
+      timestamp: Date.now()
+    }
+    setNotifications(prev => [notification, ...prev])
+    setAcceptedBidInfo({ job, contractor: bid.contractorName })
+    setShowAcceptedPopup(true)
+
+    const contractor = contractors.find(c => c.id === bid.contractorId) || contractors[0]
+    if (contractor) {
+      setTimeout(() => {
+        startDemoTracking([contractor], [job])
+        setCurrentView('tracking')
+        setActiveContractor(contractor)
+        setActiveJob(job)
+      }, 2000)
+    }
+  }
+
+  function requestBidsForJob(jobId: string) {
+    const targets = contractorsInCircle.slice(0, 3)
+    if (targets.length === 0) {
+      alert('No contractors available in your service area. Try expanding your radius.')
+      return
+    }
+    const simulated = targets.map((c, i) => ({ 
+      id: `${Date.now()}-${i}`, 
+      contractorId: c.id, 
+      contractorName: c.name, 
+      amount: Math.round(150 + Math.random()*300), 
+      message: 'Available today', 
+      createdAt: Date.now(), 
+      status: 'pending' as const 
+    }))
+    setJobs(prev => prev.map(j => j.id === jobId ? { ...j, bids: [...(j.bids || []), ...simulated] } : j))
+  }
+
+  function goBack() {
+    if (currentView === 'tracking') {
+      stopDemoTracking()
+      setCurrentView('main')
+    } else if (currentView === 'job-detail') {
+      setSelectedJob(null)
+      setCurrentView('jobs')
+    } else if (currentView === 'jobs') {
+      if (showPostJobWizard) {
+        setShowPostJobWizard(false)
+        setPostStep(1)
+      }
+      setCurrentView('main')
+    } else {
+      setCurrentView('main')
+    }
+  }
+
+  useEffect(() => {
+    if (!trackingActive) {
+      setElapsedSec(0)
+      return
+    }
+    const id = window.setInterval(() => {
+      const started = tracking.current?.startedAt || Date.now()
+      setElapsedSec(Math.max(0, Math.floor((Date.now() - started) / 1000)))
+    }, 1000)
+    return () => window.clearInterval(id)
+  }, [trackingActive])
+
+  const unreadCount = notifications.filter(n => !n.read).length
+
+  return (
+    <div className="h-screen relative bg-gray-50 flex flex-col" style={{ fontFamily: 'DM Sans, sans-serif' }}>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap');
+        * { font-family: 'DM Sans', sans-serif; }
+        .slide-up { animation: slideUp 0.3s ease-out; }
+        @keyframes slideUp {
+          from { opacity: 0; transform: translateY(20px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        .fade-in { animation: fadeIn 0.3s ease-out; }
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+        .slide-in-right { animation: slideInRight 0.3s ease-out; }
+        @keyframes slideInRight {
+          from { opacity: 0; transform: translateX(100px); }
+          to { opacity: 1; transform: translateX(0); }
+        }
+      `}</style>
+
+      {/* Map Container */}
+      <div className="flex-1 relative">
+        <div id="rushr-map" ref={mapContainer} className="absolute inset-0 w-full h-full z-0" style={{ background: '#0b1220' }} />
+
+        {/* Sidebar */}
+        <div className="absolute top-5 left-5 bottom-5 z-50 w-[420px] bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col">
+            {/* Sidebar Header */}
+            <div className="flex-shrink-0 px-6 py-4 border-b border-gray-100 flex items-center gap-3">
+            {currentView !== 'main' && (
+              <button 
+                onClick={goBack}
+                className="p-2 -ml-2 hover:bg-gray-100 rounded-full transition-colors"
+              >
+                <ArrowLeft className="w-5 h-5" />
+              </button>
+            )}
+            <h2 className="text-lg font-bold text-gray-900">
+              {currentView === 'main' && 'Service Area'}
+              {currentView === 'jobs' && (showPostJobWizard ? 'Post New Job' : 'Available Jobs')}
+              {currentView === 'job-detail' && 'Job Details'}
+              {currentView === 'tracking' && 'Live Tracking'}
+            </h2>
+          </div>
+
+          {/* Scrollable Content */}
+          <div className="flex-1 overflow-y-auto">
+            {currentView === 'main' && (
+              <MainView 
+                selectedAddress={selectedAddress}
+                setSelectedAddress={setSelectedAddress}
+                addressSuggestions={addressSuggestions}
+                searchAddress={searchAddress}
+                handleSelectSuggestion={handleSelectSuggestion}
+                selectedCenter={selectedCenter}
+                selectedZip={selectedZip}
+                radiusMi={radiusMi}
+                setRadiusMi={setRadiusMi}
+                drawCircle={drawCircle}
+                contractorsInCircle={contractorsInCircle}
+                setCurrentView={setCurrentView}
+                userType={userType}
+                filteredJobs={filteredJobs}
+              />
+            )}
+
+            {currentView === 'jobs' && (
+              <div className="p-6 space-y-4 fade-in">
+                {showPostJobWizard ? (
+                  <PostJobWizard
+                    step={postStep}
+                    setStep={setPostStep}
+                    newJob={newJob}
+                    setNewJob={setNewJob}
+                    selectedAddress={selectedAddress}
+                    selectedZip={selectedZip}
+                    onCancel={() => { 
+                      setShowPostJobWizard(false)
+                      setPostStep(1)
+                      setCurrentView('main')
+                    }}
+                    onSubmit={submitJob}
+                  />
+                ) : (
+                  userType === 'homeowner' ? (
+                    <HomeownerView 
+                      jobs={filteredJobs} 
+                      onAcceptBid={handleAcceptBid} 
+                      onRequestBids={requestBidsForJob} 
+                      nearbyCount={contractorsInCircle.length}
+                      onSelectJob={(job: JobLocation) => {
+                        setSelectedJob(job)
+                        setCurrentView('job-detail')
+                      }}
+                    />
+                  ) : (
+                    <ContractorView 
+                      jobs={filteredJobs} 
+                      onBid={handleBid}
+                      onSelectJob={(job: JobLocation) => {
+                        setSelectedJob(job)
+                        setCurrentView('job-detail')
+                      }}
+                    />
+                  )
+                )}
+              </div>
+            )}
+
+            {currentView === 'job-detail' && selectedJob && (
+              <JobDetailView 
+                job={selectedJob}
+                userType={userType}
+                onAcceptBid={handleAcceptBid}
+                onBid={handleBid}
+              />
+            )}
+
+            {currentView === 'tracking' && activeContractor && activeJob && (
+              <div className="p-6 space-y-4 fade-in">
+                <TrackingView
+                  contractor={activeContractor}
+                  job={activeJob}
+                  etaMinutes={Math.max(0, Math.ceil(etaMinutes))}
+                  distanceMi={etaDistanceMi}
+                  elapsedSec={elapsedSec}
+                  onClose={() => {
+                    stopDemoTracking()
+                    setCurrentView('main')
+                  }}
+                />
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Floating Bid Status (Right Side) */}
+        {pendingBids.length > 0 && (
+          <div className="absolute top-5 right-5 z-40 space-y-3 slide-in-right">
+            {pendingBids.map((bid) => (
+              <div key={bid.id} className="bg-white rounded-2xl shadow-2xl p-4 border-l-4 border-blue-500 min-w-[280px]">
+                <div className="flex items-start justify-between mb-2">
+                  <div className="flex-1">
+                    <div className="text-sm font-semibold text-gray-900">New Bid Placed!</div>
+                    <div className="text-xs text-gray-500 mt-0.5">By {bid.contractorName}</div>
+                  </div>
+                  <div className="bg-blue-100 text-blue-700 px-2 py-1 rounded-lg text-xs font-bold">
+                    ${bid.amount}
+                  </div>
+                </div>
+                <div className="text-xs text-gray-600">{bid.message}</div>
+                <div className="mt-2 flex items-center gap-1">
+                  <div className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-pulse"></div>
+                  <span className="text-xs text-gray-500">Pending review</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Notifications Panel */}
+        {showNotifications && (
+          <div className="absolute top-20 right-5 z-50 w-[380px] bg-white rounded-2xl shadow-2xl border border-gray-200 max-h-[500px] overflow-hidden flex flex-col slide-in-right">
+            <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+              <h3 className="font-semibold text-gray-900">Notifications</h3>
+              <button onClick={() => setShowNotifications(false)} className="p-1 hover:bg-gray-100 rounded-full">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto">
+              {notifications.length === 0 ? (
+                <div className="p-8 text-center text-gray-500">
+                  <Bell className="w-8 h-8 mx-auto mb-2 text-gray-300" />
+                  <p className="text-sm">No notifications yet</p>
+                </div>
+              ) : (
+                <div className="divide-y divide-gray-100">
+                  {notifications.map((notif) => (
+                    <div 
+                      key={notif.id} 
+                      className={`p-4 hover:bg-gray-50 cursor-pointer ${!notif.read ? 'bg-blue-50' : ''}`}
+                      onClick={() => {
+                        setNotifications(prev => prev.map(n => n.id === notif.id ? { ...n, read: true } : n))
+                      }}
+                    >
+                      <div className="flex items-start justify-between mb-1">
+                        <div className="font-medium text-sm text-gray-900">{notif.title}</div>
+                        {!notif.read && <div className="w-2 h-2 bg-blue-500 rounded-full"></div>}
+                      </div>
+                      <div className="text-sm text-gray-600">{notif.message}</div>
+                      <div className="text-xs text-gray-400 mt-1">
+                        {new Date(notif.timestamp).toLocaleTimeString()}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Accepted Bid Popup */}
+        {showAcceptedPopup && acceptedBidInfo && (
+          <div className="absolute inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm">
+            <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-md w-full mx-4 slide-up">
+              <div className="text-center mb-6">
+                <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <BadgeCheck className="w-8 h-8 text-green-600" />
+                </div>
+                <h3 className="text-2xl font-bold text-gray-900 mb-2">Bid Accepted!</h3>
+                <p className="text-gray-600">
+                  Mr. Clark accepted your bid for<br />
+                  <span className="font-semibold">"{acceptedBidInfo.job.title}"</span>
+                </p>
+              </div>
+              
+              <div className="space-y-3 mb-6">
+                <button className="w-full bg-black text-white py-3 rounded-xl font-medium hover:bg-gray-800 transition-all flex items-center justify-center gap-2">
+                  <MessageSquare className="w-5 h-5" />
+                  Open Chat
+                </button>
+                <button className="w-full bg-gray-100 text-gray-900 py-3 rounded-xl font-medium hover:bg-gray-200 transition-all flex items-center justify-center gap-2">
+                  <Phone className="w-5 h-5" />
+                  Call Customer
+                </button>
+              </div>
+              
+              <button 
+                onClick={() => {
+                  setShowAcceptedPopup(false)
+                  setAcceptedBidInfo(null)
+                }}
+                className="w-full text-gray-600 text-sm hover:text-gray-900"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        )}
+
+        {!mapReady && (
+          <div className="absolute inset-0 z-10 flex items-center justify-center pointer-events-none">
+            <div className="bg-white px-6 py-4 rounded-2xl shadow-xl">
+              <div className="font-medium text-gray-900">Initializing map...</div>
+              {mapError && <div className="mt-1 text-red-600 text-sm">{mapError}</div>}
+            </div>
+          </div>
+        )}
+
+        <div className="absolute right-5 bottom-5 z-20">
+          {!trackingActive && (
+            <button 
+              onClick={() => startDemoTracking(contractors, jobs)} 
+              className="bg-black text-white px-5 py-3 rounded-2xl shadow-2xl hover:bg-gray-800 transition-all font-medium text-sm"
+            >
+              Start Demo
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function MainView({ selectedAddress, setSelectedAddress, addressSuggestions, searchAddress, handleSelectSuggestion, selectedCenter, selectedZip, radiusMi, setRadiusMi, drawCircle, contractorsInCircle, setCurrentView, userType, filteredJobs }: any) {
+  return (
+    <div className="p-6 space-y-6 fade-in">
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">Service Location</label>
+        <div className="relative">
+          <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 h-5 w-5" />
+          <input 
+            type="text" 
+            placeholder="Enter your address" 
+            className="w-full pl-12 pr-4 py-3.5 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-black focus:border-black text-base transition-all" 
+            value={selectedAddress} 
+            onChange={(e) => { setSelectedAddress(e.target.value); searchAddress(e.target.value) }} 
+          />
+        </div>
+        
+        {addressSuggestions.length > 0 && (
+          <div className="mt-3 border border-gray-200 rounded-2xl overflow-hidden bg-white shadow-lg slide-up max-h-[200px] overflow-y-auto">
+            {addressSuggestions.map((s: any, i: number) => (
+              <button 
+                key={i} 
+                onClick={() => handleSelectSuggestion(s)} 
+                className="w-full text-left px-4 py-3 hover:bg-gray-50 border-b last:border-b-0 transition-colors"
+              >
+                <div className="font-medium text-sm text-gray-900">{s.text}</div>
+                <div className="text-xs text-gray-500 mt-0.5">{s.place_name}</div>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {selectedCenter && (
+        <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl p-5 space-y-4 slide-up">
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-semibold text-gray-900">Service Area</span>
+            <span className="text-sm px-3 py-1 bg-white rounded-full font-medium text-gray-900 shadow-sm">
+              ZIP: {selectedZip || '—'}
+            </span>
+          </div>
+          
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-sm text-gray-600">Search Radius</span>
+              <span className="text-sm font-semibold text-gray-900">{radiusMi.toFixed(1)} miles</span>
+            </div>
+            <input 
+              type="range" 
+              min={1} 
+              max={15} 
+              step={0.5} 
+              value={radiusMi} 
+              onChange={(e) => { 
+                const v = parseFloat(e.target.value); 
+                setRadiusMi(v); 
+                if (selectedCenter) drawCircle(selectedCenter, v) 
+              }} 
+              className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-black" 
+            />
+          </div>
+          
+          {!!contractorsInCircle.length && (
+            <div className="pt-4 border-t border-gray-200 flex items-center justify-between">
+              <span className="text-sm text-gray-600">Available contractors</span>
+              <span className="text-lg font-bold text-black">{contractorsInCircle.length}</span>
+            </div>
+          )}
+        </div>
+      )}
+
+      {selectedCenter && (
+        <button 
+          onClick={() => setCurrentView('jobs')}
+          className="w-full bg-black text-white py-4 rounded-2xl font-semibold text-base hover:bg-gray-800 transition-all shadow-lg flex items-center justify-between px-5"
+        >
+          <span>{userType === 'homeowner' ? `Find Contractors` : `Find Jobs`}</span>
+          <div className="flex items-center gap-2">
+            <span className="bg-white/20 px-2.5 py-1 rounded-full text-sm">{contractorsInCircle.length || filteredJobs.length}</span>
+            <ChevronRight className="w-5 h-5" />
+          </div>
+        </button>
+      )}
+    </div>
+  )
+}
+
+function HomeownerView({ jobs, onAcceptBid, onRequestBids, nearbyCount, onSelectJob }: any) {
+  return (
+    <div className="space-y-4">
+      {jobs.length === 0 && (
+        <div className="text-center py-12">
+          <div className="text-gray-400 mb-2 text-4xl">📋</div>
+          <p className="text-gray-600">No jobs yet. Post your first job to get started!</p>
+        </div>
+      )}
+      {jobs.map((job: JobLocation) => (
+        <div 
+          key={job.id} 
+          className="bg-white border border-gray-200 rounded-2xl p-5 hover:shadow-lg transition-all cursor-pointer slide-up"
+          onClick={() => onSelectJob(job)}
+        >
+          <div className="flex items-start justify-between mb-3">
+            <h4 className="font-semibold text-gray-900 text-base flex-1 pr-3">{job.title}</h4>
+            <span className={`px-3 py-1 rounded-full text-xs font-medium text-white flex-shrink-0 ${
+              job.status === 'accepted' ? 'bg-green-500' : 'bg-gray-400'
+            }`}>
+              {job.status === 'accepted' ? 'Active' : 'Open'}
+            </span>
+          </div>
+          <p className="text-sm text-gray-600 mb-4 leading-relaxed line-clamp-2">{job.description}</p>
+          <div className="flex items-center gap-2 text-sm text-gray-500 mb-4">
+            <MapPin className="h-4 w-4 flex-shrink-0" />
+            <span className="truncate">{job.address}</span>
+          </div>
+          <div className="flex items-center justify-between pt-4 border-t border-gray-100">
+            <span className="text-2xl font-bold text-gray-900">{job.budget}</span>
+            {job.bids && job.bids.length > 0 && (
+              <span className="text-sm text-gray-600">{job.bids.length} bids</span>
+            )}
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function ContractorView({ jobs, onBid, onSelectJob }: any) {
+  return (
+    <div className="space-y-4">
+      <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-2xl p-5">
+        <h3 className="font-semibold text-gray-900 mb-1">Available Jobs</h3>
+        <p className="text-sm text-gray-600">Green markers show job locations</p>
+      </div>
+      {jobs.length === 0 && (
+        <div className="text-center py-12">
+          <div className="text-gray-400 mb-2 text-4xl">🔍</div>
+          <p className="text-gray-600">No jobs available in your area</p>
+        </div>
+      )}
+      {jobs.map((job: JobLocation) => (
+        <div 
+          key={job.id} 
+          className="bg-white border border-gray-200 rounded-2xl p-5 hover:shadow-lg transition-all cursor-pointer slide-up"
+          onClick={() => onSelectJob(job)}
+        >
+          <h4 className="font-semibold text-gray-900 mb-2">{job.title}</h4>
+          <p className="text-sm text-gray-600 mb-3 leading-relaxed line-clamp-2">{job.description}</p>
+          <div className="flex items-center gap-2 text-sm text-gray-500 mb-4">
+            <MapPin className="h-4 w-4" />
+            <span>{job.distance.toFixed(1)} miles away</span>
+          </div>
+          <div className="flex items-center justify-between pt-4 border-t border-gray-100">
+            <span className="text-2xl font-bold text-gray-900">{job.budget}</span>
+            <ChevronRight className="w-5 h-5 text-gray-400" />
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function JobDetailView({ job, userType, onAcceptBid, onBid }: any) {
+  return (
+    <div className="p-6 space-y-5 fade-in">
+      <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-2xl p-5">
+        <div className="flex items-start justify-between mb-3">
+          <h3 className="text-xl font-bold text-gray-900 flex-1">{job.title}</h3>
+          <span className={`px-3 py-1 rounded-full text-xs font-medium text-white ${
+            job.status === 'accepted' ? 'bg-green-500' : 'bg-gray-400'
+          }`}>
+            {job.status === 'accepted' ? 'Active' : 'Open'}
+          </span>
+        </div>
+        <div className="flex items-center gap-2 text-sm text-gray-600">
+          <MapPin className="w-4 h-4" />
+          <span>{job.address}</span>
+        </div>
+      </div>
+
+      <div className="bg-white border border-gray-200 rounded-2xl p-5 space-y-4">
+        <div>
+          <div className="text-xs text-gray-500 mb-1">Description</div>
+          <p className="text-sm text-gray-900 leading-relaxed">{job.description}</p>
+        </div>
+        
+        <div className="grid grid-cols-2 gap-4 pt-4 border-t border-gray-100">
+          <div>
+            <div className="text-xs text-gray-500 mb-1">Budget</div>
+            <div className="text-2xl font-bold text-gray-900">{job.budget}</div>
+          </div>
+          <div>
+            <div className="text-xs text-gray-500 mb-1">Category</div>
+            <div className="text-sm font-medium text-gray-900 capitalize">{job.category}</div>
+          </div>
+        </div>
+
+        <div className="pt-4 border-t border-gray-100">
+          <div className="text-xs text-gray-500 mb-1">Distance</div>
+          <div className="text-sm font-medium text-gray-900">{job.distance.toFixed(1)} miles away</div>
+        </div>
+      </div>
+
+      {userType === 'contractor' && job.status === 'open' && (
+        <div className="bg-white border border-gray-200 rounded-2xl p-5">
+          <h4 className="font-semibold text-gray-900 mb-3">Place Your Bid</h4>
+          <div className="flex items-center gap-2">
+            <input 
+              type="number" 
+              placeholder="Your bid amount" 
+              className="flex-1 px-4 py-3 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-black" 
+              id={`bid-detail-${job.id}`} 
+            />
+            <button 
+              onClick={() => { 
+                const input = document.getElementById(`bid-detail-${job.id}`) as HTMLInputElement
+                const val = parseFloat(input?.value || '0')
+                if (val > 0) {
+                  onBid(job.id, val, 'Available today')
+                  input.value = ''
+                  alert('Bid placed successfully!')
+                } else {
+                  alert('Please enter a valid bid amount')
+                }
+              }} 
+              className="bg-black text-white px-5 py-3 rounded-xl text-sm font-medium hover:bg-gray-800 transition-all whitespace-nowrap"
+            >
+              Place Bid
+            </button>
+          </div>
+        </div>
+      )}
+
+      {userType === 'homeowner' && job.bids && job.bids.length > 0 && (
+        <div className="space-y-3">
+          <h4 className="font-semibold text-gray-900">Bids Received ({job.bids.length})</h4>
+          {job.bids.map((bid: Bid) => (
+            <div key={bid.id} className="bg-white border border-gray-200 rounded-2xl p-4">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex-1">
+                  <div className="font-medium text-gray-900">{bid.contractorName}</div>
+                  {bid.message && <div className="text-xs text-gray-500 mt-0.5">{bid.message}</div>}
+                </div>
+                <div className="text-xl font-bold text-gray-900">${bid.amount}</div>
+              </div>
+              {bid.status === 'pending' && (
+                <button 
+                  onClick={() => onAcceptBid(job.id, bid)} 
+                  className="w-full bg-green-600 text-white py-2 rounded-xl text-sm font-medium hover:bg-green-700 transition-all mt-2"
+                >
+                  Accept Bid
+                </button>
+              )}
+              {bid.status === 'accepted' && (
+                <div className="bg-green-50 text-green-700 py-2 px-3 rounded-xl text-sm font-medium text-center mt-2">
+                  ✓ Accepted
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function TrackingView({ contractor, job, etaMinutes, distanceMi, elapsedSec, onClose }: any) {
+  return (
+    <div className="space-y-5 slide-up">
+      <div className="bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl p-6 text-white">
+        <div className="flex items-center gap-2 mb-2">
+          <BadgeCheck className="w-5 h-5" />
+          <span className="font-semibold">Job Accepted</span>
+        </div>
+        <h3 className="text-xl font-bold mb-2">{job.title}</h3>
+        <div className="flex items-center gap-2 text-white/90 text-sm">
+          <MapPin className="w-4 h-4" />
+          <span>{job.address}</span>
+        </div>
+      </div>
+      
+      <div className="grid grid-cols-3 gap-3">
+        <div className="bg-blue-50 rounded-2xl p-4 text-center border border-blue-100">
+          <div className="text-xs text-blue-600 font-medium mb-1">ETA</div>
+          <div className="text-2xl font-bold text-blue-700">{etaMinutes}'</div>
+        </div>
+        <div className="bg-purple-50 rounded-2xl p-4 text-center border border-purple-100">
+          <div className="text-xs text-purple-600 font-medium mb-1">Distance</div>
+          <div className="text-2xl font-bold text-purple-700">{distanceMi.toFixed(1)}</div>
+        </div>
+        <div className="bg-orange-50 rounded-2xl p-4 text-center border border-orange-100">
+          <div className="text-xs text-orange-600 font-medium mb-1">Time</div>
+          <div className="text-lg font-bold text-orange-700 flex items-center justify-center gap-1">
+            <Clock className="w-4 h-4" />
+            {formatDuration(elapsedSec)}
+          </div>
+        </div>
+      </div>
+      
+      <div className="bg-white border-2 border-gray-200 rounded-2xl p-5">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex-1">
+            <div className="text-xs text-gray-500 mb-1">Your Contractor</div>
+            <div className="font-semibold text-gray-900 text-lg">{contractor.name}</div>
+            <div className="text-sm text-gray-600 flex items-center gap-2 mt-1">
+              <span>{contractor.specialty}</span>
+              <span>•</span>
+              <span className="text-yellow-600">★ {contractor.rating}</span>
+            </div>
+          </div>
+          <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center text-white font-bold text-xl shadow-lg">
+            {contractor.name.charAt(0)}
+          </div>
+        </div>
+        
+        <div className="grid grid-cols-2 gap-3">
+          <button className="bg-black text-white py-3 rounded-xl font-medium text-sm hover:bg-gray-800 transition-all flex items-center justify-center gap-2">
+            <Phone className="w-4 h-4" />
+            Call
+          </button>
+          <button className="bg-gray-100 text-gray-900 py-3 rounded-xl font-medium text-sm hover:bg-gray-200 transition-all flex items-center justify-center gap-2">
+            <MessageSquare className="w-4 h-4" />
+            Message
+          </button>
+        </div>
+      </div>
+      
+      <button 
+        onClick={onClose}
+        className="w-full py-3 bg-red-50 text-red-600 rounded-xl font-medium hover:bg-red-100 transition-all"
+      >
+        End Tracking
+      </button>
+    </div>
+  )
+}
+
+function PostJobWizard({ step, setStep, newJob, setNewJob, selectedAddress, selectedZip, onCancel, onSubmit }: any) {
+  const canContinueStep1 = newJob.title.trim().length > 0 && newJob.description.trim().length > 0
+  const canContinueStep2 = newJob.budget.replace(/\D/g, '').length > 0 && parseInt(newJob.budget.replace(/\D/g, '')) > 0
+  const canContinueStep3 = newJob.paymentMethod === 'bank' || (
+    newJob.cardNumber.length > 0 && 
+    newJob.cardName.length > 0 && 
+    newJob.cardExpiry.length > 0 && 
+    newJob.cardCvv.length > 0
+  )
+
+  return (
+    <div className="space-y-5 slide-up">
+      <div className="flex items-center justify-between">
+        <span className="text-sm text-gray-500">Step {step}/4</span>
+      </div>
+      
+      <div className="flex gap-1">
+        {[1, 2, 3, 4].map((s) => (
+          <div key={s} className={`h-1 flex-1 rounded-full transition-all ${s <= step ? 'bg-black' : 'bg-gray-200'}`} />
+        ))}
+      </div>
+
+      {step === 1 && (
+        <div className="space-y-5">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Job Title *</label>
+            <input 
+              value={newJob.title} 
+              onChange={(e) => setNewJob({ ...newJob, title: e.target.value })} 
+              placeholder="e.g., Fix leaking faucet" 
+              className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-black" 
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Description *</label>
+            <textarea 
+              value={newJob.description} 
+              onChange={(e) => setNewJob({ ...newJob, description: e.target.value })} 
+              placeholder="Describe the work needed..." 
+              className="w-full px-4 py-3 border border-gray-200 rounded-xl h-32 focus:ring-2 focus:ring-black resize-none" 
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Category</label>
+            <select 
+              value={newJob.category} 
+              onChange={(e) => setNewJob({ ...newJob, category: e.target.value })} 
+              className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-black bg-white"
+            >
+              <option value="general">General</option>
+              <option value="plumbing">Plumbing</option>
+              <option value="electrical">Electrical</option>
+              <option value="hvac">HVAC</option>
+            </select>
+          </div>
+        </div>
+      )}
+
+      {step === 2 && (
+        <div className="space-y-5">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Budget *</label>
+            <div className="relative">
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500">$</span>
+              <input 
+                value={newJob.budget.replace('$', '')} 
+                onChange={(e) => setNewJob({ ...newJob, budget: e.target.value })} 
+                placeholder="500" 
+                type="number"
+                className="w-full pl-8 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-black" 
+              />
+            </div>
+          </div>
+          <div className="bg-gray-50 rounded-2xl p-4">
+            <div className="text-sm font-medium text-gray-900 mb-2">Service Location</div>
+            <div className="flex items-start gap-2 text-sm text-gray-600">
+              <MapPin className="w-4 h-4 mt-0.5 flex-shrink-0" />
+              <div>
+                <div className="font-medium text-gray-900">{selectedAddress}</div>
+                <div className="text-xs text-gray-500 mt-1">ZIP: {selectedZip}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {step === 3 && (
+        <div className="space-y-5">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-3">Payment Method *</label>
+            <div className="space-y-3">
+              <button
+                onClick={() => setNewJob({ ...newJob, paymentMethod: 'bank' })}
+                className={`w-full p-4 border-2 rounded-2xl transition-all ${
+                  newJob.paymentMethod === 'bank' ? 'border-black bg-gray-50' : 'border-gray-200'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                    newJob.paymentMethod === 'bank' ? 'border-black' : 'border-gray-300'
+                  }`}>
+                    {newJob.paymentMethod === 'bank' && <div className="w-3 h-3 bg-black rounded-full" />}
+                  </div>
+                  <Building2 className="w-6 h-6 text-gray-700" />
+                  <div className="text-left flex-1">
+                    <div className="font-semibold text-gray-900">Bank Transfer</div>
+                    <div className="text-sm text-gray-500">Secure payment via bank</div>
+                  </div>
+                </div>
+              </button>
+              
+              <button
+                onClick={() => setNewJob({ ...newJob, paymentMethod: 'card' })}
+                className={`w-full p-4 border-2 rounded-2xl transition-all ${
+                  newJob.paymentMethod === 'card' ? 'border-black bg-gray-50' : 'border-gray-200'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                    newJob.paymentMethod === 'card' ? 'border-black' : 'border-gray-300'
+                  }`}>
+                    {newJob.paymentMethod === 'card' && <div className="w-3 h-3 bg-black rounded-full" />}
+                  </div>
+                  <CreditCard className="w-6 h-6 text-gray-700" />
+                  <div className="text-left flex-1">
+                    <div className="font-semibold text-gray-900">Credit Card</div>
+                    <div className="text-sm text-gray-500">Pay with card</div>
+                  </div>
+                </div>
+              </button>
+            </div>
+          </div>
+
+          {newJob.paymentMethod === 'card' && (
+            <div className="space-y-4 pt-4 border-t border-gray-200">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Card Number *</label>
+                <input 
+                  value={newJob.cardNumber} 
+                  onChange={(e) => setNewJob({ ...newJob, cardNumber: e.target.value })} 
+                  placeholder="1234 5678 9012 3456" 
+                  className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-black" 
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Cardholder Name *</label>
+                <input 
+                  value={newJob.cardName} 
+                  onChange={(e) => setNewJob({ ...newJob, cardName: e.target.value })} 
+                  placeholder="John Doe" 
+                  className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-black" 
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Expiry *</label>
+                  <input 
+                    value={newJob.cardExpiry} 
+                    onChange={(e) => setNewJob({ ...newJob, cardExpiry: e.target.value })} 
+                    placeholder="MM/YY" 
+                    className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-black" 
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">CVV *</label>
+                  <input 
+                    value={newJob.cardCvv} 
+                    onChange={(e) => setNewJob({ ...newJob, cardCvv: e.target.value })} 
+                    placeholder="123" 
+                    type="password"
+                    maxLength={3}
+                    className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-black" 
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {step === 4 && (
+        <div className="space-y-5">
+          <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl p-5 space-y-4">
+            <h4 className="font-semibold text-gray-900">Review Your Job</h4>
+            <div className="space-y-3">
+              <div>
+                <div className="text-xs text-gray-500">Title</div>
+                <div className="font-medium text-gray-900">{newJob.title || '—'}</div>
+              </div>
+              <div>
+                <div className="text-xs text-gray-500">Description</div>
+                <div className="text-sm text-gray-700">{newJob.description || '—'}</div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <div className="text-xs text-gray-500">Category</div>
+                  <div className="font-medium text-gray-900 capitalize">{newJob.category}</div>
+                </div>
+                <div>
+                  <div className="text-xs text-gray-500">Budget</div>
+                  <div className="font-semibold text-gray-900">${newJob.budget || '0'}</div>
+                </div>
+              </div>
+              <div>
+                <div className="text-xs text-gray-500">Location</div>
+                <div className="text-sm text-gray-700">{selectedAddress}</div>
+              </div>
+              <div>
+                <div className="text-xs text-gray-500">Payment</div>
+                <div className="font-medium text-gray-900 capitalize">{newJob.paymentMethod === 'bank' ? 'Bank Transfer' : 'Credit Card'}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="flex gap-3 pt-4">
+        <button 
+          onClick={step > 1 ? () => setStep(step - 1) : onCancel} 
+          className="flex-1 py-3 bg-gray-100 rounded-xl font-medium hover:bg-gray-200 transition-all"
+        >
+          {step > 1 ? 'Back' : 'Cancel'}
+        </button>
+        <button 
+          onClick={() => {
+            if (step === 1 && !canContinueStep1) {
+              alert('Please fill in title and description')
+              return
+            }
+            if (step === 2 && !canContinueStep2) {
+              alert('Please enter a valid budget')
+              return
+            }
+            if (step === 3 && !canContinueStep3) {
+              alert('Please complete payment details')
+              return
+            }
+            if (step < 4) {
+              setStep(step + 1)
+            } else {
+              onSubmit()
+            }
+          }}
+          className="flex-1 py-3 bg-black text-white rounded-xl font-medium hover:bg-gray-800 transition-all"
+        >
+          {step < 4 ? 'Continue' : 'Post Job'}
+        </button>
+      </div>
+    </div>
+  )
+}
+
+function createMarker(color: string, opts: { blink?: boolean; priority?: Priority }) {
+  const dot = document.createElement('div')
+  dot.style.width = '12px'
+  dot.style.height = '12px'
+  dot.style.borderRadius = '9999px'
+  dot.style.backgroundColor = color
+  dot.style.boxShadow = '0 0 0 2px rgba(255,255,255,0.8)'
+  dot.style.position = 'relative'
+  if (opts.blink) {
+    const ring = document.createElement('span')
+    ring.style.position = 'absolute'
+    ring.style.inset = '-8px'
+    ring.style.borderRadius = '9999px'
+    ring.style.border = '2px solid ' + color
+    ring.style.opacity = '0.6'
+    ring.style.animation = `pulseRing ${opts.priority === 'emergency' ? 0.9 : opts.priority === 'high' ? 1.2 : 1.6}s ease-out infinite`
+    dot.appendChild(ring)
+  }
+  const id = 'pulseRingKeyframe'
+  if (!document.getElementById(id)) {
+    const style = document.createElement('style')
+    style.id = id
+    style.innerHTML = `@keyframes pulseRing {0% {transform: scale(0.6); opacity: 0.7;} 70% {transform: scale(1.8); opacity: 0.1;} 100% {transform: scale(2); opacity: 0;}}`
+    document.head.appendChild(style)
+  }
+  return dot
+}
+
+function buildJobPopup(job: JobLocation) {
+  return `<div class="rounded-xl border shadow-xl bg-white overflow-hidden min-w-[220px]"><div class="p-3"><h3 class="font-semibold text-sm text-gray-900">${job.title}</h3><p class="text-xs text-gray-600 mt-1">${job.description}</p><div class="mt-2"><span class="text-green-600 font-semibold">${job.budget}</span></div></div></div>`
+}
+
+function buildContractorPopup(c: Contractor) {
+  return `<div class="rounded-xl border shadow-xl bg-white overflow-hidden min-w-[220px]"><div class="p-3"><h3 class="font-semibold text-sm text-gray-900">${c.name}</h3><p class="text-xs text-gray-600 mt-1">${c.specialty}</p><div class="mt-2"><span class="text-blue-600 font-semibold">★ ${c.rating}</span></div></div></div>`
+}
+
+async function fetchRoute(from: [number, number], to: [number, number]) {
+  const url = `https://api.mapbox.com/directions/v5/mapbox/driving-traffic/${from[0]},${from[1]};${to[0]},${to[1]}?geometries=geojson&overview=full&steps=false&access_token=${mapboxgl.accessToken}`
+  const res = await fetch(url)
+  if (!res.ok) throw new Error(`Directions failed: ${res.status}`)
+  const data = await res.json()
+  if (!data.routes || !data.routes[0]) throw new Error('No route found')
+  const route = data.routes[0]
+  return { coords: route.geometry.coordinates as [number, number][], distance: route.distance as number, duration: route.duration as number }
+}
+
+function miles(meters: number) { return meters / 1609.344 }
+
+function addOrUpdateGeojson(map: mapboxgl.Map, id: string, data: any, style: { color: string; width: number; opacity?: number }) {
+  const sourceExists = !!map.getSource(id)
+  if (!sourceExists) {
+    map.addSource(id, { type: 'geojson', data })
+    map.addLayer({ id, type: 'line', source: id, layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': style.color, 'line-width': style.width, 'line-opacity': style.opacity ?? 1 } })
+  } else {
+    (map.getSource(id) as mapboxgl.GeoJSONSource).setData(data)
+  }
+}
+
+function createVehicleMarker() {
+  const el = document.createElement('div')
+  el.className = 'rounded-full bg-white shadow-lg border-2 border-blue-500 flex items-center justify-center'
+  el.style.width = '32px'
+  el.style.height = '32px'
+  el.innerHTML = '<span style="font-size:16px;">🚐</span>'
+  return el
+}
+
+function lineString(coords: [number, number][]) {
+  return { type: 'Feature', geometry: { type: 'LineString', coordinates: coords }, properties: {} }
+}
+
+function featureLineString(coords: [number, number][]) {
+  return { type: 'Feature', geometry: { type: 'LineString', coordinates: coords }, properties: {} } as GeoJSON.Feature
+}
+
+function formatDuration(sec: number) {
+  const m = Math.floor(sec / 60)
+  const s = sec % 60
+  return `${m}:${s.toString().padStart(2, '0')}`
+}
