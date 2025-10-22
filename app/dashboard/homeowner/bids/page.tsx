@@ -113,10 +113,7 @@ export default function HomeownerBidsPage() {
       // Update bid status to accepted
       const { error: bidError } = await supabase
         .from('job_bids')
-        .update({
-          status: 'accepted',
-          accepted_at: new Date().toISOString()
-        })
+        .update({ status: 'accepted' })
         .eq('id', bid.id)
 
       if (bidError) {

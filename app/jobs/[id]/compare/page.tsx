@@ -127,7 +127,7 @@ export default function CompareBids(){
       // Update bid status
       const { error: bidError } = await supabase
         .from('job_bids')
-        .update({ status: 'accepted', accepted_at: new Date().toISOString() })
+        .update({ status: 'accepted' })
         .eq('id', bidId)
 
       if (bidError) {
