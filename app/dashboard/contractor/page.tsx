@@ -544,7 +544,7 @@ export default function ContractorDashboardPage() {
 
         {/* Today schedule */}
         <div className="rounded-2xl border border-slate-200 p-4">
-          <SectionTitle action={<Link href="/calendar" className="text-brand underline text-sm">Calendar</Link>}>
+          <SectionTitle action={<Link href="/dashboard/contractor/calendar" className="text-brand underline text-sm">Calendar</Link>}>
             Today&apos;s Schedule
           </SectionTitle>
           {currentJobs.length > 0 && (
