@@ -275,7 +275,7 @@ export default function Header() {
   // Route menus to their owning site (absolute URLs)
   const findProItems = [
     { label: 'Post a Job',            href: '/post-job' },
-    { label: 'Search for a Pro',      href: '/rushrmap' },
+    { label: 'RushrMap',              href: '/rushrmap' },
     { label: 'How it Works',          href: '/how-it-works' },
   ]
   const findWorkItems = isSignedInAsContractor ? [
@@ -356,8 +356,6 @@ export default function Header() {
             items={moreItems}
             active={moreActive}
           />
-          {/* RushrMap */}
-          <NavA href="/rushrmap">RushrMap</NavA>
           {/* Messages - show for logged in users only */}
           {signedIn && (
             <NavA href={isSignedInAsContractor ? '/dashboard/contractor/messages' : '/dashboard/homeowner/messages'}>
@@ -478,15 +476,6 @@ export default function Header() {
                   </button>
                 )
               ))}
-
-              {/* RushrMap */}
-              <Link
-                href="/rushrmap"
-                onClick={() => setMobileMenuOpen(false)}
-                className="block w-full text-left px-3 py-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-sm font-medium text-slate-700 dark:text-slate-300"
-              >
-                RushrMap
-              </Link>
 
               {/* Messages - show for logged in users only */}
               {signedIn && (
