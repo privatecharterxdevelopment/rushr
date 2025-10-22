@@ -58,15 +58,9 @@ export default function ProAuthModal() {
     }
   }, [])
 
-  // 🔗 ALSO auto-open if URL has ?proauth=signin (& optional ?callback=/some/path)
-  useEffect(() => {
-    const a = params.get("proauth")
-    const cb = params.get("callback") || undefined
-    if (a === "signin" && !open) {
-      callbackRef.current = cb
-      setOpen(true)
-    }
-  }, [params, open])
+  // URL parameter auto-open DISABLED to allow browsing Pro page without modal
+  // Modal now only opens when user explicitly clicks "Sign In" button
+  // If you need URL-based auto-open in future, add back the useEffect below
 
   // Clean up ?proauth / ?callback in the URL when closing
   const cleanUrl = () => {
