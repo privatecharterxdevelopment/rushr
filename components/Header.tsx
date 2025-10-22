@@ -405,8 +405,8 @@ export default function Header() {
             </>
           ) : (
             <>
-              {/* Get Help Now button for logged in homeowners */}
-              {isSignedInAsHomeowner && !isProRoute && (
+              {/* Get Help Now button for logged in homeowners only (not contractors) */}
+              {isSignedInAsHomeowner && !isProRoute && !isSignedInAsContractor && (
                 <button
                   onClick={() => router.push('/post-job')}
                   className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-medium shadow-sm text-sm whitespace-nowrap"
@@ -482,8 +482,8 @@ export default function Header() {
               </>
             ) : (
               <div className="py-2 space-y-2">
-                {/* Get Help Now button for logged in homeowners on mobile */}
-                {isSignedInAsHomeowner && !isProRoute && (
+                {/* Get Help Now button for logged in homeowners only (not contractors) on mobile */}
+                {isSignedInAsHomeowner && !isProRoute && !isSignedInAsContractor && (
                   <button
                     className="w-full text-left px-3 py-2 rounded-lg bg-emerald-600 text-white font-medium text-sm"
                     onClick={() => {
