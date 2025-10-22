@@ -53,23 +53,31 @@ export default function HomeownerBidsPage() {
       const enrichedBids = await Promise.all(
         (bidsData || []).map(async (bid) => {
           // Get job title
-          const { data: jobData } = await supabase
+          const { data: jobData, error: jobError } = await supabase
             .from('homeowner_jobs')
             .select('title')
             .eq('id', bid.job_id)
             .single()
 
-          // Get contractor name
-          const { data: contractorData } = await supabase
+          if (jobError) {
+            console.error('Error fetching job for bid:', bid.id, jobError)
+          }
+
+          // Get contractor name - contractor_id is the auth user id, so look up by user_id
+          const { data: contractorData, error: contractorError } = await supabase
             .from('pro_contractors')
-            .select('name')
-            .eq('id', bid.contractor_id)
+            .select('name, business_name')
+            .eq('user_id', bid.contractor_id)
             .single()
+
+          if (contractorError) {
+            console.error('Error fetching contractor for bid:', bid.id, bid.contractor_id, contractorError)
+          }
 
           return {
             ...bid,
             job_title: jobData?.title || 'Unknown Job',
-            contractor_name: contractorData?.name || 'Unknown Contractor'
+            contractor_name: contractorData?.business_name || contractorData?.name || 'Unknown Contractor'
           }
         })
       )
