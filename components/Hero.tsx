@@ -111,11 +111,11 @@ export default function Hero(){
   }
 
   return (
-    <section className="relative -mx-3 sm:-mx-4 lg:-mx-6 overflow-visible">
+    <section className="relative -mx-4 sm:-mx-6 lg:-mx-8 overflow-visible">
       {/* Dark emerald gradient background */}
       <div className="absolute inset-0 bg-gradient-to-br from-emerald-800 via-emerald-700 to-teal-800" />
 
-      <div className="relative container-max px-5 md:px-10 lg:px-16 py-10 md:py-14 lg:py-16">
+      <div className="relative container-max px-4 sm:px-6 md:px-10 lg:px-16 py-12 md:py-14 lg:py-16 min-h-[100vh] md:min-h-0 flex items-center">
         <div className="grid lg:grid-cols-2 gap-8 lg:gap-12">
           {/* Left Column - Content */}
           <div className="text-white space-y-3 lg:space-y-4 flex flex-col justify-center">

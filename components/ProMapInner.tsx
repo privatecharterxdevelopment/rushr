@@ -82,6 +82,7 @@ export default function ProMapInner({
 
   // --- Sidebar page state (Uber-style two-page flow) ---
   const [sidebarPage, setSidebarPage] = useState<'search' | 'results'>('search')
+  const [sidebarOpen, setSidebarOpen] = useState(false) // Sidebar closed by default
 
   // --- Distance calculation (Haversine formula) ---
   function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
@@ -829,10 +830,27 @@ export default function ProMapInner({
         style={{ zIndex: 0 }}
       />
 
-      {/* Uber-style Floating Left Sidebar - Two Page Flow (only if not hidden) */}
+      {/* Toggle Sidebar Button */}
       {!hideSidebar && (
+        <button
+          onClick={() => setSidebarOpen(!sidebarOpen)}
+          className="absolute top-4 left-4 z-20 bg-white rounded-lg shadow-lg p-3 hover:bg-slate-50 transition-colors"
+          title={sidebarOpen ? "Close sidebar" : "Open sidebar"}
+        >
+          <svg className="h-5 w-5 text-slate-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            {sidebarOpen ? (
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            ) : (
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            )}
+          </svg>
+        </button>
+      )}
+
+      {/* Uber-style Floating Left Sidebar - Two Page Flow (only if not hidden and open) */}
+      {!hideSidebar && sidebarOpen && (
         <div
-          className="absolute top-4 left-4 bottom-4 w-96 bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col"
+          className="absolute top-4 left-16 bottom-4 w-96 bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col"
           style={{ zIndex: 10, maxHeight: 'calc(100vh - 120px)' }}
         >
         {/* PAGE 1: Search Page */}

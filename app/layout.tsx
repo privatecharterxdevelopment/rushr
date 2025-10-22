@@ -68,7 +68,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           <RouteGuard>
             <BrandClassController />
             <Header />
-            <main className="max-w-7xl mx-auto w-full px-3 sm:px-4 lg:px-6">
+            <main className="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8">
               {children}
             </main>
             <Footer />

@@ -565,7 +565,6 @@ export default function Header() {
                     + Get Help Now
                   </button>
                 )}
-                <UserDropdown />
               </div>
             )}
           </div>
