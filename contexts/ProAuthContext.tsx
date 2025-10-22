@@ -347,16 +347,15 @@ export function ProAuthProvider({ children }: { children: React.ReactNode }) {
     setContractorProfile(null)
     setSession(null)
 
-    // Supabase sign out - use 'local' scope to only sign out from this device/browser
-    // NOT 'global' which would sign out from all devices
+    // Clear Supabase session completely
     try {
       await supabase.auth.signOut({ scope: 'local' })
     } catch (err) {
       console.error('[PRO-AUTH] Signout error:', err)
     }
 
-    // Redirect to contractor home page
-    window.location.href = '/contractors'
+    // Redirect to contractor home page (/pro)
+    window.location.href = '/pro'
   }
 
   const isProUser = contractorProfile?.subscription_type === 'pro' || false

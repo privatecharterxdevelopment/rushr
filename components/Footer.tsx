@@ -112,7 +112,7 @@ export default function Footer() {
             <li><FLink href="/pro/how-it-works">How it Works For Pros</FLink></li>
             <li><FLink href="/teams">Rushr Teams</FLink></li>
             <li><FLink href="/rushrmap">Search For A Pro</FLink></li>
-            <li><FLink href="/jobs">Browse Jobs</FLink></li>
+            <li><FLink href="/dashboard/contractor/jobs">Find Jobs (Contractors)</FLink></li>
             <li><FLink href="/post-job">Post a Job</FLink></li>
             <li><FLink href="/pro/signals">Signals</FLink></li>
           </ul>
