@@ -833,7 +833,7 @@ export default function ProMapInner({
       {!hideSidebar && (
         <div
           className="absolute top-4 left-4 bottom-4 w-96 bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col"
-          style={{ zIndex: 1000, maxHeight: 'calc(100vh - 120px)' }}
+          style={{ zIndex: 10, maxHeight: 'calc(100vh - 120px)' }}
         >
         {/* PAGE 1: Search Page */}
         {sidebarPage === 'search' && (
@@ -853,33 +853,36 @@ export default function ProMapInner({
                   placeholder="What service do you need?"
                   className="flex-1 px-3 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-sm"
                 />
-                <input
-                  type="text"
-                  value={zipCode}
-                  onChange={(e) => onZipCodeChange?.(e.target.value.replace(/\D/g, '').slice(0, 5))}
-                  placeholder="ZIP"
-                  maxLength={5}
-                  className="w-20 px-2 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500 outline-none text-sm text-center font-mono"
-                />
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={zipCode}
+                    onChange={(e) => onZipCodeChange?.(e.target.value.replace(/\D/g, '').slice(0, 5))}
+                    placeholder="ZIP"
+                    maxLength={5}
+                    className="w-24 pl-2 pr-8 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500 outline-none text-sm text-center font-mono"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleLocate()
+                      onLocateMe?.()
+                    }}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 p-1 hover:bg-slate-100 rounded-md transition-colors"
+                    title="Use my location"
+                  >
+                    <svg className="h-4 w-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                  </button>
+                </div>
               </div>
-            </div>
-
-            {/* Locate Me Button - Transparent */}
-            <div className="px-4 pt-3 flex-shrink-0">
-              <button
-                onClick={() => {
-                  handleLocate()
-                  onLocateMe?.()
-                }}
-                className="w-full px-4 py-2.5 rounded-lg border-2 border-slate-300 hover:border-blue-500 hover:bg-blue-50 text-slate-700 text-sm font-medium transition-colors flex items-center justify-center gap-2"
-              >
-                📍 Locate Me
-              </button>
             </div>
 
             {/* Category Bubbles */}
             <div className="px-4 pt-3 flex-shrink-0">
-              <div className="text-xs font-semibold text-slate-600 mb-2">Select a Category</div>
+              <div className="text-xs font-semibold text-slate-600 mb-2">Select a Category (Optional)</div>
               <div className="flex flex-wrap gap-1">
                 {Object.entries(CAT_EMOJI).map(([label, emoji]) => (
                   <button
@@ -898,16 +901,28 @@ export default function ProMapInner({
               </div>
             </div>
 
-            {/* Search Button - Directly below bubbles */}
+            {/* Radius Filter */}
+            <div className="px-4 pt-3 flex-shrink-0">
+              <div className="flex items-center gap-2">
+                <label className="text-xs font-semibold text-slate-600 w-14">Radius</label>
+                <input
+                  type="range"
+                  min={1}
+                  max={50}
+                  step={1}
+                  value={radius}
+                  onChange={(e) => onRadiusChange?.(Number(e.target.value))}
+                  className="flex-1"
+                />
+                <div className="w-12 text-right text-xs font-semibold text-slate-700">{radius} mi</div>
+              </div>
+            </div>
+
+            {/* Search Button - Directly below radius */}
             <div className="p-4 flex-shrink-0 bg-white">
               <button
                 onClick={() => setSidebarPage('results')}
-                disabled={!selectedCategory}
-                className={`w-full px-4 py-3 rounded-lg text-white text-sm font-semibold transition-colors shadow-sm ${
-                  selectedCategory
-                    ? 'bg-blue-600 hover:bg-blue-700'
-                    : 'bg-slate-300 cursor-not-allowed'
-                }`}
+                className="w-full px-4 py-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold transition-colors shadow-sm"
               >
                 Search
               </button>
