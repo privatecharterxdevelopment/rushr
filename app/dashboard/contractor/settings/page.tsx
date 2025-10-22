@@ -97,13 +97,13 @@ export default function ContractorSettingsPage() {
         insuranceCarrier: contractorProfile.insurance_carrier || '',
         baseZip: contractorProfile.base_zip || '',
         serviceAreaZips: contractorProfile.service_area_zips || [],
-        categories: [], // Will be loaded from separate table
-        hourlyRate: 75, // Default, will be loaded from rates table
+        categories: contractorProfile.categories || [],
+        hourlyRate: contractorProfile.hourly_rate || 75,
         minimumJobAmount: 100,
         serviceRadiusMiles: contractorProfile.service_radius_miles || 25,
         bio: '',
-        emergencyAvailable: true,
-        weekendAvailable: true
+        emergencyAvailable: contractorProfile.emergency_available ?? true,
+        weekendAvailable: contractorProfile.weekend_available ?? true
       })
     }
   }, [contractorProfile, user])
@@ -177,6 +177,10 @@ export default function ContractorSettingsPage() {
           base_zip: profileData.baseZip,
           service_area_zips: profileData.serviceAreaZips,
           service_radius_miles: profileData.serviceRadiusMiles,
+          hourly_rate: profileData.hourlyRate,
+          categories: profileData.categories,
+          emergency_available: profileData.emergencyAvailable,
+          weekend_available: profileData.weekendAvailable,
           updated_at: new Date().toISOString()
         })
         .eq('id', user.id)
@@ -185,8 +189,6 @@ export default function ContractorSettingsPage() {
         setError(profileError.message)
         return
       }
-
-      // TODO: Update categories and rates in separate tables when those tables exist
 
       setSuccess('Profile updated successfully!')
 

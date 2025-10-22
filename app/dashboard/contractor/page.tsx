@@ -230,11 +230,11 @@ export default function ContractorDashboardPage() {
   const recentEarnings: Earning[] = []
 
   const completeness: CompletenessField[] = [
-    { key:'license', label:'Upload license', weight:25, done:!!contractorData?.license_number && contractorData?.license_number !== 'pending',  href:'/profile/settings', icon:<BadgeCheck className="h-4 w-4" /> },
-    { key:'insurance', label:'Verify insurance', weight:25, done:!!contractorData?.insurance_carrier && contractorData?.insurance_carrier !== 'pending', href:'/profile/settings', icon:<ShieldIcon /> },
-    { key:'coverage', label:'Emergency service area', weight:20, done:contractorZips.length > 0, href:'/settings/service-area', icon:<MapPin className="h-4 w-4" /> },
-    { key:'hours', label:'Emergency availability', weight:15, done:!!contractorData?.availability_schedule, href:'/settings/calendar', icon:<Clock className="h-4 w-4" /> },
-    { key:'rates', label:'Set hourly rates', weight:15, done:!!contractorData?.hourly_rate, href:'/profile/settings', icon:<DollarSign className="h-4 w-4" /> },
+    { key:'license', label:'Upload license', weight:25, done:!!contractorData?.license_number && contractorData?.license_number !== 'pending',  href:'/dashboard/contractor/settings', icon:<BadgeCheck className="h-4 w-4" /> },
+    { key:'insurance', label:'Verify insurance', weight:25, done:!!contractorData?.insurance_carrier && contractorData?.insurance_carrier !== 'pending', href:'/dashboard/contractor/settings', icon:<ShieldIcon /> },
+    { key:'coverage', label:'Emergency service area', weight:20, done:contractorZips.length > 0, href:'/dashboard/contractor/settings', icon:<MapPin className="h-4 w-4" /> },
+    { key:'hours', label:'Emergency availability', weight:15, done:!!contractorData?.emergency_available, href:'/dashboard/contractor/settings', icon:<Clock className="h-4 w-4" /> },
+    { key:'rates', label:'Set hourly rates', weight:15, done:!!contractorData?.hourly_rate, href:'/dashboard/contractor/settings', icon:<DollarSign className="h-4 w-4" /> },
   ]
 
   // Use real contractor stats
