@@ -565,7 +565,7 @@ export default function ProMapInner({
           style: 'mapbox://styles/mapbox/light-v11', // Light grey style
           center: initialCenter,
           zoom: 11,
-          pitch: 45, // Enable 3D view
+          pitch: 0, // Bird's-eye view (top-down, not tilted)
           bearing: 0,
           antialias: true
         })

@@ -103,7 +103,7 @@ export default function ProAuthModal() {
       if (result.success) {
         setSuccess(true)
         setLoading(false)
-        // Show success for 1.5 seconds then close
+        // Show success for 1 second then redirect to contractor dashboard
         setTimeout(() => {
           setOpen(false)
           setSuccess(false)
@@ -112,8 +112,9 @@ export default function ProAuthModal() {
           setEmail("")
           setPassword("")
           setError(null)
-          // Let ProAuthContext handle routing via auth state change
-        }, 1500)
+          // Redirect to contractor dashboard
+          window.location.href = '/dashboard/contractor'
+        }, 1000)
       }
     } catch (err: any) {
       setError(err?.message || "Something went wrong. Please try again.")

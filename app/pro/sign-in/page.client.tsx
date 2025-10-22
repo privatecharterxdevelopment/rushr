@@ -59,8 +59,8 @@ export default function ProSignInPage() {
     if (error) {
       setError(error)
     } else {
-      // Success - redirect to extensive contractor dashboard
-      router.push('/dashboard/contractor')
+      // Success - redirect to contractor dashboard with full page reload
+      window.location.href = '/dashboard/contractor'
     }
   }
 

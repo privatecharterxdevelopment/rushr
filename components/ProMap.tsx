@@ -35,33 +35,33 @@ export default function ProMap(props: Props){
         } else {
           console.log('ProMap: Fetched contractors from database:', data?.length || 0, 'contractors')
 
-          // Transform data to include location
+          // Transform data to include location - ONLY use if we have precise lat/lng
           const contractorsWithLocation = (data || []).map(contractor => {
             let loc = null
 
+            // ONLY use contractor location if we have precise lat/lng from their address
             if (contractor.latitude && contractor.longitude) {
               loc = {
                 lat: Number(contractor.latitude),
                 lng: Number(contractor.longitude)
               }
-            } else if (contractor.service_area_zips && contractor.service_area_zips.length > 0) {
-              // Use first ZIP as fallback
-              const zip = contractor.service_area_zips[0]
-              // Simple ZIP to coords (this is a fallback)
-              loc = { lat: 40.7128, lng: -74.006 } // Default to NYC
             }
+            // DO NOT use ZIP codes as fallback - they are too inaccurate
 
             return {
               ...contractor,
               loc,
               services: contractor.categories || [],
               rating: contractor.rating || 0,
-              city: contractor.city || contractor.service_area_zips?.[0] || 'NYC'
+              city: contractor.city || contractor.service_area_zips?.[0] || 'Unknown'
             }
           })
 
-          console.log('ProMap: Contractors with location data:', contractorsWithLocation.length)
-          setContractors(contractorsWithLocation)
+          // Filter out contractors without precise location
+          const contractorsWithPreciseLocation = contractorsWithLocation.filter(c => c.loc !== null)
+
+          console.log('ProMap: Contractors with precise location:', contractorsWithPreciseLocation.length, 'out of', contractorsWithLocation.length)
+          setContractors(contractorsWithPreciseLocation)
         }
       } catch (err) {
         console.error('ProMap: Error loading contractors:', err)
