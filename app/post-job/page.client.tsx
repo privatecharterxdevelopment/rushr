@@ -707,9 +707,9 @@ export default function PostJobInner({ userId }: Props) {
 
       console.log('Job created successfully:', insertedJob)
 
-      // Redirect to dashboard jobs page
+      // Redirect to homeowner dashboard
       setSending(false)
-      window.location.href = '/dashboard/homeowner/jobs'
+      window.location.href = '/dashboard/homeowner'
 
     } catch (err) {
       console.error('Error submitting job:', err)
