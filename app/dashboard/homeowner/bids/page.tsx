@@ -63,21 +63,30 @@ export default function HomeownerBidsPage() {
             console.error('Error fetching job for bid:', bid.id, jobError)
           }
 
-          // Get contractor name - contractor_id is the auth user id, so look up by user_id
+          // Get contractor name - contractor_id is the auth user id, which maps to pro_contractors.id
           const { data: contractorData, error: contractorError } = await supabase
             .from('pro_contractors')
             .select('name, business_name')
-            .eq('user_id', bid.contractor_id)
+            .eq('id', bid.contractor_id)
             .single()
 
           if (contractorError) {
             console.error('Error fetching contractor for bid:', bid.id, bid.contractor_id, contractorError)
           }
 
+          // Determine contractor display name
+          let contractorName = 'Unknown Contractor'
+          if (contractorData) {
+            contractorName = contractorData.business_name || contractorData.name || `Contractor ${bid.contractor_id.substring(0, 8)}`
+          } else {
+            // If no profile found, show partial ID
+            contractorName = `Contractor ${bid.contractor_id.substring(0, 8)}`
+          }
+
           return {
             ...bid,
             job_title: jobData?.title || 'Unknown Job',
-            contractor_name: contractorData?.business_name || contractorData?.name || 'Unknown Contractor'
+            contractor_name: contractorName
           }
         })
       )
