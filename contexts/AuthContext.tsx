@@ -279,9 +279,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUserProfile(null)
     setSession(null)
 
-    // Supabase sign out - this clears the session completely
+    // Supabase sign out - use 'local' scope to only sign out from this device/browser
+    // NOT 'global' which would sign out from all devices
     try {
-      await supabase.auth.signOut({ scope: 'global' })
+      await supabase.auth.signOut({ scope: 'local' })
     } catch (err) {
       console.error('[HOMEOWNER-AUTH] Signout error:', err)
     }

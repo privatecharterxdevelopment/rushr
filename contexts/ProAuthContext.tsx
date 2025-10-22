@@ -347,9 +347,10 @@ export function ProAuthProvider({ children }: { children: React.ReactNode }) {
     setContractorProfile(null)
     setSession(null)
 
-    // Supabase sign out - this clears the session completely
+    // Supabase sign out - use 'local' scope to only sign out from this device/browser
+    // NOT 'global' which would sign out from all devices
     try {
-      await supabase.auth.signOut({ scope: 'global' })
+      await supabase.auth.signOut({ scope: 'local' })
     } catch (err) {
       console.error('[PRO-AUTH] Signout error:', err)
     }
