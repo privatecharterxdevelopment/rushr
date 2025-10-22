@@ -122,6 +122,9 @@ CREATE POLICY job_participants_mark_read ON job_chat_messages
   );
 
 -- 6. Function to update location timestamp automatically
+DROP TRIGGER IF EXISTS trigger_update_contractor_location_timestamp ON contractor_locations;
+DROP FUNCTION IF EXISTS update_contractor_location_timestamp();
+
 CREATE OR REPLACE FUNCTION update_contractor_location_timestamp()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -136,6 +139,8 @@ CREATE TRIGGER trigger_update_contractor_location_timestamp
   EXECUTE FUNCTION update_contractor_location_timestamp();
 
 -- 7. Function to get unread message count
+DROP FUNCTION IF EXISTS get_unread_message_count(UUID, UUID);
+
 CREATE OR REPLACE FUNCTION get_unread_message_count(p_job_id UUID, p_user_id UUID)
 RETURNS INTEGER AS $$
 DECLARE
