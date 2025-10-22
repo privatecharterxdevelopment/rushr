@@ -39,7 +39,7 @@ export default function CompareBids(){
 
       try {
         const { data, error } = await supabase
-          .from('homeowner_job_bids')
+          .from('job_bids')
           .select('*')
           .eq('job_id', id)
           .eq('homeowner_id', user.id)
