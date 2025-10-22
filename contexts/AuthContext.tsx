@@ -160,35 +160,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       async (event, session) => {
         if (!mounted) return
 
+        console.log('[HOMEOWNER-AUTH] Event:', event, 'User:', session?.user?.id?.substring(0, 8))
         setSession(session)
         setUser(session?.user ?? null)
 
-        // Handle SIGNED_OUT event - always go to main page
+        // Handle SIGNED_OUT event
         if (event === 'SIGNED_OUT') {
           setUserProfile(null)
-          return // State already cleared by signOut function
+          return
         }
 
         if (session?.user) {
           await fetchUserProfile(session.user.id)
-
-          // Redirect to dashboard after successful login
-          if (event === 'SIGNED_IN' && session.user.email_confirmed_at) {
-            // Check if user is a contractor by querying pro_contractors table
-            const { data: proContractor } = await supabase
-              .from('pro_contractors')
-              .select('id')
-              .eq('id', session.user.id)
-              .maybeSingle()
-
-            // If user is in pro_contractors table, they're a contractor
-            if (proContractor) {
-              router.push('/dashboard/contractor')
-            } else {
-              // Otherwise, they're a homeowner
-              router.push('/dashboard/homeowner')
-            }
-          }
+          // NO AUTO-REDIRECT - let pages handle routing
         } else {
           setUserProfile(null)
         }

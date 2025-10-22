@@ -220,29 +220,23 @@ export function ProAuthProvider({ children }: { children: React.ReactNode }) {
 
     getInitialSession()
 
-    // Listen for auth changes (when user manually logs in)
+    // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         try {
-          console.log('[AUTH] Auth state change:', event, 'User ID:', session?.user?.id?.substring(0, 8))
+          console.log('[PRO-AUTH] Event:', event, 'User:', session?.user?.id?.substring(0, 8))
           setSession(session)
           setUser(session?.user ?? null)
 
           if (session?.user) {
             // Check if user exists in pro_contractors table
-            const profile = await fetchContractorProfile(session.user.id)
-
-            // Redirect to contractor dashboard after successful login/signup if they're a contractor
-            // REMOVED email_confirmed_at requirement for development
-            if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && profile) {
-              console.log('[AUTH] Redirecting contractor to dashboard')
-              router.push('/dashboard/contractor')
-            }
+            await fetchContractorProfile(session.user.id)
+            // NO AUTO-REDIRECT - let pages handle routing
           } else {
             setContractorProfile(null)
           }
         } catch (err) {
-          console.error('Error in auth state change:', err)
+          console.error('[PRO-AUTH] Error:', err)
           setContractorProfile(null)
         } finally {
           setLoading(false)
@@ -346,34 +340,21 @@ export function ProAuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const signOut = async () => {
-    // Clear local state
+    console.log('[PRO-AUTH] Signing out contractor')
+
+    // Clear local state FIRST
     setUser(null)
     setContractorProfile(null)
     setSession(null)
 
-    // Supabase sign out (handles its own storage cleanup)
+    // Supabase sign out - this clears the session completely
     try {
-      await supabase.auth.signOut()
+      await supabase.auth.signOut({ scope: 'global' })
     } catch (err) {
-      console.error('Supabase signout error:', err)
+      console.error('[PRO-AUTH] Signout error:', err)
     }
 
-    // Clear only app-specific storage keys (not Supabase keys)
-    try {
-      const appKeysToRemove = ['contractorProfile', 'lastSync']
-      appKeysToRemove.forEach(key => {
-        try {
-          localStorage.removeItem(key)
-          sessionStorage.removeItem(key)
-        } catch (e) {
-          // Ignore individual key errors
-        }
-      })
-    } catch (err) {
-      console.error('Failed to clear storage:', err)
-    }
-
-    // Redirect to homepage
+    // Force redirect to home and reload to clear all state
     window.location.href = '/'
   }
 
