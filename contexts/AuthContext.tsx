@@ -272,38 +272,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const signOut = async () => {
-    console.log('[HOMEOWNER-AUTH] NUKING homeowner session')
+    console.log('[HOMEOWNER-AUTH] Signing out homeowner - clearing session')
 
     // 1. Clear React state
     setUser(null)
     setUserProfile(null)
     setSession(null)
 
-    // 2. Clear ALL Supabase sessions (local scope)
+    // 2. Sign out from Supabase (this clears auth tokens)
     try {
       await supabase.auth.signOut({ scope: 'local' })
     } catch (err) {
       console.error('[HOMEOWNER-AUTH] Signout error:', err)
     }
 
-    // 3. Clear ALL localStorage (nuke everything)
-    try {
-      localStorage.clear()
-    } catch (err) {
-      console.error('[HOMEOWNER-AUTH] LocalStorage clear error:', err)
-    }
-
-    // 4. Clear ALL sessionStorage
-    try {
-      sessionStorage.clear()
-    } catch (err) {
-      console.error('[HOMEOWNER-AUTH] SessionStorage clear error:', err)
-    }
-
-    // 5. Force reload to home to ensure clean state
-    setTimeout(() => {
-      window.location.href = '/'
-    }, 100)
+    // 3. Force reload to home to ensure clean state
+    // The supabase.auth.signOut() already cleared the session
+    window.location.href = '/'
   }
 
   const value = {

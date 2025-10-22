@@ -340,38 +340,23 @@ export function ProAuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const signOut = async () => {
-    console.log('[PRO-AUTH] NUKING contractor session')
+    console.log('[PRO-AUTH] Signing out contractor - clearing session')
 
     // 1. Clear React state
     setUser(null)
     setContractorProfile(null)
     setSession(null)
 
-    // 2. Clear ALL Supabase sessions (local scope)
+    // 2. Sign out from Supabase (this clears auth tokens)
     try {
       await supabase.auth.signOut({ scope: 'local' })
     } catch (err) {
       console.error('[PRO-AUTH] Signout error:', err)
     }
 
-    // 3. Clear ALL localStorage (nuke everything)
-    try {
-      localStorage.clear()
-    } catch (err) {
-      console.error('[PRO-AUTH] LocalStorage clear error:', err)
-    }
-
-    // 4. Clear ALL sessionStorage
-    try {
-      sessionStorage.clear()
-    } catch (err) {
-      console.error('[PRO-AUTH] SessionStorage clear error:', err)
-    }
-
-    // 5. Force reload to /pro to ensure clean state
-    setTimeout(() => {
-      window.location.href = '/pro'
-    }, 100)
+    // 3. Force reload to /pro to ensure clean state
+    // The supabase.auth.signOut() already cleared the session
+    window.location.href = '/pro'
   }
 
   const isProUser = contractorProfile?.subscription_type === 'pro' || false
