@@ -404,13 +404,13 @@ export default function Header() {
             </>
           ) : (
             <>
-              {/* Post Job button for logged in homeowners */}
+              {/* Get Help Now button for logged in homeowners */}
               {isSignedInAsHomeowner && !isProRoute && (
                 <button
                   onClick={() => router.push('/post-job')}
                   className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-medium shadow-sm text-sm whitespace-nowrap"
                 >
-                  <span className="text-lg">+</span> Post Job
+                  <span className="text-lg">+</span> Get Help Now
                 </button>
               )}
               {/* Bid notifications */}
@@ -481,7 +481,7 @@ export default function Header() {
               </>
             ) : (
               <div className="py-2 space-y-2">
-                {/* Post Job button for logged in homeowners on mobile */}
+                {/* Get Help Now button for logged in homeowners on mobile */}
                 {isSignedInAsHomeowner && !isProRoute && (
                   <button
                     className="w-full text-left px-3 py-2 rounded-lg bg-emerald-600 text-white font-medium text-sm"
@@ -490,7 +490,7 @@ export default function Header() {
                       setMobileMenuOpen(false)
                     }}
                   >
-                    + Post Job
+                    + Get Help Now
                   </button>
                 )}
                 <UserDropdown />
