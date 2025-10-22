@@ -121,6 +121,12 @@ export default function CompareBids(){
   const handleAcceptBid = async (bidId: string) => {
     if (!user || accepting) return
 
+    const bid = bids.find(b => b.id === bidId)
+    if (!bid || bid.bid_amount == null) {
+      alert('Invalid bid')
+      return
+    }
+
     setAccepting(bidId)
 
     try {
@@ -136,22 +142,26 @@ export default function CompareBids(){
         return
       }
 
-      // Update job status
+      // Update job status and final cost
       const { error: jobError } = await supabase
         .from('homeowner_jobs')
-        .update({ status: 'in_progress' })
+        .update({
+          status: 'in_progress',
+          final_cost: bid.bid_amount
+        })
         .eq('id', id)
 
       if (jobError) {
         console.error('Error updating job:', jobError)
       }
 
-      alert('Bid accepted successfully!')
-      window.location.reload()
+      // Redirect to Stripe payment page with escrow amount
+      const amount = bid.bid_amount
+      const jobTitle = job?.title || 'Job'
+      window.location.href = `/payments/checkout?job_id=${id}&amount=${amount}&description=${encodeURIComponent(jobTitle)}&type=escrow`
     } catch (err) {
       console.error('Error accepting bid:', err)
       alert('Failed to accept bid')
-    } finally {
       setAccepting(null)
     }
   }
