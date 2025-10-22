@@ -390,10 +390,10 @@ export default function HomeownerDashboardPage() {
   return (
     <div className="space-y-8 pt-8">
       {/* header */}
-      <div className="mb-2 flex items-center justify-between">
+      <div className="mb-2 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex items-center gap-4">
           {/* Profile Avatar */}
-          <div className="w-16 h-16 rounded-full overflow-hidden bg-gradient-to-br from-emerald-500 to-blue-500 flex items-center justify-center">
+          <div className="w-16 h-16 flex-shrink-0 rounded-full overflow-hidden bg-gradient-to-br from-emerald-500 to-blue-500 flex items-center justify-center">
             {userProfile.avatar_url ? (
               <img
                 src={userProfile.avatar_url}
@@ -405,9 +405,10 @@ export default function HomeownerDashboardPage() {
             )}
           </div>
 
-          <div>
-            <h1 className="text-2xl font-semibold text-ink dark:text-white">
-              Welcome back, {userProfile.name || user.email?.split('@')[0]} <Badge>Homeowner</Badge>
+          <div className="min-w-0 flex-1">
+            <h1 className="text-xl lg:text-2xl font-semibold text-ink dark:text-white flex flex-wrap items-center gap-2">
+              <span className="truncate">Welcome back, {userProfile.name || user.email?.split('@')[0]}</span>
+              <Badge>Homeowner</Badge>
               {completenessPct >= 100 && <Badge tone="blue">✓ Profile Complete</Badge>}
             </h1>
             <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
@@ -420,13 +421,13 @@ export default function HomeownerDashboardPage() {
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-3">
+
+        {/* Action buttons - horizontal scroll on mobile, flex on desktop */}
+        <div className="flex items-center gap-2 overflow-x-auto pb-2 lg:pb-0 -mx-4 px-4 lg:mx-0 lg:px-0">
           <NotificationBell />
-          <div className="flex gap-2">
-            <Link href="/post-job?urgent=1" className="btn-primary">Emergency Help</Link>
-            <Link href="/dashboard/homeowner/bids" className="btn">Manage Bids</Link>
-            <Link href="/rushrmap" className="btn">Find a Pro</Link>
-          </div>
+          <Link href="/post-job?urgent=1" className="btn-primary whitespace-nowrap flex-shrink-0">Emergency Help</Link>
+          <Link href="/dashboard/homeowner/bids" className="btn whitespace-nowrap flex-shrink-0">Manage Bids</Link>
+          <Link href="/rushrmap" className="btn whitespace-nowrap flex-shrink-0">Find a Pro</Link>
         </div>
       </div>
 

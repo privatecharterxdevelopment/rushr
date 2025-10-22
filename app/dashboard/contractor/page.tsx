@@ -430,7 +430,7 @@ export default function ContractorDashboardPage() {
       )}
 
       {/* header */}
-      <div className="mb-2 flex items-center justify-between">
+      <div className="mb-2 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <div>
           <h1 className="text-2xl font-semibold text-ink dark:text-white">
             Dashboard <Badge>Pro</Badge>
@@ -439,9 +439,25 @@ export default function ContractorDashboardPage() {
             Welcome back, {contractorData?.name || contractorProfile?.name || user?.email || 'Contractor'}!
           </p>
         </div>
-        <div className="flex gap-2 items-center">
-          {/* Availability Toggle */}
-          <div className="flex items-center gap-2">
+
+        {/* Availability Toggle - Mobile friendly */}
+        <div className="flex items-center gap-2 lg:hidden">
+          <span className="text-sm text-slate-600">Status:</span>
+          <select
+            value={availability}
+            onChange={(e) => setAvailability(e.target.value as Availability)}
+            className={`px-3 py-1 rounded-full text-sm font-medium border ${getAvailabilityColor(availability)}`}
+          >
+            <option value="online">Online</option>
+            <option value="busy">Busy</option>
+            <option value="offline">Offline</option>
+          </select>
+        </div>
+
+        {/* Action buttons - horizontal scroll on mobile, flex on desktop */}
+        <div className="flex gap-2 items-center overflow-x-auto pb-2 lg:pb-0 -mx-4 px-4 lg:mx-0 lg:px-0">
+          {/* Availability Toggle - Desktop */}
+          <div className="hidden lg:flex items-center gap-2 flex-shrink-0">
             <span className="text-sm text-slate-600">Status:</span>
             <select
               value={availability}
@@ -453,11 +469,11 @@ export default function ContractorDashboardPage() {
               <option value="offline">Offline</option>
             </select>
           </div>
-          <Link href="/jobs" className="btn-primary">Browse Jobs</Link>
-          <Link href="/dashboard/contractor/jobs" className="btn">My Jobs</Link>
-          <Link href="/dashboard/contractor/calendar" className="btn">Calendar</Link>
-          <Link href="/dashboard/contractor/messages" className="btn">Messages</Link>
-          <Link href="/dashboard/contractor/settings" className="btn">Settings</Link>
+          <Link href="/jobs" className="btn-primary whitespace-nowrap flex-shrink-0">Browse Jobs</Link>
+          <Link href="/dashboard/contractor/jobs" className="btn whitespace-nowrap flex-shrink-0">My Jobs</Link>
+          <Link href="/dashboard/contractor/calendar" className="btn whitespace-nowrap flex-shrink-0">Calendar</Link>
+          <Link href="/dashboard/contractor/messages" className="btn whitespace-nowrap flex-shrink-0">Messages</Link>
+          <Link href="/dashboard/contractor/settings" className="btn whitespace-nowrap flex-shrink-0">Settings</Link>
         </div>
       </div>
 

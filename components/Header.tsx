@@ -432,8 +432,90 @@ export default function Header() {
 
       {/* Mobile Menu */}
       {mobileMenuOpen && (
-        <div className="md:hidden border-t border-slate-200 bg-white">
-          <div className="px-4 py-3 space-y-2">
+        <div className="md:hidden border-t border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900">
+          <div className="px-4 py-3 space-y-3">
+            {/* Navigation Links */}
+            <div className="space-y-1 border-b border-slate-200 dark:border-slate-700 pb-3">
+              {/* Find a Pro Section */}
+              <div className="font-semibold text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wider px-3 py-1">
+                Find a Pro
+              </div>
+              {findProItems.map((item, i) => (
+                <Link
+                  key={i}
+                  href={item.href}
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="block w-full text-left px-3 py-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-sm text-slate-700 dark:text-slate-300"
+                >
+                  {item.label}
+                </Link>
+              ))}
+
+              {/* Rushr Pro Section */}
+              <div className="font-semibold text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wider px-3 py-1 mt-3">
+                Rushr Pro
+              </div>
+              {findWorkItems.map((item, i) => (
+                item.href ? (
+                  <Link
+                    key={i}
+                    href={item.href}
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="block w-full text-left px-3 py-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-sm text-slate-700 dark:text-slate-300"
+                  >
+                    {item.label}
+                  </Link>
+                ) : (
+                  <button
+                    key={i}
+                    onClick={() => {
+                      item.onClick?.()
+                      setMobileMenuOpen(false)
+                    }}
+                    className="block w-full text-left px-3 py-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-sm text-slate-700 dark:text-slate-300"
+                  >
+                    {item.label}
+                  </button>
+                )
+              ))}
+
+              {/* RushrMap */}
+              <Link
+                href="/rushrmap"
+                onClick={() => setMobileMenuOpen(false)}
+                className="block w-full text-left px-3 py-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-sm font-medium text-slate-700 dark:text-slate-300"
+              >
+                RushrMap
+              </Link>
+
+              {/* Messages - show for logged in users only */}
+              {signedIn && (
+                <Link
+                  href={isSignedInAsContractor ? '/dashboard/contractor/messages' : '/dashboard/homeowner/messages'}
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="block w-full text-left px-3 py-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-sm font-medium text-slate-700 dark:text-slate-300"
+                >
+                  Messages
+                </Link>
+              )}
+
+              {/* More Section */}
+              <div className="font-semibold text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wider px-3 py-1 mt-3">
+                More
+              </div>
+              {moreItems.map((item, i) => (
+                <Link
+                  key={i}
+                  href={item.href}
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="block w-full text-left px-3 py-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-sm text-slate-700 dark:text-slate-300"
+                >
+                  {item.label}
+                </Link>
+              ))}
+            </div>
+
+            {/* Auth Buttons */}
             {!signedIn ? (
               <>
                 {isProRoute ? (

@@ -131,52 +131,53 @@ export default function Hero(){
 
             {/* Search Form */}
             <form onSubmit={onFindPro} className="flex flex-col gap-2 max-w-xl">
-              <div className="flex gap-2">
-                <div className="flex-1 relative">
+              {/* Search input - full width on all devices */}
+              <div className="w-full">
+                <input
+                  type="text"
+                  placeholder="What emergency do you need? (e.g., plumber, electrician)"
+                  value={searchQuery}
+                  onChange={e => setSearchQuery(e.target.value)}
+                  className="w-full px-4 py-3 rounded-lg text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-400 text-sm"
+                />
+              </div>
+
+              {/* Location and Submit - horizontal row */}
+              <div className="flex items-center gap-2">
+                <div className="flex-1 min-w-0">
                   <input
                     type="text"
-                    placeholder="What emergency do you need? (e.g., plumber, electrician)"
-                    value={searchQuery}
-                    onChange={e => setSearchQuery(e.target.value)}
-                    className="w-full px-5 py-3 rounded-lg text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-400 text-sm"
+                    placeholder="ZIP Code"
+                    value={location}
+                    onChange={e => setLocation(e.target.value)}
+                    className="w-full px-4 py-3 rounded-lg text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-400 text-sm"
                   />
                 </div>
-                <div className="flex items-center gap-2">
-                  <div className="relative">
-                    <input
-                      type="text"
-                      placeholder="ZIP"
-                      value={location}
-                      onChange={e => setLocation(e.target.value)}
-                      className="w-24 px-3 py-3 rounded-lg text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-400 text-sm"
-                    />
-                  </div>
-                  <button
-                    type="button"
-                    onClick={getUserLocation}
-                    disabled={loadingLocation}
-                    className="p-3 bg-white hover:bg-gray-50 rounded-lg transition-colors disabled:opacity-50"
-                    title="Use my location"
-                  >
-                    {loadingLocation ? (
-                      <svg className="animate-spin h-5 w-5 text-gray-700" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                      </svg>
-                    ) : (
-                      <svg className="h-5 w-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                      </svg>
-                    )}
-                  </button>
-                  <button
-                    type="submit"
-                    className="px-6 py-3 bg-gray-900 hover:bg-black text-white font-semibold rounded-lg transition-colors whitespace-nowrap text-sm"
-                  >
-                    Find a Pro
-                  </button>
-                </div>
+                <button
+                  type="button"
+                  onClick={getUserLocation}
+                  disabled={loadingLocation}
+                  className="flex-shrink-0 p-3 bg-white hover:bg-gray-50 rounded-lg transition-colors disabled:opacity-50"
+                  title="Use my location"
+                >
+                  {loadingLocation ? (
+                    <svg className="animate-spin h-5 w-5 text-gray-700" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                  ) : (
+                    <svg className="h-5 w-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                  )}
+                </button>
+                <button
+                  type="submit"
+                  className="flex-shrink-0 px-6 py-3 bg-gray-900 hover:bg-black text-white font-semibold rounded-lg transition-colors whitespace-nowrap text-sm"
+                >
+                  Find a Pro
+                </button>
               </div>
             </form>
 
