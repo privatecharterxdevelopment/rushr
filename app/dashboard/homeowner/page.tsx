@@ -763,7 +763,7 @@ export default function HomeownerDashboardPage() {
                     <div className="min-w-0">
                       <div className="truncate font-medium">{p.contractor_profiles?.name || p.contractor_profiles?.business_name}</div>
                       <div className="text-[11px] text-slate-500">
-                        2.5 mi • {p.jobs_completed || 0} jobs • {(p.average_rating || p.contractor_profiles?.rating || 0).toFixed(1)}★
+                        2.5 mi • {p.jobs_completed || 0} jobs • {Number(p.average_rating || p.contractor_profiles?.rating || 0).toFixed(1)}★
                       </div>
                       <div className="text-[10px] text-emerald-600 font-medium">
                         {p.trust_level === 1 ? 'Saved' : p.trust_level === 2 ? 'Preferred' : 'Trusted'} • Last: {p.last_job_date ? new Date(p.last_job_date).toLocaleDateString() : 'Unknown'}
