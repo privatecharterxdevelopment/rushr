@@ -57,10 +57,10 @@ export default function HomeownerBidsPage() {
     if (!user) return
     try {
       const { data, error } = await supabase
-        .from('homeowner_job_bids')
+        .from('job_bids')
         .select('*')
         .eq('homeowner_id', user.id)
-        .order('bid_submitted_at', { ascending: false })
+        .order('created_at', { ascending: false })
 
       if (error) {
         console.error('Error fetching bids:', error)
