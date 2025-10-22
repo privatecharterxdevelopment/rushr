@@ -149,7 +149,7 @@ export default function PaymentSuccessPage() {
             Need help? Contact our support team
           </p>
           <Link
-            href="/support"
+            href="/contact"
             className="text-emerald-600 hover:text-emerald-700 text-sm font-medium"
           >
             Get Support

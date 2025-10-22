@@ -2,6 +2,8 @@
 
 import React, { useMemo, useState, useEffect } from 'react'
 import { useSearchParams } from 'next/navigation'
+import dynamic from 'next/dynamic'
+import { supabase } from '../../lib/supabaseClient'
 import {
   Check,
   Clock,
@@ -22,25 +24,9 @@ import {
   User,
 } from 'lucide-react'
 
-type Props = { userId: string | null }
+const ProMap = dynamic(() => import('../../components/ProMap'), { ssr: false })
 
-/** Map placeholder */
-function MapStub() {
-  return (
-    <div className="relative h-[360px] w-full overflow-hidden rounded-2xl border border-emerald-200 bg-gradient-to-br from-emerald-50 to-white">
-      <div className="absolute inset-0 bg-[radial-gradient(700px_240px_at_20%_-10%,rgba(16,185,129,0.10),transparent_60%)]" />
-      <div className="absolute inset-0 grid place-items-center">
-        <div className="text-center">
-          <div className="mx-auto mb-3 grid h-12 w-12 place-items-center rounded-xl bg-emerald-100 text-emerald-600">
-            <MapPin className="h-6 w-6" />
-          </div>
-          <div className="font-medium text-slate-900">Live Emergency Map</div>
-          <p className="mt-1 text-sm text-slate-500">Real-time tracking and ETA once a pro accepts your emergency.</p>
-        </div>
-      </div>
-    </div>
-  )
-}
+type Props = { userId: string | null }
 
 /** Emergency contractor type */
 type Contractor = {
@@ -344,6 +330,7 @@ export default function PostJobInner({ userId }: Props) {
   const [issueTitle, setIssueTitle] = useState('')
   const [details, setDetails] = useState('')
   const [photos, setPhotos] = useState<File[]>([])
+  const [userLocation, setUserLocation] = useState<[number, number] | null>(null)
 
   // Form validation state
   const [errors, setErrors] = useState<Record<string, string>>({})
@@ -355,7 +342,98 @@ export default function PostJobInner({ userId }: Props) {
   const [picked, setPicked] = useState<string | null>(null)
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [sending, setSending] = useState(false)
-  const [sent, setSent] = useState(false)
+
+  // Get user's current location
+  const getCurrentLocation = () => {
+    console.log('getCurrentLocation called!')
+
+    if (!navigator.geolocation) {
+      console.error('Geolocation not supported')
+      alert('Geolocation is not supported by your browser.')
+      return
+    }
+
+    console.log('Requesting geolocation permission...')
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        console.log('Geolocation success!', position.coords)
+        const { latitude, longitude } = position.coords
+        // Store as [lat, lng] for ProMapInner
+        setUserLocation([latitude, longitude])
+        setAddress(`Current Location (${latitude.toFixed(4)}, ${longitude.toFixed(4)})`)
+        console.log('Set userLocation:', [latitude, longitude])
+        console.log('Set address:', `Current Location (${latitude.toFixed(4)}, ${longitude.toFixed(4)})`)
+      },
+      (error) => {
+        console.error('Geolocation error:', error)
+        console.error('Error code:', error.code)
+        console.error('Error message:', error.message)
+
+        let errorMessage = 'Could not get your location. '
+        switch(error.code) {
+          case error.PERMISSION_DENIED:
+            errorMessage += 'Permission denied. Please allow location access in your browser settings.'
+            break
+          case error.POSITION_UNAVAILABLE:
+            errorMessage += 'Location information is unavailable.'
+            break
+          case error.TIMEOUT:
+            errorMessage += 'Location request timed out.'
+            break
+          default:
+            errorMessage += 'An unknown error occurred.'
+        }
+
+        alert(errorMessage)
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0
+      }
+    )
+  }
+
+  // Geocode address (e.g., "New York City" → coordinates + formatted address)
+  const geocodeAddress = async (searchText: string) => {
+    const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN
+    if (!MAPBOX_TOKEN) {
+      console.error('Mapbox token not configured')
+      return
+    }
+
+    try {
+      const response = await fetch(
+        `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(searchText)}.json?access_token=${MAPBOX_TOKEN}&limit=1`
+      )
+      const data = await response.json()
+
+      if (data.features && data.features.length > 0) {
+        const feature = data.features[0]
+        const [lng, lat] = feature.center
+        const formattedAddress = feature.place_name
+
+        setUserLocation([lat, lng])
+        setAddress(formattedAddress)
+        console.log('Geocoded:', searchText, '→', formattedAddress, [lat, lng])
+      }
+    } catch (error) {
+      console.error('Geocoding error:', error)
+    }
+  }
+
+  // Debounced geocoding when user types in address field
+  useEffect(() => {
+    if (!address || address.length < 3) return
+    if (address.startsWith('Current Location')) return
+
+    const timer = setTimeout(() => {
+      geocodeAddress(address)
+    }, 1000) // Wait 1 second after user stops typing
+
+    return () => clearTimeout(timer)
+  }, [address])
 
   // Form validation functions
   const validateField = (field: string, value: string) => {
@@ -439,19 +517,108 @@ export default function PostJobInner({ userId }: Props) {
     }
   }, [searchParams])
 
+  // Auto-fetch user location on page load
+  useEffect(() => {
+    console.log('Auto-fetching user location on page load...')
+    getCurrentLocation()
+  }, []) // Empty dependency array = runs once on mount
+
   // Pro list filters
   const [onlyActive, setOnlyActive] = useState(true)
   const [sortBy, setSortBy] = useState<'eta' | 'distance' | 'rating'>('eta')
+  const [nearbyContractors, setNearbyContractors] = useState<Contractor[]>([])
+  const [loadingContractors, setLoadingContractors] = useState(false)
+
+  // Fetch nearby contractors - Filter by ZIP and category
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    async function fetchNearbyContractors() {
+      // Extract ZIP from address
+      const zipMatch = address.match(/\b\d{5}\b/)
+      const homeownerZip = zipMatch ? zipMatch[0] : null
+
+      if (!homeownerZip) {
+        console.log('[POST-JOB] No ZIP code yet, waiting for address')
+        setNearbyContractors([])
+        return
+      }
+
+      setLoadingContractors(true)
+
+      try {
+        // Get ALL contractors and filter client-side by ZIP
+        let query = supabase
+          .from('pro_contractors')
+          .select('id, name, business_name, categories, base_zip, service_area_zips, phone, status')
+          .eq('status', 'approved')
+
+        // Filter by emergency category if selected
+        if (emergencyType) {
+          query = query.contains('categories', [emergencyType])
+        }
+
+        const { data: contractors, error } = await query.limit(100)
+
+        if (error) {
+          console.error('[POST-JOB] Database error:', error)
+          setNearbyContractors([])
+          return
+        }
+
+        if (contractors && contractors.length > 0) {
+          // Filter contractors by ZIP - check if homeowner ZIP is in their service area
+          const matchingContractors = contractors.filter(c => {
+            const serviceZips = c.service_area_zips || []
+            const baseZip = c.base_zip
+            return serviceZips.includes(homeownerZip) || baseZip === homeownerZip
+          })
+
+          // Map database contractors to UI Contractor type
+          const mappedContractors: Contractor[] = matchingContractors.map((c, index) => ({
+            id: c.id,
+            name: c.business_name || c.name || 'Contractor',
+            rating: 4.5 + (Math.random() * 0.5),
+            jobs: Math.floor(Math.random() * 500),
+            distanceKm: (index + 1) * 1.5,
+            etaMin: (index + 1) * 10 + 5,
+            trades: c.categories || [],
+            insured: true,
+            backgroundChecked: true,
+            activeNow: true,
+          }))
+
+          console.log(`[POST-JOB] Found ${mappedContractors.length} contractors for ZIP ${homeownerZip}, category: ${emergencyType || 'ALL'}`)
+          setNearbyContractors(mappedContractors)
+        } else {
+          console.log(`[POST-JOB] No contractors found for category: ${emergencyType || 'ALL'}`)
+          setNearbyContractors([])
+        }
+      } catch (err) {
+        console.error('[POST-JOB] Error fetching contractors:', err)
+        setNearbyContractors([])
+      } finally {
+        setLoadingContractors(false)
+      }
+    }
+
+    fetchNearbyContractors()
+  }, [emergencyType, address])
 
   const filteredNearby = useMemo(() => {
-    const base = onlyActive ? MOCK.filter(m => m.activeNow) : MOCK
+    const base = nearbyContractors.length > 0
+      ? (onlyActive ? nearbyContractors.filter(m => m.activeNow) : nearbyContractors)
+      : (onlyActive ? MOCK.filter(m => m.activeNow) : MOCK) // Fallback to MOCK if no data
     const sorted = [...base].sort((a, b) =>
       sortBy === 'eta' ? a.etaMin - b.etaMin : sortBy === 'distance' ? a.distanceKm - b.distanceKm : b.rating - a.rating
     )
     return sorted
-  }, [onlyActive, sortBy])
+  }, [nearbyContractors, onlyActive, sortBy])
 
-  const selectedContractor = useMemo(() => MOCK.find((m) => m.id === picked) || null, [picked])
+  const selectedContractor = useMemo(() =>
+    nearbyContractors.length > 0
+      ? nearbyContractors.find((m) => m.id === picked) || null
+      : MOCK.find((m) => m.id === picked) || null
+  , [picked, nearbyContractors])
 
   function onUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files || [])
@@ -496,39 +663,60 @@ export default function PostJobInner({ userId }: Props) {
     setConfirmOpen(true)
   }
 
-  function actuallySend() {
+  async function actuallySend() {
     setConfirmOpen(false)
     setSending(true)
-    setTimeout(() => {
-      setSending(false)
-      setSent(true)
-      window.scrollTo({ top: 0, behavior: 'smooth' })
-    }, 1500)
-  }
 
-  const Tracker = () => (
-    <div className="fixed inset-x-0 bottom-0 z-50">
-      <div className="mx-auto mb-4 w-full max-w-6xl px-4">
-        <div className="rounded-2xl border border-emerald-200 bg-white p-4 shadow-2xl">
-          <div className="flex items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <div className="grid h-12 w-12 place-items-center rounded-xl bg-emerald-100 text-emerald-600">
-                <Clock className="h-6 w-6" />
-              </div>
-              <div>
-                <div className="text-sm text-slate-500">Emergency Request Active</div>
-                <div className="font-semibold text-slate-900">Pro en route • ETA 12 minutes</div>
-              </div>
-            </div>
-            <div className="flex gap-2">
-              <button className="btn btn-outline">Call Pro</button>
-              <button className="btn-primary">Track</button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  )
+    try {
+      console.log('Submitting emergency job to database...')
+
+      // Import supabase
+      const { supabase } = await import('../../lib/supabaseClient')
+
+      // Prepare job data
+      const jobData = {
+        title: issueTitle,
+        description: details || issueTitle,
+        category: emergencyType || category,
+        priority: 'emergency', // All post-job submissions are emergency
+        status: 'pending', // Waiting for contractors to accept
+        address: address,
+        latitude: userLocation ? userLocation[0] : null,
+        longitude: userLocation ? userLocation[1] : null,
+        zip_code: address.match(/\d{5}/)?.[0] || null,
+        phone: phone,
+        homeowner_id: userId, // Current user ID
+        created_at: new Date().toISOString(),
+      }
+
+      console.log('Job data:', jobData)
+
+      // Insert job into database
+      const { data: insertedJob, error } = await supabase
+        .from('homeowner_jobs')
+        .insert([jobData])
+        .select()
+        .single()
+
+      if (error) {
+        console.error('Error creating job:', error)
+        alert('Failed to submit emergency request. Please try again.')
+        setSending(false)
+        return
+      }
+
+      console.log('Job created successfully:', insertedJob)
+
+      // Redirect to dashboard jobs page
+      setSending(false)
+      window.location.href = '/dashboard/homeowner/jobs'
+
+    } catch (err) {
+      console.error('Error submitting job:', err)
+      alert('Failed to submit emergency request. Please try again.')
+      setSending(false)
+    }
+  }
 
   return (
     <>
@@ -552,21 +740,6 @@ export default function PostJobInner({ userId }: Props) {
         {/* Emergency banner */}
         <EmergencyBanner />
 
-
-        {sent && (
-          <div className="mb-8 card border-emerald-200 bg-emerald-50 p-6">
-            <div className="flex items-start gap-3">
-              <Check className="h-6 w-6 text-emerald-600 flex-shrink-0" />
-              <div>
-                <div className="font-semibold text-emerald-900">Emergency Request Sent!</div>
-                <p className="mt-1 text-emerald-700">
-                  Nearby emergency contractors have been notified. You'll see the first acceptance here with live arrival tracking.
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
-
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-5">
           {/* Left column: Emergency form */}
           <div className="space-y-6 lg:col-span-2">
@@ -588,8 +761,9 @@ export default function PostJobInner({ userId }: Props) {
                     aria-describedby={touched.address && errors.address ? 'address-error' : undefined}
                   />
                   <button
+                    type="button"
                     className="px-3 py-1 border border-slate-200 rounded-lg hover:bg-slate-50 flex items-center gap-1 text-sm"
-                    onClick={() => setAddress('Using current location')}
+                    onClick={getCurrentLocation}
                     title="Use current location"
                   >
                     <MapPin className="h-4 w-4" />
@@ -796,8 +970,34 @@ export default function PostJobInner({ userId }: Props) {
 
           {/* Right column: Map and emergency pros */}
           <div className="space-y-6 lg:col-span-3">
-            <div className="card p-4">
-              <MapStub />
+            <div className="card p-0 overflow-hidden relative">
+              {/* Always show the map */}
+              <ProMap
+                centerZip={address.match(/\d{5}/)?.[0] || '10001'}
+                category={category}
+                radiusMiles={10}
+                searchCenter={userLocation || undefined}
+              />
+
+              {/* Overlay prompt when no location */}
+              {!userLocation && !address.match(/\d{5}/) && (
+                <div className="absolute inset-0 bg-gradient-to-br from-emerald-50/95 to-white/95 z-10 grid place-items-center">
+                  <div className="text-center">
+                    <div className="mx-auto mb-3 grid h-12 w-12 place-items-center rounded-xl bg-emerald-100 text-emerald-600">
+                      <MapPin className="h-6 w-6" />
+                    </div>
+                    <div className="font-medium text-slate-900">Click to see nearby pros on the map</div>
+                    <p className="mt-1 text-sm text-slate-500">Use your location or enter an address above</p>
+                    <button
+                      type="button"
+                      onClick={getCurrentLocation}
+                      className="mt-4 px-6 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors font-medium"
+                    >
+                      📍 Use My Current Location
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Emergency pros filters */}
@@ -861,8 +1061,6 @@ export default function PostJobInner({ userId }: Props) {
             </div>
           </div>
         </div>
-
-        {sent ? <Tracker /> : null}
       </div>
     </>
   )

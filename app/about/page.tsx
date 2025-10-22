@@ -29,7 +29,7 @@ export default function AboutPage(){
 
             <div className="mt-6 flex flex-wrap gap-2">
               <Link href="/post-job" className="btn-primary">Post a job</Link>
-              <Link href="/find-pro" className="btn btn-outline">Find a pro</Link>
+              <Link href="/rushrmap" className="btn btn-outline">Find a pro</Link>
               <Link href="/signals" className="btn btn-ghost">Signals for pros</Link>
             </div>
           </div>

@@ -332,7 +332,7 @@ export default function KYCVerificationPage() {
             <p>• Verification typically takes 1-2 business days</p>
           </div>
           <div className="mt-4">
-            <Link href="/support" className="text-blue-600 dark:text-blue-400 hover:underline text-sm">
+            <Link href="/contact" className="text-blue-600 dark:text-blue-400 hover:underline text-sm">
               Contact Support →
             </Link>
           </div>

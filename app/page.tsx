@@ -2,7 +2,7 @@
 
 import React, { useMemo, useRef, useState, useEffect } from 'react'
 import Link from 'next/link'
-import { motion, useMotionValue, useSpring, useTransform } from 'motion/react'
+import { motion, useMotionValue, useSpring, useTransform, useInView } from 'motion/react'
 import { Button } from '../components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { openAuth } from '../components/AuthModal'
@@ -161,7 +161,7 @@ function HeroHome() {
 
             {/* Secondary CTAs */}
             <div className="flex flex-col sm:flex-row gap-3">
-              <Link href="/find-pro" className="inline-flex">
+              <Link href="/rushrmap" className="inline-flex">
                 <Button
                   size="lg"
                   variant="outline"
@@ -286,24 +286,54 @@ function StackedPreview() {
 }
 
 /* -------------------------------------------
+   ANIMATED SECTION WRAPPER
+-------------------------------------------- */
+function AnimatedSection({ children, delay = 0 }: { children: React.ReactNode; delay?: number }) {
+  const ref = useRef(null)
+  const isInView = useInView(ref, { once: true, margin: "-100px" })
+
+  return (
+    <motion.div
+      ref={ref}
+      initial={{ opacity: 0, y: 40 }}
+      animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 40 }}
+      transition={{ duration: 0.6, delay, ease: [0.22, 1, 0.36, 1] }}
+    >
+      {children}
+    </motion.div>
+  )
+}
+
+/* -------------------------------------------
    STATS STRIP — animated counters
 -------------------------------------------- */
 function StatStrip() {
+  const ref = useRef(null)
+  const isInView = useInView(ref, { once: true })
+
   return (
-    <section className="border-y bg-white">
+    <section ref={ref} className="border-y bg-white">
       <div className="mx-auto grid max-w-7xl grid-cols-1 gap-4 px-6 py-6 sm:grid-cols-3">
-        <StatItem icon={<ShieldCheck className="h-5 w-5" />} label="Verified emergency pros" end={1200} suffix="+" />
-        <StatItem icon={<Siren className="h-5 w-5" />} label="Avg. response time (mins)" end={12} />
-        <StatItem icon={<Quote className="h-5 w-5" />} label="Avg. quotes per job" end={3} />
+        <StatItem icon={<ShieldCheck className="h-5 w-5" />} label="Verified emergency pros" end={1200} suffix="+" delay={0} inView={isInView} />
+        <StatItem icon={<Siren className="h-5 w-5" />} label="Avg. response time (mins)" end={12} delay={0.1} inView={isInView} />
+        <StatItem icon={<Quote className="h-5 w-5" />} label="Avg. quotes per job" end={3} delay={0.2} inView={isInView} />
       </div>
     </section>
   )
 }
-function StatItem({ icon, label, end, suffix = '' }: { icon: React.ReactNode; label: string; end: number; suffix?: string }) {
-  const val = useCountUp(end, 900)
+function StatItem({ icon, label, end, suffix = '', delay = 0, inView }: { icon: React.ReactNode; label: string; end: number; suffix?: string; delay?: number; inView: boolean }) {
+  const val = inView ? useCountUp(end, 900) : 0
+
   return (
-    <div className="flex items-center justify-center gap-3 rounded-xl border border-emerald-200/60 bg-white/70 px-4 py-3">
-      <div className={`flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-50 ${homeText}`}>{icon}</div>
+    <motion.div
+      initial={{ opacity: 0, scale: 0.8 }}
+      animate={inView ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0.8 }}
+      transition={{ duration: 0.5, delay, ease: [0.22, 1, 0.36, 1] }}
+      className="flex items-center justify-center gap-3 rounded-xl border border-emerald-200/60 bg-white/70 px-4 py-3 hover:shadow-md hover:scale-105 transition-all duration-300"
+    >
+      <div className={`flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-50 ${homeText}`}>
+        {icon}
+      </div>
       <div>
         <div className="text-xl font-extrabold text-slate-900">
           {val}
@@ -311,7 +341,7 @@ function StatItem({ icon, label, end, suffix = '' }: { icon: React.ReactNode; la
         </div>
         <div className="text-xs text-slate-600">{label}</div>
       </div>
-    </div>
+    </motion.div>
   )
 }
 function useCountUp(to: number, duration = 800) {
@@ -345,92 +375,109 @@ function PopularEmergencies() {
     Array<{ name: string; href: string; icon: React.ReactNode; hint?: string }>
   > = {
     Home: [
-      { name: 'Plumbing', href: '/find-pro?category=Plumbing&urgent=1', icon: <ShowerHead className="h-6 w-6" />, hint: 'Leaks, clogs, burst pipes' },
-      { name: 'Electrical', href: '/find-pro?category=Electrical&urgent=1', icon: <Lightbulb className="h-6 w-6" />, hint: 'No power, breakers, outlets' },
-      { name: 'HVAC', href: '/find-pro?category=HVAC&urgent=1', icon: <Wind className="h-6 w-6" />, hint: 'No-cool, no-heat' },
-      { name: 'Roof leak', href: '/find-pro?category=Roofing&urgent=1', icon: <HomeIcon className="h-6 w-6" />, hint: 'Active leak, tarp' },
-      { name: 'Water damage', href: '/find-pro?category=Water%20Damage&urgent=1', icon: <Droplets className="h-6 w-6" />, hint: 'Dry-out, mitigation' },
-      { name: 'Locksmith', href: '/find-pro?category=Locksmith&urgent=1', icon: <Lock className="h-6 w-6" />, hint: 'House lockout, rekey' },
-      { name: 'Appliance repair', href: '/find-pro?category=Appliance%20Repair&urgent=1', icon: <Wrench className="h-6 w-6" />, hint: 'Fridge, washer, oven' },
-      { name: 'Handyman', href: '/find-pro?category=Handyman&urgent=1', icon: <Hammer className="h-6 w-6" />, hint: 'Small urgent fixes' },
+      { name: 'Plumbing', href: '/rushrmap?category=Plumbing&urgent=1', icon: <ShowerHead className="h-6 w-6" />, hint: 'Leaks, clogs, burst pipes' },
+      { name: 'Electrical', href: '/rushrmap?category=Electrical&urgent=1', icon: <Lightbulb className="h-6 w-6" />, hint: 'No power, breakers, outlets' },
+      { name: 'HVAC', href: '/rushrmap?category=HVAC&urgent=1', icon: <Wind className="h-6 w-6" />, hint: 'No-cool, no-heat' },
+      { name: 'Roof leak', href: '/rushrmap?category=Roofing&urgent=1', icon: <HomeIcon className="h-6 w-6" />, hint: 'Active leak, tarp' },
+      { name: 'Water damage', href: '/rushrmap?category=Water%20Damage&urgent=1', icon: <Droplets className="h-6 w-6" />, hint: 'Dry-out, mitigation' },
+      { name: 'Locksmith', href: '/rushrmap?category=Locksmith&urgent=1', icon: <Lock className="h-6 w-6" />, hint: 'House lockout, rekey' },
+      { name: 'Appliance repair', href: '/rushrmap?category=Appliance%20Repair&urgent=1', icon: <Wrench className="h-6 w-6" />, hint: 'Fridge, washer, oven' },
+      { name: 'Handyman', href: '/rushrmap?category=Handyman&urgent=1', icon: <Hammer className="h-6 w-6" />, hint: 'Small urgent fixes' },
     ],
     Auto: [
-      { name: 'Jump start', href: '/find-pro?category=Auto%20Battery&urgent=1', icon: <Battery className="h-6 w-6" />, hint: 'Dead battery' },
-      { name: 'Tire change', href: '/find-pro?category=Auto%20Tire&urgent=1', icon: <Wrench className="h-6 w-6" />, hint: 'Flat, spare install' },
-      { name: 'Lockout', href: '/find-pro?category=Auto%20Lockout&urgent=1', icon: <KeyRound className="h-6 w-6" />, hint: 'Keys inside' },
-      { name: 'Tow request', href: '/find-pro?category=Tow&urgent=1', icon: <Car className="h-6 w-6" />, hint: 'Local tow' },
-      { name: 'Fuel delivery', href: '/find-pro?category=Fuel%20Delivery&urgent=1', icon: <Siren className="h-6 w-6" />, hint: 'Out of gas' },
-      { name: 'Mobile mechanic', href: '/find-pro?category=Mobile%20Mechanic&urgent=1', icon: <Settings className="h-6 w-6" />, hint: 'On-site diagnosis' },
+      { name: 'Jump start', href: '/rushrmap?category=Auto%20Battery&urgent=1', icon: <Battery className="h-6 w-6" />, hint: 'Dead battery' },
+      { name: 'Tire change', href: '/rushrmap?category=Auto%20Tire&urgent=1', icon: <Wrench className="h-6 w-6" />, hint: 'Flat, spare install' },
+      { name: 'Lockout', href: '/rushrmap?category=Auto%20Lockout&urgent=1', icon: <KeyRound className="h-6 w-6" />, hint: 'Keys inside' },
+      { name: 'Tow request', href: '/rushrmap?category=Tow&urgent=1', icon: <Car className="h-6 w-6" />, hint: 'Local tow' },
+      { name: 'Fuel delivery', href: '/rushrmap?category=Fuel%20Delivery&urgent=1', icon: <Siren className="h-6 w-6" />, hint: 'Out of gas' },
+      { name: 'Mobile mechanic', href: '/rushrmap?category=Mobile%20Mechanic&urgent=1', icon: <Settings className="h-6 w-6" />, hint: 'On-site diagnosis' },
     ],
     General: [
-      { name: 'Board-up', href: '/find-pro?category=Board%20Up&urgent=1', icon: <Hammer className="h-6 w-6" />, hint: 'Windows, doors' },
-      { name: 'Storm damage', href: '/find-pro?category=Storm%20Damage&urgent=1', icon: <Siren className="h-6 w-6" />, hint: 'Wind, hail' },
-      { name: 'Tree down', href: '/find-pro?category=Tree%20Service&urgent=1', icon: <Leaf className="h-6 w-6" />, hint: 'Removal, clearance' },
-      { name: 'Pest emergency', href: '/find-pro?category=Pest%20Control&urgent=1', icon: <Bug className="h-6 w-6" />, hint: 'Wasps, rodents' },
-      { name: 'Glass repair', href: '/find-pro?category=Glass%20Repair&urgent=1', icon: <HomeIcon className="h-6 w-6" />, hint: 'Windows, doors' },
-      { name: 'Other', href: '/find-pro?category=General&urgent=1', icon: <Sparkles className="h-6 w-6" />, hint: 'Tell us what happened' },
+      { name: 'Board-up', href: '/rushrmap?category=Board%20Up&urgent=1', icon: <Hammer className="h-6 w-6" />, hint: 'Windows, doors' },
+      { name: 'Storm damage', href: '/rushrmap?category=Storm%20Damage&urgent=1', icon: <Siren className="h-6 w-6" />, hint: 'Wind, hail' },
+      { name: 'Tree down', href: '/rushrmap?category=Tree%20Service&urgent=1', icon: <Leaf className="h-6 w-6" />, hint: 'Removal, clearance' },
+      { name: 'Pest emergency', href: '/rushrmap?category=Pest%20Control&urgent=1', icon: <Bug className="h-6 w-6" />, hint: 'Wasps, rodents' },
+      { name: 'Glass repair', href: '/rushrmap?category=Glass%20Repair&urgent=1', icon: <HomeIcon className="h-6 w-6" />, hint: 'Windows, doors' },
+      { name: 'Other', href: '/rushrmap?category=General&urgent=1', icon: <Sparkles className="h-6 w-6" />, hint: 'Tell us what happened' },
     ],
   }
 
   const cats = groups[group]
   const padCount = ((cols - (cats.length % cols)) % cols) // 0..(cols-1)
 
+  const ref = useRef(null)
+  const isInView = useInView(ref, { once: true, margin: "-100px" })
+
   return (
-    <section className="mx-auto max-w-7xl px-6 py-10">
-      <div className="mx-auto max-w-3xl text-center">
+    <section ref={ref} className="mx-auto max-w-7xl px-6 py-10">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
+        transition={{ duration: 0.5 }}
+        className="mx-auto max-w-3xl text-center"
+      >
         <h2 className="text-2xl font-semibold text-gray-900">Popular emergencies</h2>
         <p className="mt-2 text-gray-600">Pick a category and get matched fast.{' '}
-          <Link href="/find-pro?urgent=1" className="font-semibold text-emerald-700 hover:text-emerald-800">See all emergencies →</Link>
+          <Link href="/rushrmap?urgent=1" className="font-semibold text-emerald-700 hover:text-emerald-800 hover:underline transition-all">See all emergencies →</Link>
         </p>
-        <div></div>
 
         {/* Segmented control */}
-<div className="mt-4 flex justify-center">
-  <div className="relative inline-flex rounded-full bg-slate-100 p-1">
-    {(['Home', 'Auto', 'General'] as Group[]).map((g) => {
-      const active = group === g
-      return (
-        <button
-          key={g}
-          onClick={() => setGroup(g)}
-          className={`
-            relative z-10 px-4 py-1.5 text-sm font-medium rounded-full transition
-            ${active ? 'text-white' : 'text-slate-600 hover:text-slate-800'}
-          `}
-        >
-          {g}
-          {active && (
-            <motion.span
-              layoutId="pill"
-              className="absolute inset-0 z-[-1] rounded-full bg-emerald-600"
-              transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-            />
-          )}
-        </button>
-      )
-    })}
-  </div>
-</div>
-
-      </div>
+        <div className="mt-4 flex justify-center">
+          <div className="relative inline-flex rounded-full bg-slate-100 p-1">
+            {(['Home', 'Auto', 'General'] as Group[]).map((g) => {
+              const active = group === g
+              return (
+                <button
+                  key={g}
+                  onClick={() => setGroup(g)}
+                  className={`
+                    relative z-10 px-4 py-1.5 text-sm font-medium rounded-full transition
+                    ${active ? 'text-white' : 'text-slate-600 hover:text-slate-800'}
+                  `}
+                >
+                  {g}
+                  {active && (
+                    <motion.span
+                      layoutId="pill"
+                      className="absolute inset-0 z-[-1] rounded-full bg-emerald-600"
+                      transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+                    />
+                  )}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      </motion.div>
 
       {/* Strict grid: 2 / 3 / 4 columns — no awkward last row thanks to ghost pads */}
       <div className="mt-6 grid gap-3 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4">
         {cats.map((c, i) => (
-          <Link key={i} href={c.href} className="group">
-            <Card className="relative h-full overflow-hidden border-emerald-200/60 bg-white/85 p-3 transition hover:shadow-sm">
-              <GradientBorder emerald />
-              <div className="flex items-center gap-2">
-                <div className={`flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-50 ${homeText}`}>
-                  {c.icon}
+          <motion.div
+            key={i}
+            initial={{ opacity: 0, y: 20 }}
+            animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
+            transition={{ duration: 0.4, delay: 0.5 + i * 0.05, ease: [0.22, 1, 0.36, 1] }}
+          >
+            <Link href={c.href} className="group block">
+              <Card className="relative h-full overflow-hidden border-emerald-200/60 bg-white/85 p-3 transition-all duration-300 hover:shadow-lg hover:scale-105 hover:-translate-y-1">
+                <GradientBorder emerald />
+                <div className="flex items-center gap-2">
+                  <motion.div
+                    whileHover={{ rotate: 360 }}
+                    transition={{ duration: 0.5 }}
+                    className={`flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-50 ${homeText} group-hover:bg-emerald-100 transition-colors`}
+                  >
+                    {c.icon}
+                  </motion.div>
+                  <div className="min-w-0">
+                    <div className="truncate text-sm font-semibold text-slate-900 group-hover:text-emerald-700 transition-colors">{c.name}</div>
+                    <div className="truncate text-[11px] text-slate-500">{c.hint ?? '\u00A0'}</div>
+                  </div>
                 </div>
-                <div className="min-w-0">
-                  <div className="truncate text-sm font-semibold text-slate-900">{c.name}</div>
-                  <div className="truncate text-[11px] text-slate-500">{c.hint ?? '\u00A0'}</div>
-                </div>
-              </div>
-            </Card>
-          </Link>
+              </Card>
+            </Link>
+          </motion.div>
         ))}
 
         {/* Ghost pads to complete the row visually */}
@@ -472,6 +519,9 @@ function useGridCols() {
    HOW IT WORKS — emergency flow
 -------------------------------------------- */
 function HowItWorksHome() {
+  const ref = useRef(null)
+  const isInView = useInView(ref, { once: true, margin: "-100px" })
+
   const steps = [
     {
       title: 'Request help',
@@ -490,27 +540,42 @@ function HowItWorksHome() {
     },
   ]
   return (
-    <section className="mx-auto max-w-7xl px-6 py-10 md:py-14">
-      <div className="mx-auto max-w-3xl text-center">
+    <section ref={ref} className="mx-auto max-w-7xl px-6 py-10 md:py-14">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
+        transition={{ duration: 0.5 }}
+        className="mx-auto max-w-3xl text-center"
+      >
         <h2 className="text-2xl font-semibold text-gray-900">How it works</h2>
         <p className="mt-1 text-gray-600">Simple, fast, and transparent for urgent jobs.</p>
-      </div>
+      </motion.div>
       <div className="mt-8 grid items-stretch gap-6 md:grid-cols-3">
         {steps.map((s, i) => (
-          <TiltCard key={i}>
-            <Card className="relative flex h-full flex-col overflow-hidden border-emerald-200/60 bg-white/85 shadow-sm">
-              <GradientBorder emerald />
-              <CardHeader className="flex flex-row items-center gap-3">
-                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-50 ring-1 ring-emerald-200">
-                  {s.icon}
-                </div>
-                <CardTitle className="text-gray-900">{s.title}</CardTitle>
-              </CardHeader>
-              <CardContent className="pb-6">
-                <p className="text-gray-600">{s.desc}</p>
-              </CardContent>
-            </Card>
-          </TiltCard>
+          <motion.div
+            key={i}
+            initial={{ opacity: 0, y: 40 }}
+            animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 40 }}
+            transition={{ duration: 0.5, delay: 0.2 + i * 0.15, ease: [0.22, 1, 0.36, 1] }}
+          >
+            <TiltCard>
+              <Card className="relative flex h-full flex-col overflow-hidden border-emerald-200/60 bg-white/85 shadow-sm hover:shadow-xl transition-all duration-300">
+                <GradientBorder emerald />
+                <CardHeader className="flex flex-row items-center gap-3">
+                  <motion.div
+                    whileHover={{ scale: 1.1, rotate: 5 }}
+                    className="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-50 ring-1 ring-emerald-200"
+                  >
+                    {s.icon}
+                  </motion.div>
+                  <CardTitle className="text-gray-900">{s.title}</CardTitle>
+                </CardHeader>
+                <CardContent className="pb-6">
+                  <p className="text-gray-600">{s.desc}</p>
+                </CardContent>
+              </Card>
+            </TiltCard>
+          </motion.div>
         ))}
       </div>
     </section>
@@ -552,9 +617,9 @@ function GeoBanner() {
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {popular.map((c) => (
-            <a key={c} href={`/find-pro?near=${encodeURIComponent(c)}`} className="rounded-full border bg-white px-3 py-1 text-xs hover:border-emerald-200 hover:bg-emerald-50">
+            <Link key={c} href={`/rushrmap?near=${encodeURIComponent(c)}`} className="rounded-full border bg-white px-3 py-1 text-xs hover:border-emerald-200 hover:bg-emerald-50">
               {c}
-            </a>
+            </Link>
           ))}
         </div>
       </div>
@@ -580,7 +645,7 @@ function FeaturedPros() {
           <ShieldCheck className="h-5 w-5 text-emerald-700" />
           <h2 className="text-lg font-semibold text-slate-900">Featured pros</h2>
         </div>
-        <Link href="/find-pro?urgent=1" className="text-sm text-emerald-700 hover:text-emerald-800">Browse all →</Link>
+        <Link href="/rushrmap?urgent=1" className="text-sm text-emerald-700 hover:text-emerald-800">Browse all →</Link>
       </div>
 
       <div className="grid items-stretch gap-3 sm:grid-cols-2 lg:grid-cols-4">

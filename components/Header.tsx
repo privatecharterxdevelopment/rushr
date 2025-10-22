@@ -57,18 +57,6 @@ export default function Header() {
   // Theme: Pro routes get blue, everything else gets green
   const isContractor = isProRoute
 
-  // DEBUG: Log auth state for pro pages
-  if (isProRoute) {
-    console.log('=== PRO PAGE AUTH DEBUG ===', {
-      pathname,
-      contractorUser: contractorUser ? 'EXISTS' : 'NULL',
-      contractorProfile: contractorProfile ? 'EXISTS' : 'NULL',
-      isSignedInAsContractor,
-      signedIn,
-      homeownerUser: homeownerUser ? 'EXISTS' : 'NULL'
-    })
-  }
-
 
 
   // Brand-driven classes (from CSS variables set in layout.tsx)
@@ -106,7 +94,21 @@ export default function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const timers = useRef<Record<string, number | null>>({ pro: null, work: null, more: null })
 
+  // Close all dropdowns when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as HTMLElement
+      // Check if click is outside all dropdowns
+      if (!target.closest('[data-dropdown-container]')) {
+        setOpenFindPro(false)
+        setOpenFindWork(false)
+        setOpenMore(false)
+      }
+    }
 
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
 
   // Cleanup timers on unmount to prevent memory leaks
   useEffect(() => {
@@ -175,7 +177,7 @@ export default function Header() {
       if (timers.current[k]) window.clearTimeout(timers.current[k] as number)
       timers.current[k] = window.setTimeout(() => {
         setOpen(false)
-      }, 150) as any
+      }, 100) as any
     }
     const cancelClose = () => {
       const k = keyName
@@ -221,7 +223,7 @@ export default function Header() {
     }
 
     return (
-      <div className="relative" onMouseEnter={handleOpen} onMouseLeave={startClose}>
+      <div className="relative" data-dropdown-container onMouseEnter={handleOpen} onMouseLeave={startClose}>
         <button
           onClick={handleClick}
           className={`relative inline-flex items-center pb-1 hover:text-ink dark:hover:text-white font-medium transition-colors ${
@@ -240,7 +242,7 @@ export default function Header() {
         </button>
         {open && (
           <div
-            className="absolute left-0 top-full mt-2 z-[9999] bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-2 w-64 shadow-xl transform transition-all duration-200 ease-out opacity-100 scale-100"
+            className="absolute left-0 top-full mt-2 z-[9999] bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-2 w-64 shadow-xl animate-in fade-in slide-in-from-top-2 duration-150"
             onMouseEnter={cancelClose}
             onMouseLeave={startClose}
             role="menu"
@@ -249,6 +251,11 @@ export default function Header() {
               <button
                 key={i}
                 onClick={() => {
+                  // Immediately close and clear all timers
+                  if (timers.current[keyName]) {
+                    window.clearTimeout(timers.current[keyName] as number)
+                    timers.current[keyName] = null
+                  }
                   setOpen(false)
                   if (it.href) go(it.href)
                   else it.onClick?.()
@@ -268,7 +275,7 @@ export default function Header() {
   // Route menus to their owning site (absolute URLs)
   const findProItems = [
     { label: 'Post a Job',            href: '/post-job' },
-    { label: 'Search for a Pro',      href: '/find-pro' },
+    { label: 'Search for a Pro',      href: '/rushrmap' },
     { label: 'How it Works',          href: '/how-it-works' },
   ]
   const findWorkItems = isSignedInAsContractor ? [
@@ -276,7 +283,7 @@ export default function Header() {
     { label: 'Browse Jobs',               href: '/dashboard/contractor/jobs' },
     { label: 'Messages',                  href: '/dashboard/contractor/messages' },
     { label: 'Calendar',                  href: '/dashboard/contractor/calendar' },
-    { label: 'Signals ★',                 href: '/dashboard/contractor/signals' },
+    { label: 'Signals ★',                 href: '/pro/signals' },
   ] : [
     // Not logged in - open Pro login modal
     { label: 'Browse Jobs',               onClick: () => openProAuth() },
@@ -293,7 +300,7 @@ export default function Header() {
   ]
 
   // "Active" underline only applies to local sections
-  const findProActive = ['/post-job', '/find-pro', '/how-it-works'].some(isActive)
+  const findProActive = ['/post-job', '/rushrmap', '/how-it-works'].some(isActive)
   const findWorkActive = ['/jobs', '/find-work', '/signals'].some(isActive)
   const moreActive = ['/about', '/contact', '/pricing'].some(isActive)
 
@@ -362,19 +369,13 @@ export default function Header() {
           {!signedIn ? (
             <>
               {isProRoute ? (
-                // Pro route: Blue contractor buttons + switch to homeowner
+                // Pro route: Blue contractor sign in + switch to homeowner
                 <>
                   <button
                     className="inline-flex items-center px-3 sm:px-4 py-2 rounded-lg border border-blue-600 bg-blue-600 text-white hover:bg-blue-700 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium shadow-sm text-sm whitespace-nowrap"
-                    onClick={() => router.push('/pro/contractor-signup')}
-                  >
-                    Sign up
-                  </button>
-                  <button
-                    className="inline-flex items-center px-3 sm:px-4 py-2 rounded-lg border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-slate-400 font-medium text-sm whitespace-nowrap"
                     onClick={() => openProAuth()}
                   >
-                    Sign in
+                    Sign In
                   </button>
                   <button
                     onClick={switchToHomeowner}
@@ -384,19 +385,13 @@ export default function Header() {
                   </button>
                 </>
               ) : (
-                // Homeowner route: Green homeowner buttons + switch to pro
+                // Homeowner route: Green homeowner sign in + switch to pro
                 <>
                   <button
                     className="inline-flex items-center px-3 sm:px-4 py-2 rounded-lg border border-emerald-600 bg-emerald-600 text-white hover:bg-emerald-700 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-medium shadow-sm text-sm whitespace-nowrap"
-                    onClick={() => router.push('/sign-up')}
-                  >
-                    Sign up
-                  </button>
-                  <button
-                    className="inline-flex items-center px-3 sm:px-4 py-2 rounded-lg border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-slate-400 font-medium text-sm whitespace-nowrap"
                     onClick={() => openAuth()}
                   >
-                    Sign in
+                    Sign In
                   </button>
                   <button
                     onClick={switchToPro}
@@ -445,20 +440,11 @@ export default function Header() {
                     <button
                       className="w-full text-left px-3 py-2 rounded-lg border border-blue-600 bg-blue-600 text-white font-medium text-sm"
                       onClick={() => {
-                        router.push('/pro/contractor-signup')
-                        setMobileMenuOpen(false)
-                      }}
-                    >
-                      Sign up as Contractor
-                    </button>
-                    <button
-                      className="w-full text-left px-3 py-2 rounded-lg border border-slate-300 text-slate-700 font-medium text-sm"
-                      onClick={() => {
                         openProAuth()
                         setMobileMenuOpen(false)
                       }}
                     >
-                      Sign in
+                      Sign In
                     </button>
                     <button
                       className="w-full text-left px-3 py-2 text-blue-600 underline text-sm"
@@ -475,20 +461,11 @@ export default function Header() {
                     <button
                       className="w-full text-left px-3 py-2 rounded-lg border border-emerald-600 bg-emerald-600 text-white font-medium text-sm"
                       onClick={() => {
-                        router.push('/sign-up')
-                        setMobileMenuOpen(false)
-                      }}
-                    >
-                      Sign up as Homeowner
-                    </button>
-                    <button
-                      className="w-full text-left px-3 py-2 rounded-lg border border-slate-300 text-slate-700 font-medium text-sm"
-                      onClick={() => {
                         openAuth()
                         setMobileMenuOpen(false)
                       }}
                     >
-                      Sign in
+                      Sign In
                     </button>
                     <button
                       className="w-full text-left px-3 py-2 text-emerald-600 underline text-sm"

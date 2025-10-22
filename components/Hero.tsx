@@ -8,10 +8,34 @@ import dynamic from 'next/dynamic'
 
 const AnimatedPhoneMockup = dynamic(() => import('./AnimatedPhoneMockup'), { ssr: false })
 
+// Category mapping based on keywords
+const CATEGORY_KEYWORDS: Record<string, string[]> = {
+  'Plumber': ['plumb', 'leak', 'pipe', 'drain', 'water', 'toilet', 'sink', 'faucet', 'sewer'],
+  'Electrician': ['electric', 'power', 'outlet', 'breaker', 'wiring', 'light', 'switch'],
+  'HVAC': ['hvac', 'heat', 'cool', 'ac', 'furnace', 'thermostat', 'air condition'],
+  'Roofer': ['roof', 'shingle', 'gutter', 'ceiling leak'],
+  'Locksmith': ['lock', 'key', 'locked out', 'door lock'],
+  'Appliance Repair': ['appliance', 'fridge', 'washer', 'dryer', 'dishwasher', 'oven', 'stove'],
+  'Pest Control': ['pest', 'bug', 'rat', 'mouse', 'termite', 'roach', 'ant'],
+  'Cleaner': ['clean', 'mold', 'carpet', 'deep clean'],
+  'Handyman': ['handyman', 'repair', 'fix']
+}
+
+function detectCategory(searchText: string): string | null {
+  const lowerText = searchText.toLowerCase()
+  for (const [category, keywords] of Object.entries(CATEGORY_KEYWORDS)) {
+    if (keywords.some(keyword => lowerText.includes(keyword))) {
+      return category
+    }
+  }
+  return null
+}
+
 export default function Hero(){
   const router = useRouter()
   const { user } = useAuth()
 
+  const [searchQuery, setSearchQuery] = useState('')
   const [location, setLocation] = useState('')
 
   const onFindPro = (e: React.FormEvent)=>{
@@ -20,12 +44,23 @@ export default function Hero(){
       openAuth('signup')
       return
     }
-    if (typeof window !== 'undefined' && location) {
-      try { localStorage.setItem('housecall.defaultZip', location.trim()) } catch {}
+
+    // Extract zip code from location or search query
+    const zipMatch = (location + ' ' + searchQuery).match(/\b\d{5}\b/)
+    const zip = zipMatch ? zipMatch[0] : location.trim()
+
+    if (zip && typeof window !== 'undefined') {
+      try { localStorage.setItem('housecall.defaultZip', zip) } catch {}
     }
+
+    // Detect category from search query
+    const detectedCategory = detectCategory(searchQuery)
+
     const q = new URLSearchParams()
-    if(location) q.set('location', location.trim())
-    router.push(`/find-pros${q.toString() ? `?${q.toString()}` : ''}`)
+    if(zip) q.set('near', zip)
+    if(detectedCategory) q.set('category', detectedCategory)
+
+    router.push(`/rushrmap${q.toString() ? `?${q.toString()}` : ''}`)
   }
 
   return (
@@ -48,20 +83,29 @@ export default function Hero(){
             </p>
 
             {/* Search Form */}
-            <form onSubmit={onFindPro} className="flex flex-col sm:flex-row gap-2 max-w-xl">
+            <form onSubmit={onFindPro} className="flex flex-col gap-2 max-w-xl">
               <input
                 type="text"
-                placeholder="Enter your address or share location"
-                value={location}
-                onChange={e => setLocation(e.target.value)}
-                className="flex-1 px-5 py-3 rounded-lg text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-400 text-sm"
+                placeholder="What do you need? (e.g., I need a plumber)"
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                className="w-full px-5 py-3 rounded-lg text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-400 text-sm"
               />
-              <button
-                type="submit"
-                className="px-6 py-3 bg-gray-900 hover:bg-black text-white font-semibold rounded-lg transition-colors whitespace-nowrap text-sm"
-              >
-                Find a Pro
-              </button>
+              <div className="flex flex-col sm:flex-row gap-2">
+                <input
+                  type="text"
+                  placeholder="ZIP code or address"
+                  value={location}
+                  onChange={e => setLocation(e.target.value)}
+                  className="flex-1 px-5 py-3 rounded-lg text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-400 text-sm"
+                />
+                <button
+                  type="submit"
+                  className="px-6 py-3 bg-gray-900 hover:bg-black text-white font-semibold rounded-lg transition-colors whitespace-nowrap text-sm"
+                >
+                  Find a Pro
+                </button>
+              </div>
             </form>
 
             {/* Trust Indicators */}

@@ -219,7 +219,24 @@ export default function AuthModal() {
                 isProRoute ? 'focus:border-blue-500' : 'focus:border-emerald-500'
               }`}
             />
-            {error && <p className="text-sm text-rose-600">{error}</p>}
+            {error && (
+              <div className="text-sm text-rose-600">
+                {error.includes('contractor account') ? (
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-blue-800">
+                    <p className="font-medium mb-2">🔵 Contractor Account Detected</p>
+                    <p className="text-sm mb-2">{error}</p>
+                    <a
+                      href="/pro/sign-in"
+                      className="inline-block bg-blue-600 hover:bg-blue-700 text-white font-medium px-4 py-2 rounded-lg text-sm transition-colors"
+                    >
+                      Go to Contractor Login →
+                    </a>
+                  </div>
+                ) : (
+                  <p>{error}</p>
+                )}
+              </div>
+            )}
 
             <button
               type="submit"

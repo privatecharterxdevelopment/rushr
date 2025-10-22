@@ -188,36 +188,42 @@ export default function ContractorSignup() {
 async function submitAll(e?: React.FormEvent) {
   e?.preventDefault()
 
+  console.log('[WIZARD] submitAll called')
+
   const eobj = validateAll(form)
   setErrors(eobj)
   if (Object.keys(eobj).length) {
-    console.log('[contractor] validation errors', Object.keys(eobj))
+    console.log('[WIZARD] Validation errors:', Object.keys(eobj), eobj)
     scrollToFirstError(eobj)
+    alert(`Please fix the following errors: ${Object.keys(eobj).join(', ')}`)
     return
   }
 
   setBusy(true)
-  console.log('[contractor] submit start')
+  console.log('[WIZARD] Submit started - validation passed')
 
   try {
     // Get current user session
     const { data: { session }, error: sessErr } = await supabase.auth.getSession()
-    console.log('[contractor] sessionErr?', sessErr || null)
+    console.log('[WIZARD] Session error?', sessErr || 'None')
 
     if (!session) {
+      console.error('[WIZARD] No session found!')
       alert('Please sign in first.')
       router.push('/pro/sign-in')
       setBusy(false)
       return
     }
-    console.log('[contractor] user', session.user?.id)
+    console.log('[WIZARD] User ID:', session.user?.id)
 
-    // Update pro_contractors table
-    const { error: profileError } = await supabase
+    // KYC FLOW:
+    // 1. Wizard submit → status: pending_approval, kyc_status: in_progress
+    // 2. Admin approves → status: approved, kyc_status: completed
+    // 3. Contractor goes online → status: online
+
+    const { data: updateData, error: profileError } = await supabase
       .from('pro_contractors')
-      .upsert({
-        id: session.user.id,
-        email: form.email,
+      .update({
         name: form.name,
         business_name: form.businessName,
         phone: form.phone,
@@ -228,25 +234,34 @@ async function submitAll(e?: React.FormEvent) {
         base_zip: form.baseZip,
         service_area_zips: [form.baseZip, ...form.extraZips],
         service_radius_miles: form.radiusMiles,
-        status: 'approved', // Auto-approve
-        kyc_status: 'completed', // Mark KYC as completed
-        kyc_completed_at: new Date().toISOString(),
-        profile_approved_at: new Date().toISOString(),
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        status: 'pending_approval',
+        kyc_status: 'in_progress'
       })
+      .eq('id', session.user.id)
+      .select()
 
     if (profileError) {
-      console.error('[contractor] profile error', profileError)
-      throw new Error(profileError.message)
+      console.error('[WIZARD] Database error:', profileError)
+      console.error('[WIZARD] Error details:', {
+        message: profileError.message,
+        code: profileError.code,
+        details: profileError.details,
+        hint: profileError.hint
+      })
+      alert(`Database error: ${profileError.message}\n\nPlease check console for details.`)
+      setBusy(false)
+      return
     }
 
+    console.log('[WIZARD] Update successful:', updateData)
+
     clearDraft()
-    alert('Profile submitted and approved! Welcome to Rushr Pro.')
+    alert('KYC Verification submitted! Your profile is now pending approval. You will be notified once approved.')
+    console.log('[WIZARD] Redirecting to dashboard...')
     router.push('/dashboard/contractor')
   } catch (err: any) {
-    console.error('[contractor] submit error', err)
-    alert(err?.message || 'Could not submit right now.')
+    console.error('[WIZARD] Submit error:', err)
+    alert(`Error: ${err?.message || 'Could not submit right now. Check console for details.'}`)
   } finally {
     setBusy(false)
   }

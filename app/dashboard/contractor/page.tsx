@@ -109,31 +109,34 @@ export default function ContractorDashboardPage() {
     const loadContractorData = async () => {
       if (user) {
         try {
-          // Get contractor profile
-          const { data: contractor } = await supabase
-            .from('pro_contractors')
-            .select('*')
-            .eq('id', user.id)
-            .single()
+          // Parallelize all queries to reduce load time
+          const [contractorResult, myBidsResult, availableJobsResult] = await Promise.all([
+            supabase
+              .from('pro_contractors')
+              .select('*')
+              .eq('id', user.id)
+              .single(),
+            supabase
+              .from('job_bids')
+              .select(`
+                *,
+                homeowner_jobs!inner(*)
+              `)
+              .eq('contractor_id', user.id),
+            supabase
+              .from('homeowner_jobs')
+              .select('*')
+              .in('status', ['pending', 'bidding'])
+          ])
+
+          const contractor = contractorResult.data
+          const myBids = myBidsResult.data
+          const availableJobsData = availableJobsResult.data
 
           if (contractor) {
             setContractorData(contractor)
             setContractorZips(contractor.service_area_zips || [contractor.base_zip || ''].filter(Boolean))
           }
-
-          // Get contractor stats from job_bids and jobs tables
-          const { data: myBids } = await supabase
-            .from('job_bids')
-            .select(`
-              *,
-              homeowner_jobs!inner(*)
-            `)
-            .eq('contractor_id', user.id)
-
-          const { data: availableJobsData } = await supabase
-            .from('homeowner_jobs')
-            .select('*')
-            .in('status', ['pending', 'bidding'])
 
           if (myBids) {
             const acceptedBids = myBids.filter(bid => bid.status === 'accepted')
@@ -227,11 +230,11 @@ export default function ContractorDashboardPage() {
   const recentEarnings: Earning[] = []
 
   const completeness: CompletenessField[] = [
-    { key:'license', label:'Upload license', weight:25, done:!!contractorData?.license_number && contractorData?.license_number !== 'pending',  href:'/profile', icon:<BadgeCheck className="h-4 w-4" /> },
-    { key:'insurance', label:'Verify insurance', weight:25, done:!!contractorData?.insurance_carrier && contractorData?.insurance_carrier !== 'pending', href:'/profile', icon:<ShieldIcon /> },
-    { key:'coverage', label:'Emergency service area', weight:20, done:contractorZips.length > 0, href:'/settings/coverage', icon:<MapPin className="h-4 w-4" /> },
-    { key:'hours', label:'Emergency availability', weight:15, done:!!contractorData?.availability_schedule, href:'/settings/availability', icon:<Clock className="h-4 w-4" /> },
-    { key:'rates', label:'Set hourly rates', weight:15, done:!!contractorData?.hourly_rate, href:'/settings/rates', icon:<DollarSign className="h-4 w-4" /> },
+    { key:'license', label:'Upload license', weight:25, done:!!contractorData?.license_number && contractorData?.license_number !== 'pending',  href:'/profile/settings', icon:<BadgeCheck className="h-4 w-4" /> },
+    { key:'insurance', label:'Verify insurance', weight:25, done:!!contractorData?.insurance_carrier && contractorData?.insurance_carrier !== 'pending', href:'/profile/settings', icon:<ShieldIcon /> },
+    { key:'coverage', label:'Emergency service area', weight:20, done:contractorZips.length > 0, href:'/settings/service-area', icon:<MapPin className="h-4 w-4" /> },
+    { key:'hours', label:'Emergency availability', weight:15, done:!!contractorData?.availability_schedule, href:'/settings/calendar', icon:<Clock className="h-4 w-4" /> },
+    { key:'rates', label:'Set hourly rates', weight:15, done:!!contractorData?.hourly_rate, href:'/profile/settings', icon:<DollarSign className="h-4 w-4" /> },
   ]
 
   // Use real contractor stats
@@ -325,45 +328,61 @@ export default function ContractorDashboardPage() {
 
   return (
     <div className={`space-y-8 ${showKYCOverlay ? 'relative' : ''}`}>
-      {/* KYC Banner - Only show if contractor data is incomplete */}
-      {(!contractorData || contractorData.kyc_status !== 'completed') && (
+      {/* KYC Status Banners */}
+
+      {/* 1. NOT STARTED - Need to complete wizard */}
+      {contractorData && contractorData.kyc_status === 'not_started' && (
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
           <div className="flex items-center">
             <div className="flex-shrink-0">
               <svg className="h-8 w-8 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             </div>
             <div className="ml-3 flex-1">
-              <h3 className="text-lg font-medium text-blue-800">
-                {!contractorData ? 'Complete Your Pro Setup' : 'Finish KYC Verification'}
-              </h3>
+              <h3 className="text-lg font-medium text-blue-800">Complete KYC Verification</h3>
               <p className="text-blue-700 mt-1">
-                {!contractorData
-                  ? 'Set up your contractor profile to start accepting jobs and unlock premium features.'
-                  : 'Complete your KYC verification to unlock premium features like job signals and priority support.'
-                }
+                Please complete the KYC verification wizard to start accepting jobs.
               </p>
-              {contractorZips.length > 0 && (
-                <p className="text-blue-600 text-sm mt-2">
-                  Service areas: {contractorZips.join(', ')}
-                </p>
-              )}
             </div>
             <div className="ml-4">
               <Link
                 href="/pro/wizard"
-                className="px-4 py-2 bg-[var(--brand-text)] text-white rounded-md hover:bg-[var(--brand-border)] inline-block"
+                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 inline-block"
               >
-                {!contractorData ? 'Setup Profile' : 'Start KYC Verification'}
+                Start KYC Verification
               </Link>
             </div>
           </div>
         </div>
       )}
 
-      {/* Success Banner - Show when fully verified */}
-      {contractorData && contractorData.kyc_status === 'completed' && (
+      {/* 2. IN PROGRESS / PENDING APPROVAL - Waiting for admin */}
+      {contractorData && (contractorData.kyc_status === 'in_progress' || contractorData.status === 'pending_approval') && (
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
+          <div className="flex items-center">
+            <div className="flex-shrink-0">
+              <svg className="h-8 w-8 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <div className="ml-3 flex-1">
+              <h3 className="text-lg font-medium text-yellow-800">Pending Approval</h3>
+              <p className="text-yellow-700 mt-1">
+                Your KYC verification is under review. We'll notify you once approved (typically 1-2 business days).
+              </p>
+              {contractorZips.length > 0 && (
+                <p className="text-yellow-600 text-sm mt-2">
+                  Service areas: {contractorZips.join(', ')}
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 3. APPROVED - Can go online */}
+      {contractorData && contractorData.kyc_status === 'completed' && contractorData.status === 'approved' && (
         <div className="bg-green-50 border border-green-200 rounded-lg p-6">
           <div className="flex items-center">
             <div className="flex-shrink-0">
@@ -372,12 +391,36 @@ export default function ContractorDashboardPage() {
               </svg>
             </div>
             <div className="ml-3 flex-1">
-              <h3 className="text-lg font-medium text-green-800">Welcome to Rushr Pro!</h3>
+              <h3 className="text-lg font-medium text-green-800">Verified & Approved!</h3>
               <p className="text-green-700 mt-1">
-                Your account is fully verified. You now have access to all Pro features!
+                Your account is verified. Set your status to "Online" to start receiving jobs!
               </p>
               {contractorZips.length > 0 && (
                 <p className="text-green-600 text-sm mt-2">
+                  Service areas: {contractorZips.join(', ')}
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 4. ONLINE - Receiving jobs */}
+      {contractorData && contractorData.status === 'online' && (
+        <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-6">
+          <div className="flex items-center">
+            <div className="flex-shrink-0">
+              <svg className="h-8 w-8 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+            <div className="ml-3 flex-1">
+              <h3 className="text-lg font-medium text-emerald-800">You're Online! 🎉</h3>
+              <p className="text-emerald-700 mt-1">
+                Your profile is live and you're receiving job notifications.
+              </p>
+              {contractorZips.length > 0 && (
+                <p className="text-emerald-600 text-sm mt-2">
                   Service areas: {contractorZips.join(', ')}
                 </p>
               )}
@@ -543,7 +586,7 @@ export default function ContractorDashboardPage() {
       <section className={`grid grid-cols-1 gap-4 xl:grid-cols-3 ${showKYCOverlay ? 'opacity-50 pointer-events-none' : ''}`}>
         {/* Recent earnings */}
         <div className="rounded-2xl border border-emerald-200 bg-white p-4 shadow-sm">
-          <SectionTitle action={<Link href="/earnings" className="text-brand underline text-sm">View all</Link>}>
+          <SectionTitle action={<Link href="/dashboard/contractor" className="text-brand underline text-sm">View all</Link>}>
             Recent earnings
           </SectionTitle>
           <ul className="space-y-2">
@@ -569,7 +612,7 @@ export default function ContractorDashboardPage() {
 
         {/* Profile completeness */}
         <div className="rounded-2xl border border-blue-200 bg-white p-4 shadow-sm">
-          <SectionTitle action={<Link href="/profile" className="text-brand underline text-sm">Edit profile</Link>}>
+          <SectionTitle action={<Link href="/profile/settings" className="text-brand underline text-sm">Edit profile</Link>}>
             Emergency readiness
           </SectionTitle>
           <div className="rounded-xl border border-blue-200 bg-blue-50 p-3">
@@ -644,16 +687,15 @@ export default function ContractorDashboardPage() {
           <h3 className="mb-2 font-semibold text-ink dark:text-white">Emergency services</h3>
           <p className="text-sm text-slate-600 mb-3">Manage your emergency service offerings and rates.</p>
           <div className="flex flex-wrap gap-2">
-            <Link href="/settings/services" className="btn">Service Types</Link>
-            <Link href="/settings/rates" className="btn btn-outline">Hourly Rates</Link>
+            <Link href="/profile/settings" className="btn">Service Types & Rates</Link>
           </div>
         </div>
         <div className="rounded-2xl border border-slate-200 p-4">
           <h3 className="mb-2 font-semibold text-ink dark:text-white">Coverage & availability</h3>
           <p className="text-sm text-slate-600">Set your service area and emergency availability hours.</p>
           <div className="mt-3 flex gap-2">
-            <Link href="/settings/coverage" className="btn">Service Area</Link>
-            <Link href="/settings/availability" className="btn btn-outline">Availability</Link>
+            <Link href="/settings/service-area" className="btn">Service Area</Link>
+            <Link href="/settings/calendar" className="btn btn-outline">Availability</Link>
           </div>
         </div>
       </section>

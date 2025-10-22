@@ -8,7 +8,7 @@ import { openAuth } from './AuthModal'
 import LogoWordmark from './LogoWordmark'
 
 export default function Footer() {
-  const pathname = usePathname()
+  const pathname = usePathname() || ''
   const router = useRouter()
   const { user: homeownerUser } = useAuth()
   const { user: proUser } = useProAuth()
@@ -16,6 +16,12 @@ export default function Footer() {
   // Determine current user and role
   const user = homeownerUser || proUser
   const userRole = homeownerUser ? 'HOMEOWNER' : proUser ? 'CONTRACTOR' : null
+
+  // Determine if we're on a pro route for theming
+  const isProRoute = pathname.startsWith('/pro') || pathname.startsWith('/dashboard/contractor')
+
+  // Brand colors
+  const brandColor = isProRoute ? '#0072f5' : '#47B46B'
 
   // For local development, use relative paths instead of cross-site URLs
   const isLocalDev = !process.env.NEXT_PUBLIC_PRO_URL && !process.env.NEXT_PUBLIC_MAIN_URL
@@ -35,9 +41,13 @@ export default function Footer() {
     return (
       <Link
         href={href}
-        className={`flex items-center gap-2 hover:text-ink dark:hover:text-white transition ${active ? 'text-primary font-semibold' : ''}`}
+        className={`flex items-center gap-2 hover:text-ink dark:hover:text-white transition ${active ? 'font-semibold' : ''}`}
+        style={active ? { color: brandColor } : undefined}
       >
-        <span className={`h-1.5 w-1.5 rounded-full ${active ? 'bg-primary' : 'bg-transparent'}`} />
+        <span
+          className="h-1.5 w-1.5 rounded-full"
+          style={{ backgroundColor: active ? brandColor : 'transparent' }}
+        />
         <span>{children}</span>
       </Link>
     )
@@ -86,37 +96,41 @@ export default function Footer() {
         <div>
           <div className="font-semibold text-ink dark:text-white mb-2">Company</div>
           <ul className="space-y-2">
-            <li><FLink href={toMain('/about')}>About</FLink></li>
-            <li><FLink href={toMain('/pricing')}>Pricing</FLink></li>
+            <li><FLink href="/about">About</FLink></li>
+            <li><FLink href="/pricing">Pricing</FLink></li>
             <li><DashboardItem /></li>
-            <li><FLink href={MAIN_HOME}>Rushr for Homeowners</FLink></li>
-            <li><FLink href={PRO_HOME}>Rushr For Pros</FLink></li>
+            <li><FLink href="/">Rushr for Homeowners</FLink></li>
+            <li><FLink href="/pro">Rushr For Pros</FLink></li>
           </ul>
         </div>
 
         <div>
           <div className="font-semibold text-ink dark:text-white mb-2">Explore</div>
           <ul className="space-y-2">
-            <li><FLink href={toMain('/')}>Home</FLink></li>
-            <li><FLink href={toMain('/how-it-works')}>How It Works</FLink></li>
-            <li><FLink href={toPro('/find-work/how-it-works')}>How it Works For Pros</FLink></li>
-            <li><FLink href={toMain('/teams')}>Rushr Teams</FLink></li>
-            <li><FLink href={toMain('/find-pro')}>Search For A Pro</FLink></li>
-            <li><FLink href={toPro('/jobs')}>Browse Jobs</FLink></li>
-              <li><FLink href={toMain('/post-job')}>Post a Job</FLink></li>
-            <li><FLink href={toPro('/signals')}>Signals</FLink></li>
+            <li><FLink href="/">Home</FLink></li>
+            <li><FLink href="/how-it-works">How It Works</FLink></li>
+            <li><FLink href="/pro/how-it-works">How it Works For Pros</FLink></li>
+            <li><FLink href="/teams">Rushr Teams</FLink></li>
+            <li><FLink href="/rushrmap">Search For A Pro</FLink></li>
+            <li><FLink href="/jobs">Browse Jobs</FLink></li>
+            <li><FLink href="/post-job">Post a Job</FLink></li>
+            <li><FLink href="/pro/signals">Signals</FLink></li>
           </ul>
         </div>
 
         <div>
           <div className="font-semibold text-ink dark:text-white mb-2">Legal & Contact</div>
           <ul className="space-y-2">
-            <li><FLink href={toMain('/terms')}>Terms</FLink></li>
-            <li><FLink href={toMain('/privacy')}>Privacy</FLink></li>
-            <li><FLink href={toMain('/contact')}>Contact</FLink></li>
+            <li><FLink href="/terms">Terms</FLink></li>
+            <li><FLink href="/privacy">Privacy</FLink></li>
+            <li><FLink href="/contact">Contact</FLink></li>
             <li>
-              <a className="hover:text-ink dark:hover:text-white" href="mailto:hello@userushr.com">
-                hello@userushr.com
+              <a
+                className="flex items-center gap-2 hover:text-ink dark:hover:text-white transition"
+                href="mailto:hello@userushr.com"
+              >
+                <span className="h-1.5 w-1.5 rounded-full bg-transparent" />
+                <span>hello@userushr.com</span>
               </a>
             </li>
           </ul>

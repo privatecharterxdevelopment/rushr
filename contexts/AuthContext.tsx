@@ -172,10 +172,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (session?.user) {
           await fetchUserProfile(session.user.id)
 
-          // Redirect to homeowner dashboard after successful login/signup
+          // Redirect to dashboard after successful login
           if (event === 'SIGNED_IN' && session.user.email_confirmed_at) {
-            // Only redirect if user is NOT a contractor
-            if (session.user.user_metadata?.role !== 'contractor') {
+            // Check if user is a contractor by querying pro_contractors table
+            const { data: proContractor } = await supabase
+              .from('pro_contractors')
+              .select('id')
+              .eq('id', session.user.id)
+              .maybeSingle()
+
+            // If user is in pro_contractors table, they're a contractor
+            if (proContractor) {
+              router.push('/dashboard/contractor')
+            } else {
+              // Otherwise, they're a homeowner
               router.push('/dashboard/homeowner')
             }
           }
@@ -200,6 +210,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (error) {
         return { error: error.message }
+      }
+
+      // Check if this user is a contractor - homeowner login should reject contractors
+      if (data.user) {
+        const { data: profile, error: profileError } = await supabase
+          .from('user_profiles')
+          .select('role')
+          .eq('id', data.user.id)
+          .single()
+
+        if (!profileError && profile && profile.role === 'contractor') {
+          // Sign out the contractor immediately
+          await supabase.auth.signOut()
+          return {
+            error: 'This is a contractor account. Please use the contractor login at /pro/sign-in instead.'
+          }
+        }
       }
 
       showGlobalToast('Signed in successfully!', 'success')
@@ -266,19 +293,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUserProfile(null)
     setSession(null)
 
-    // Clear storage
-    try {
-      localStorage.clear()
-      sessionStorage.clear()
-    } catch (err) {
-      console.error('Failed to clear storage:', err)
-    }
-
-    // Supabase sign out
+    // Supabase sign out (handles its own storage cleanup)
     try {
       await supabase.auth.signOut()
     } catch (err) {
       console.error('Supabase signout error:', err)
+    }
+
+    // Clear only app-specific storage keys (not Supabase keys)
+    try {
+      const appKeysToRemove = ['userProfile', 'lastSync']
+      appKeysToRemove.forEach(key => {
+        try {
+          localStorage.removeItem(key)
+          sessionStorage.removeItem(key)
+        } catch (e) {
+          // Ignore individual key errors
+        }
+      })
+    } catch (err) {
+      console.error('Failed to clear storage:', err)
     }
 
     // Redirect to homepage

@@ -35,6 +35,7 @@ type Props = {
   minRating?: number
   onMinRatingChange?: (r: number) => void
   filteredCount?: number
+  hideSidebar?: boolean // NEW: Hide the sidebar for simple map view
 }
 
 const CAT_EMOJI: Record<string, string> = {
@@ -75,18 +76,51 @@ export default function ProMapInner({
   minRating = 0,
   onMinRatingChange,
   filteredCount = 0,
+  hideSidebar = false, // NEW: Default to showing sidebar
 }: Props) {
   const addToast = useApp()?.addToast
 
   // --- Sidebar page state (Uber-style two-page flow) ---
   const [sidebarPage, setSidebarPage] = useState<'search' | 'results'>('search')
 
+  // --- Distance calculation (Haversine formula) ---
+  function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
+    const R = 3959 // Earth's radius in miles
+    const dLat = (lat2 - lat1) * Math.PI / 180
+    const dLon = (lon2 - lon1) * Math.PI / 180
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+      Math.sin(dLon / 2) * Math.sin(dLon / 2)
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+    return R * c
+  }
+
   // --- Data filter ---
   const safeItems = Array.isArray(items) ? items : []
   const pros = useMemo(() => {
-    if (!category) return safeItems
-    return safeItems.filter((c: any) => Array.isArray(c?.services) && c.services.includes(category))
-  }, [safeItems, category])
+    let filtered = safeItems
+
+    // Filter by category if specified
+    if (category) {
+      filtered = filtered.filter((c: any) => Array.isArray(c?.services) && c.services.includes(category))
+    }
+
+    // Filter by radius if searchCenter is provided
+    if (searchCenter && radiusMiles) {
+      const [centerLat, centerLng] = searchCenter
+      filtered = filtered.filter((c: any) => {
+        const lat = Number(c?.loc?.lat)
+        const lng = Number(c?.loc?.lng)
+        if (!isFinite(lat) || !isFinite(lng)) return false
+
+        const distance = calculateDistance(centerLat, centerLng, lat, lng)
+        return distance <= radiusMiles
+      })
+    }
+
+    return filtered
+  }, [safeItems, category, searchCenter, radiusMiles])
 
   // --- Leaflet + map refs ---
   const mapRef = useRef<HTMLDivElement>(null)
@@ -230,9 +264,98 @@ export default function ProMapInner({
   const userLocationMarkerRef = useRef<any>(null)
   const radiusCircleRef = useRef<any>(null)
 
+  // Function to add user location marker
+  async function addUserLocationMarker(map: any, location: [number, number]) {
+    if (!map || !location) return
+
+    // Remove existing user marker
+    if (userLocationMarkerRef.current) {
+      userLocationMarkerRef.current.remove()
+      userLocationMarkerRef.current = null
+    }
+
+    const mapboxgl = (await import('mapbox-gl')).default
+
+    // Create pulsing user location marker
+    const el = document.createElement('div')
+    el.className = 'user-location-marker'
+    el.style.cssText = `
+      width: 24px;
+      height: 24px;
+      position: relative;
+    `
+
+    // Inner blue dot
+    const dot = document.createElement('div')
+    dot.style.cssText = `
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 16px;
+      height: 16px;
+      background-color: #3B82F6;
+      border: 3px solid white;
+      border-radius: 50%;
+      box-shadow: 0 0 10px rgba(59, 130, 246, 0.8), 0 2px 4px rgba(0,0,0,0.3);
+      z-index: 2;
+    `
+    el.appendChild(dot)
+
+    // Pulsing ring
+    const pulse = document.createElement('div')
+    pulse.style.cssText = `
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 40px;
+      height: 40px;
+      border: 2px solid #3B82F6;
+      border-radius: 50%;
+      animation: user-location-pulse 2s ease-out infinite;
+      opacity: 0.6;
+      z-index: 1;
+    `
+    el.appendChild(pulse)
+
+    // Add animation keyframes if not already added
+    if (!document.getElementById('user-location-pulse-animation')) {
+      const style = document.createElement('style')
+      style.id = 'user-location-pulse-animation'
+      style.textContent = `
+        @keyframes user-location-pulse {
+          0% { transform: translate(-50%, -50%) scale(0.5); opacity: 1; }
+          100% { transform: translate(-50%, -50%) scale(2.5); opacity: 0; }
+        }
+      `
+      document.head.appendChild(style)
+    }
+
+    const marker = new mapboxgl.Marker(el)
+      .setLngLat([location[1], location[0]]) // Mapbox uses [lng, lat]
+      .setPopup(
+        new mapboxgl.Popup({ offset: 25 })
+          .setHTML('<div style="padding: 8px; font-weight: 600;">📍 Your Location</div>')
+      )
+      .addTo(map)
+
+    userLocationMarkerRef.current = marker
+    console.log('User location marker added at:', location)
+  }
+
   // Function to update radius circle - works with 3D pitch
   function updateRadiusCircle(map: any, center: [number, number], radiusMiles: number) {
     if (!map) return
+
+    // Check if map style is loaded
+    if (!map.isStyleLoaded()) {
+      // Wait for style to load, then try again
+      map.once('style.load', () => {
+        updateRadiusCircle(map, center, radiusMiles)
+      })
+      return
+    }
 
     // Remove existing circle
     if (radiusCircleRef.current) {
@@ -257,37 +380,41 @@ export default function ProMapInner({
       }]
     }
 
-    map.addSource('radius-circle', {
-      type: 'geojson',
-      data: circleGeoJSON
-    })
+    try {
+      map.addSource('radius-circle', {
+        type: 'geojson',
+        data: circleGeoJSON
+      })
 
-    // Use circle layer with pitch alignment for 3D perspective
-    map.addLayer({
-      id: 'radius-circle-layer',
-      type: 'circle',
-      source: 'radius-circle',
-      paint: {
-        'circle-radius': {
-          stops: [
-            [0, 0],
-            [10, radiusMiles * 10],
-            [15, radiusMiles * 50],
-            [18, radiusMiles * 150]
-          ],
-          base: 2
-        },
-        'circle-color': '#10b981',
-        'circle-opacity': 0.06, // Much lighter
-        'circle-stroke-width': 1.5,
-        'circle-stroke-color': '#10b981',
-        'circle-stroke-opacity': 0.25, // Lighter stroke
-        'circle-pitch-alignment': 'map', // Adjusts with map pitch/tilt
-        'circle-pitch-scale': 'map' // Scales with map perspective
-      }
-    })
+      // Use circle layer with pitch alignment for 3D perspective
+      map.addLayer({
+        id: 'radius-circle-layer',
+        type: 'circle',
+        source: 'radius-circle',
+        paint: {
+          'circle-radius': {
+            stops: [
+              [0, 0],
+              [10, radiusMiles * 10],
+              [15, radiusMiles * 50],
+              [18, radiusMiles * 150]
+            ],
+            base: 2
+          },
+          'circle-color': '#10b981',
+          'circle-opacity': 0.06, // Much lighter
+          'circle-stroke-width': 1.5,
+          'circle-stroke-color': '#10b981',
+          'circle-stroke-opacity': 0.25, // Lighter stroke
+          'circle-pitch-alignment': 'map', // Adjusts with map pitch/tilt
+          'circle-pitch-scale': 'map' // Scales with map perspective
+        }
+      })
 
-    radiusCircleRef.current = true
+      radiusCircleRef.current = true
+    } catch (e) {
+      console.error('Error adding radius circle:', e)
+    }
   }
 
   function refreshMarkersMapbox(map: any, items: any[], selectedCategory?: string) {
@@ -428,7 +555,10 @@ export default function ProMapInner({
         const mapboxgl = (await import('mapbox-gl')).default
         ;(mapboxgl as any).accessToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN || ''
 
-        const initialCenter: [number, number] = searchCenter ?? [-74.006, 40.7128]
+        // searchCenter is [lat, lng], but Mapbox needs [lng, lat]
+        const initialCenter: [number, number] = searchCenter
+          ? [searchCenter[1], searchCenter[0]]
+          : [-74.006, 40.7128]
 
         map = new mapboxgl.Map({
           container: mapRef.current,
@@ -491,8 +621,10 @@ export default function ProMapInner({
           console.log('Map loaded, adding initial markers:', pros.length)
           refreshMarkersMapbox(map, pros, category)
 
-          // Add radius circle if searchCenter is provided
+          // Add user location marker if searchCenter is provided
           if (searchCenter && radiusMiles) {
+            console.log('Adding user location marker at:', searchCenter)
+            addUserLocationMarker(map, searchCenter)
             updateRadiusCircle(map, searchCenter, radiusMiles)
           }
         })
@@ -535,11 +667,13 @@ export default function ProMapInner({
     refreshMarkersMapbox(map, pros, category)
   }, [pros, category])
 
-  // Update radius circle when searchCenter or radius changes
+  // Update radius circle and user marker when searchCenter or radius changes
   useEffect(() => {
     const map = mapObjRef.current
     if (!map || !searchCenter || !radiusMiles) return
 
+    console.log('SearchCenter changed, updating user marker and radius:', searchCenter)
+    addUserLocationMarker(map, searchCenter)
     updateRadiusCircle(map, searchCenter, radiusMiles)
   }, [searchCenter, radiusMiles])
 
@@ -549,6 +683,7 @@ export default function ProMapInner({
     if (!map) return
     try {
       if (searchCenter) {
+        // searchCenter is [lat, lng], Mapbox needs [lng, lat]
         map.flyTo({
           center: [searchCenter[1], searchCenter[0]],
           zoom: map.getZoom() || 11
@@ -694,11 +829,12 @@ export default function ProMapInner({
         style={{ zIndex: 0 }}
       />
 
-      {/* Uber-style Floating Left Sidebar - Two Page Flow */}
-      <div
-        className="absolute top-4 left-4 bottom-4 w-96 bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col"
-        style={{ zIndex: 1000, maxHeight: 'calc(100vh - 120px)' }}
-      >
+      {/* Uber-style Floating Left Sidebar - Two Page Flow (only if not hidden) */}
+      {!hideSidebar && (
+        <div
+          className="absolute top-4 left-4 bottom-4 w-96 bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col"
+          style={{ zIndex: 1000, maxHeight: 'calc(100vh - 120px)' }}
+        >
         {/* PAGE 1: Search Page */}
         {sidebarPage === 'search' && (
           <>
@@ -944,7 +1080,8 @@ export default function ProMapInner({
             )}
           </>
         )}
-      </div>
+        </div>
+      )}
     </div>
   )
 }

@@ -1,14 +1,16 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { useAuth } from '../../contexts/AuthContext'
 import LoadingSpinner from '../../components/LoadingSpinner'
+import { openAuth } from '../../components/AuthModal'
 
 export default function SignUpPage() {
   const { signUp, user, loading: authLoading } = useAuth()
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [name, setName] = useState('')
@@ -67,8 +69,13 @@ export default function SignUpPage() {
       setError(error)
       setLoading(false)
     } else {
-      // Success - redirect IMMEDIATELY to homeowner dashboard (don't wait for loading to finish)
-      window.location.href = '/dashboard/homeowner'
+      // Success - check for callback URL, otherwise go to dashboard
+      const callbackUrl = searchParams.get('callback')
+      if (callbackUrl) {
+        window.location.href = callbackUrl
+      } else {
+        window.location.href = '/dashboard/homeowner'
+      }
     }
   }
 
@@ -131,9 +138,19 @@ export default function SignUpPage() {
 
         <p className="mt-6 text-sm text-gray-600 text-center">
           Already have an account?{' '}
-          <Link href="/sign-in" className="text-green-600 hover:text-green-500 font-medium transition-colors">
+          <button
+            onClick={() => {
+              const callbackUrl = searchParams.get('callback')
+              if (callbackUrl) {
+                openAuth(callbackUrl)
+              } else {
+                window.location.href = '/?auth=signin'
+              }
+            }}
+            className="text-green-600 hover:text-green-500 font-medium transition-colors"
+          >
             Sign in
-          </Link>
+          </button>
         </p>
 
         <div className="mt-6 pt-6 border-t border-gray-200">

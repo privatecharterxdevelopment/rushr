@@ -59,7 +59,7 @@ export default function HowItWorksPage(){
               </button>
 
               <Link
-                href="/find-pro"
+                href="/rushrmap"
                 className="bg-white hover:bg-gray-50 text-emerald-700 hover:text-emerald-800 px-8 py-4 rounded-xl font-semibold text-lg shadow-lg border border-emerald-200 hover:border-emerald-300 transition-colors"
               >
                 Browse Professionals
@@ -328,7 +328,7 @@ export default function HowItWorksPage(){
               <button onClick={postOrAuth} className="btn-primary px-10 py-5 text-xl font-bold shadow-xl transition-all transform hover:scale-105">
                 🚨 Get Emergency Help Now
               </button>
-              <Link href="/find-pro" className="bg-slate-600 hover:bg-slate-700 text-white px-10 py-5 rounded-xl font-bold text-xl shadow-xl transition-all transform hover:scale-105 border border-emerald-500/30">
+              <Link href="/rushrmap" className="bg-slate-600 hover:bg-slate-700 text-white px-10 py-5 rounded-xl font-bold text-xl shadow-xl transition-all transform hover:scale-105 border border-emerald-500/30">
                 🔍 Browse Emergency Pros
               </Link>
             </div>

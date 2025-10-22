@@ -70,8 +70,10 @@ export default function UserDropdown() {
   const router = useRouter()
 
   // Determine which user is logged in
-  const isContractor = !!contractorUser
-  const isHomeowner = !!homeownerUser && !!userProfile
+  // CRITICAL: Check contractorProfile existence, NOT contractorUser
+  // Both contexts can have a user, but only contractors have contractorProfile
+  const isContractor = !!contractorProfile
+  const isHomeowner = !!userProfile && !contractorProfile
 
   const user = isContractor ? contractorUser : homeownerUser
   const profile = isContractor ? contractorProfile : userProfile
@@ -134,7 +136,7 @@ export default function UserDropdown() {
     {
       icon: MessageIcon,
       label: 'Messages',
-      href: '/messages',
+      href: isContractor ? '/dashboard/contractor/messages' : '/dashboard/homeowner/messages',
       badge: 0, // TODO: Implement unread count
     },
     {

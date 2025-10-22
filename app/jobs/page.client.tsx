@@ -51,14 +51,14 @@ export default function JobsInner() {
 
         // Get jobs that are accepting bids (pending status)
         const { data, error } = await supabase
-          .from('jobs')
+          .from('homeowner_jobs')
           .select('*')
           .eq('status', 'pending') // Only jobs accepting bids
           .order('created_at', { ascending: false })
 
         if (error) {
           console.error('Error fetching jobs:', error)
-          setError(error.message)
+          setError(error.message || JSON.stringify(error) || 'Failed to fetch jobs')
           return
         }
 

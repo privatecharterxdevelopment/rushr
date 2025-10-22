@@ -4,12 +4,12 @@ import React, { useMemo, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useAuth } from '../../../contexts/AuthContext'
 import { useHomeownerStats } from '../../../lib/hooks/useHomeownerStats'
-import { supabaseHomeowner as supabase } from '../../../lib/supabaseClient'
+import { supabase } from '../../../lib/supabaseClient'
 import NotificationBell from '../../../components/NotificationBell'
 import LoadingSpinner from '../../../components/LoadingSpinner'
 import dynamic from 'next/dynamic'
 
-const ContractorTracker = dynamic(() => import('../../../components/ContractorTracker'), { ssr: false })
+// const ContractorTracker = dynamic(() => import('../../../components/ContractorTracker'), { ssr: false })
 const PaymentHistory = dynamic(() => import('../../../components/PaymentHistory'), { ssr: false })
 import {
   CalendarDays,
@@ -425,7 +425,7 @@ export default function HomeownerDashboardPage() {
           <div className="flex gap-2">
             <Link href="/post-job?urgent=1" className="btn-primary">Emergency Help</Link>
             <Link href="/dashboard/homeowner/bids" className="btn">Manage Bids</Link>
-            <Link href="/find-pro" className="btn">Find a Pro</Link>
+            <Link href="/rushrmap" className="btn">Find a Pro</Link>
           </div>
         </div>
       </div>
@@ -742,7 +742,7 @@ export default function HomeownerDashboardPage() {
           </div>
         </div>
         <div className="rounded-2xl border border-emerald-200 bg-white p-4">
-          <SectionTitle action={<Link href="/find-pro" className="text-brand underline text-sm">Browse</Link>}>
+          <SectionTitle action={<Link href="/rushrmap" className="text-brand underline text-sm">Browse</Link>}>
             Trusted pros
           </SectionTitle>
 
@@ -804,7 +804,8 @@ export default function HomeownerDashboardPage() {
       </section>
 
       {/* Contractor Tracker - Shows when job has accepted bid */}
-      {showTracker && activeJob && (
+      {/* TODO: Implement ContractorTracker component for real-time tracking */}
+      {/* {showTracker && activeJob && (
         <ContractorTracker
           jobId={activeJob.id}
           contractorId={activeJob.contractor_id}
@@ -813,7 +814,7 @@ export default function HomeownerDashboardPage() {
           contractorPhone={activeJob.contractor_phone}
           onClose={() => setShowTracker(false)}
         />
-      )}
+      )} */}
     </div>
   )
 }

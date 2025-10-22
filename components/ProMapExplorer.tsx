@@ -2,6 +2,7 @@
 'use client'
 
 import React, { useEffect, useMemo, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 import ProMapInner from './ProMapInner'
 import { useApp } from '../lib/state'
 
@@ -27,6 +28,35 @@ const ZIP_COORDS: Record<string, LatLng> = {
   '11215': [40.6673, -73.985],
 }
 
+// City coordinates mapping
+const CITY_COORDS: Record<string, LatLng> = {
+  // New York
+  'Manhattan, NY': [40.7831, -73.9712],
+  'Brooklyn, NY': [40.6782, -73.9442],
+  'Queens, NY': [40.7282, -73.7949],
+  'Bronx, NY': [40.8448, -73.8648],
+  'Staten Island, NY': [40.5795, -74.1502],
+  'New York, NY': [40.7128, -74.0060],
+  'NYC': [40.7128, -74.0060],
+
+  // Other major cities
+  'Los Angeles, CA': [34.0522, -118.2437],
+  'Chicago, IL': [41.8781, -87.6298],
+  'Phoenix, AZ': [33.4484, -112.0740],
+  'Miami, FL': [25.7617, -80.1918],
+  'Seattle, WA': [47.6062, -122.3321],
+  'San Francisco, CA': [37.7749, -122.4194],
+  'Boston, MA': [42.3601, -71.0589],
+  'Philadelphia, PA': [39.9526, -75.1652],
+  'Houston, TX': [29.7604, -95.3698],
+  'Dallas, TX': [32.7767, -96.7970],
+  'San Diego, CA': [32.7157, -117.1611],
+  'Denver, CO': [39.7392, -104.9903],
+  'Atlanta, GA': [33.7490, -84.3880],
+  'Las Vegas, NV': [36.1699, -115.1398],
+  'Portland, OR': [45.5152, -122.6784],
+}
+
 // Helper function to get location from ZIP code
 function getLocationFromZip(zipCode: string): { lat: number; lng: number } | null {
   const coords = ZIP_COORDS[zipCode]
@@ -37,7 +67,24 @@ function getLocationFromZip(zipCode: string): { lat: number; lng: number } | nul
   return { lat: 40.7128, lng: -74.006 }
 }
 
+// Helper function to get coordinates from city name
+function getCityCoordinates(city: string): LatLng | null {
+  const coords = CITY_COORDS[city]
+  if (coords) {
+    return coords
+  }
+  // Try partial match
+  for (const [key, value] of Object.entries(CITY_COORDS)) {
+    if (key.toLowerCase().includes(city.toLowerCase()) || city.toLowerCase().includes(key.toLowerCase())) {
+      return value
+    }
+  }
+  // Default to NYC
+  return [40.7128, -74.0060]
+}
+
 export default function ProMapExplorer() {
+  const searchParams = useSearchParams()
   const [allContractors, setAllContractors] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -54,23 +101,44 @@ export default function ProMapExplorer() {
   const [showMore, setShowMore] = useState(false)
   const [showList, setShowList] = useState(false)
 
+  // Initialize from URL parameters
+  useEffect(() => {
+    const nearParam = searchParams?.get('near')
+    const cityParam = searchParams?.get('city')
+    const categoryParam = searchParams?.get('category')
+
+    if (nearParam || cityParam) {
+      const location = nearParam || cityParam
+      setQuery(location || '')
+      setZip(location || '')
+
+      // Try to find coordinates for the city/location
+      const cityCoords = getCityCoordinates(location || '')
+      if (cityCoords) {
+        setCenter(cityCoords)
+      }
+    }
+
+    if (categoryParam) {
+      setCategory(categoryParam as keyof typeof CAT_EMOJI)
+    }
+  }, [searchParams])
+
   // Fetch contractors from Supabase
   useEffect(() => {
     async function fetchContractors() {
       try {
-        const { supabaseBrowser } = await import('../utils/supabase-browser')
-        const supabase = supabaseBrowser()
+        const { supabase } = await import('../lib/supabaseClient')
 
         const { data, error } = await supabase
-          .from('contractor_profiles')
+          .from('pro_contractors')
           .select('*')
-          .eq('status', 'approved')
 
         if (error) {
-          console.error('Error fetching contractors:', error)
+          console.error('[RUSHRMAP] Error fetching contractors:', error)
           setAllContractors([])
         } else {
-          console.log('Fetched contractors from DB:', data)
+          console.log('[RUSHRMAP] Fetched contractors from DB:', data)
           // Transform data to include location coordinates
           const contractorsWithLocation = (data || []).map(contractor => {
             // Use exact coordinates from database (latitude/longitude)
@@ -83,28 +151,28 @@ export default function ProMapExplorer() {
                 lat: Number(contractor.latitude),
                 lng: Number(contractor.longitude)
               }
-            } else {
+            } else if (contractor.base_zip) {
+              // Fallback: Use base_zip
+              loc = getLocationFromZip(contractor.base_zip)
+            } else if (Array.isArray(contractor.service_area_zips) && contractor.service_area_zips.length > 0) {
               // Fallback: Use first ZIP from service_area_zips array
-              const primaryZip = Array.isArray(contractor.service_area_zips) && contractor.service_area_zips.length > 0
-                ? contractor.service_area_zips[0]
-                : null
-              loc = primaryZip ? getLocationFromZip(primaryZip) : null
+              loc = getLocationFromZip(contractor.service_area_zips[0])
             }
 
             return {
               ...contractor,
               loc,
               services: contractor.categories || [], // Map categories to services
-              rating: contractor.rating || 0,
-              city: contractor.address || contractor.service_area_zips?.[0] || 'NYC'
+              rating: contractor.rating || 4.5,
+              city: contractor.business_address || contractor.base_zip || contractor.service_area_zips?.[0] || 'NYC'
             }
           }).filter(c => c.loc !== null) // Only include contractors with valid locations
 
-          console.log('Contractors with location:', contractorsWithLocation)
+          console.log('[RUSHRMAP] Contractors with location:', contractorsWithLocation)
           setAllContractors(contractorsWithLocation)
         }
       } catch (err) {
-        console.error('Failed to fetch contractors:', err)
+        console.error('[RUSHRMAP] Failed to fetch contractors:', err)
         setAllContractors([])
       } finally {
         setLoading(false)

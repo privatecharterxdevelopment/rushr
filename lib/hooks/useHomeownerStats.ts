@@ -52,15 +52,29 @@ export function useHomeownerStats() {
     if (!user) return
 
     try {
-      // Fetch dashboard statistics
-      const { data: statsData, error: statsError } = await supabase
-        .from('homeowner_dashboard_stats')
-        .select('*')
-        .eq('homeowner_id', user.id)
-        .single()
+      // Parallelize all three queries to reduce load time
+      const [statsResult, jobsResult, messagesResult] = await Promise.all([
+        supabase
+          .from('homeowner_dashboard_stats')
+          .select('*')
+          .eq('homeowner_id', user.id)
+          .single(),
+        supabase
+          .from('homeowner_jobs')
+          .select('*')
+          .eq('homeowner_id', user.id)
+          .order('created_at', { ascending: false })
+          .limit(10),
+        supabase
+          .from('homeowner_messages')
+          .select('*')
+          .eq('homeowner_id', user.id)
+          .order('created_at', { ascending: false })
+          .limit(20)
+      ])
 
-      if (statsError) {
-        // Suppressed: Database connection disabled, using defaults
+      // Handle stats
+      if (statsResult.error) {
         // If no stats exist yet, use defaults
         setStats({
           active_services: 0,
@@ -72,37 +86,23 @@ export function useHomeownerStats() {
           member_since: new Date().toISOString()
         })
       } else {
-        setStats(statsData)
+        setStats(statsResult.data)
       }
 
-      // Fetch recent jobs
-      const { data: jobsData, error: jobsError } = await supabase
-        .from('homeowner_jobs')
-        .select('*')
-        .eq('homeowner_id', user.id)
-        .order('created_at', { ascending: false })
-        .limit(10)
-
-      if (jobsError) {
-        console.error('Error fetching jobs:', jobsError)
+      // Handle jobs
+      if (jobsResult.error) {
+        console.error('Error fetching jobs:', jobsResult.error)
         setJobs([])
       } else {
-        setJobs(jobsData || [])
+        setJobs(jobsResult.data || [])
       }
 
-      // Fetch recent messages
-      const { data: messagesData, error: messagesError } = await supabase
-        .from('homeowner_messages')
-        .select('*')
-        .eq('homeowner_id', user.id)
-        .order('created_at', { ascending: false })
-        .limit(20)
-
-      if (messagesError) {
-        console.error('Error fetching messages:', messagesError)
+      // Handle messages
+      if (messagesResult.error) {
+        console.error('Error fetching messages:', messagesResult.error)
         setMessages([])
       } else {
-        setMessages(messagesData || [])
+        setMessages(messagesResult.data || [])
       }
 
     } catch (err) {
@@ -189,7 +189,80 @@ export function useHomeownerStats() {
       return
     }
 
-    fetchStats()
+    // Initial fetch
+    const loadInitialData = async () => {
+      if (!user) return
+
+      try {
+        // Parallelize all three queries to reduce load time
+        const [statsResult, jobsResult, messagesResult] = await Promise.all([
+          supabase
+            .from('homeowner_dashboard_stats')
+            .select('*')
+            .eq('homeowner_id', user.id)
+            .single(),
+          supabase
+            .from('homeowner_jobs')
+            .select('*')
+            .eq('homeowner_id', user.id)
+            .order('created_at', { ascending: false })
+            .limit(10),
+          supabase
+            .from('homeowner_messages')
+            .select('*')
+            .eq('homeowner_id', user.id)
+            .order('created_at', { ascending: false })
+            .limit(20)
+        ])
+
+        // Handle stats
+        if (statsResult.error) {
+          setStats({
+            active_services: 0,
+            completed_services: 0,
+            unread_messages: 0,
+            trusted_contractors: 0,
+            total_spent: 0,
+            first_job_completed: false,
+            member_since: new Date().toISOString()
+          })
+        } else {
+          setStats(statsResult.data)
+        }
+
+        // Handle jobs
+        if (jobsResult.error) {
+          console.error('Error fetching jobs:', jobsResult.error)
+          setJobs([])
+        } else {
+          setJobs(jobsResult.data || [])
+        }
+
+        // Handle messages
+        if (messagesResult.error) {
+          console.error('Error fetching messages:', messagesResult.error)
+          setMessages([])
+        } else {
+          setMessages(messagesResult.data || [])
+        }
+      } catch (err) {
+        console.error('Error loading initial data:', err)
+        setError('Failed to load dashboard data')
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadInitialData()
+
+    // Debounce timer for fetchStats to prevent excessive calls
+    let debounceTimer: NodeJS.Timeout | null = null
+    const debouncedRefresh = () => {
+      if (debounceTimer) clearTimeout(debounceTimer)
+      debounceTimer = setTimeout(() => {
+        loadInitialData()
+      }, 500)
+    }
 
     // Subscribe to job changes
     const jobsSubscription = supabase
@@ -203,7 +276,7 @@ export function useHomeownerStats() {
           filter: `homeowner_id=eq.${user.id}`
         },
         () => {
-          fetchStats() // Refresh when jobs change
+          debouncedRefresh()
         }
       )
       .subscribe()
@@ -220,12 +293,13 @@ export function useHomeownerStats() {
           filter: `homeowner_id=eq.${user.id}`
         },
         () => {
-          fetchStats() // Refresh when messages change
+          debouncedRefresh()
         }
       )
       .subscribe()
 
     return () => {
+      if (debounceTimer) clearTimeout(debounceTimer)
       jobsSubscription.unsubscribe()
       messagesSubscription.unsubscribe()
     }

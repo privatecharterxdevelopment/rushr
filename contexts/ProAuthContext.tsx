@@ -224,18 +224,19 @@ export function ProAuthProvider({ children }: { children: React.ReactNode }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         try {
+          console.log('[AUTH] Auth state change:', event, 'User ID:', session?.user?.id?.substring(0, 8))
           setSession(session)
           setUser(session?.user ?? null)
 
           if (session?.user) {
-            // Only fetch contractor profile if user_metadata says they're a contractor
-            if (session.user.user_metadata?.role === 'contractor') {
-              await fetchContractorProfile(session.user.id)
+            // Check if user exists in pro_contractors table
+            const profile = await fetchContractorProfile(session.user.id)
 
-              // Redirect to contractor dashboard after successful login/signup
-              if (event === 'SIGNED_IN' && session.user.email_confirmed_at) {
-                router.push('/dashboard/contractor')
-              }
+            // Redirect to contractor dashboard after successful login/signup if they're a contractor
+            // REMOVED email_confirmed_at requirement for development
+            if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && profile) {
+              console.log('[AUTH] Redirecting contractor to dashboard')
+              router.push('/dashboard/contractor')
             }
           } else {
             setContractorProfile(null)
@@ -275,7 +276,9 @@ export function ProAuthProvider({ children }: { children: React.ReactNode }) {
         data: {
           name: contractorData.name,
           role: 'contractor'
-        }
+        },
+        // DISABLE email confirmation for development
+        emailRedirectTo: undefined
       }
     })
 
@@ -284,31 +287,33 @@ export function ProAuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     if (authData.user) {
-      // Create contractor profile
+      console.log('[SIGNUP] Creating contractor profile for user:', authData.user.id)
+
+      // Create contractor profile - use minimal fields to avoid ambiguous column errors
       const { error: profileError } = await supabase
         .from('pro_contractors')
-        .insert({
+        .insert([{
           id: authData.user.id,
           email: email,
           name: contractorData.name,
           business_name: contractorData.businessName,
-          phone: contractorData.phone,
-          license_number: contractorData.licenseNumber,
-          license_state: contractorData.licenseState,
-          insurance_carrier: contractorData.insuranceCarrier,
-          categories: contractorData.categories,
-          base_zip: contractorData.baseZip,
+          phone: contractorData.phone || '',
+          license_number: contractorData.licenseNumber || 'pending',
+          license_state: contractorData.licenseState || 'pending',
+          insurance_carrier: contractorData.insuranceCarrier || 'pending',
+          categories: contractorData.categories || ['General'],
+          base_zip: contractorData.baseZip || '00000',
           status: 'pending',
-          kyc_status: 'not_started',
-          created_at: new Date().toISOString()
-        })
+          kyc_status: 'not_started'
+        }])
 
       if (profileError) {
-        if (typeof window !== 'undefined') {
-          console.error('Error creating contractor profile:', profileError)
-        }
-        return { error: 'Failed to create contractor profile' }
+        console.error('[SIGNUP] Error creating contractor profile:', profileError)
+        console.error('[SIGNUP] Full error details:', JSON.stringify(profileError, null, 2))
+        return { error: `Database error: ${profileError.message}. Check if pro_contractors table has triggers or policies causing conflicts.` }
       }
+
+      console.log('[SIGNUP] Contractor profile created successfully')
 
       // Auto-approve for now and require KYC
       const { error: approveError } = await supabase
@@ -320,24 +325,20 @@ export function ProAuthProvider({ children }: { children: React.ReactNode }) {
         .eq('id', authData.user.id)
 
       if (approveError) {
-        if (typeof window !== 'undefined') {
-          console.error('Error approving contractor:', approveError)
-        }
+        console.error('[SIGNUP] Error approving contractor:', approveError)
+      } else {
+        console.log('[SIGNUP] Contractor auto-approved')
       }
 
-      // Check if user needs email confirmation
-      if (!authData.user.email_confirmed_at) {
-        return {
-          success: true,
-          needsKYC: true,
-          message: "Please check your email and click the confirmation link, then complete KYC verification."
-        }
-      }
+      // Fetch the created profile to set it in context
+      await fetchContractorProfile(authData.user.id)
+
+      console.log('[SIGNUP] Signup complete, redirecting to dashboard')
 
       return {
         success: true,
-        needsKYC: true,
-        message: "Account created successfully. Please complete KYC verification to access Pro features."
+        needsKYC: false, // Changed to false so they can access dashboard immediately
+        message: "Account created successfully! Redirecting to your dashboard..."
       }
     }
 
@@ -350,19 +351,26 @@ export function ProAuthProvider({ children }: { children: React.ReactNode }) {
     setContractorProfile(null)
     setSession(null)
 
-    // Clear storage
-    try {
-      localStorage.clear()
-      sessionStorage.clear()
-    } catch (err) {
-      console.error('Failed to clear storage:', err)
-    }
-
-    // Supabase sign out
+    // Supabase sign out (handles its own storage cleanup)
     try {
       await supabase.auth.signOut()
     } catch (err) {
       console.error('Supabase signout error:', err)
+    }
+
+    // Clear only app-specific storage keys (not Supabase keys)
+    try {
+      const appKeysToRemove = ['contractorProfile', 'lastSync']
+      appKeysToRemove.forEach(key => {
+        try {
+          localStorage.removeItem(key)
+          sessionStorage.removeItem(key)
+        } catch (e) {
+          // Ignore individual key errors
+        }
+      })
+    } catch (err) {
+      console.error('Failed to clear storage:', err)
     }
 
     // Redirect to homepage
