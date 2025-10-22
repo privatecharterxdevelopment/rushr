@@ -19,7 +19,7 @@ interface Bid {
   id: string
   job_id: string
   contractor_id: string
-  bid_amount: number
+  bid_amount: number | null
   message: string | null
   status: string
   created_at: string
@@ -197,7 +197,9 @@ export default function HomeownerBidsPage() {
                   <DollarSign className="h-5 w-5 text-emerald-600" />
                   <div>
                     <p className="text-sm text-slate-500">Bid Amount</p>
-                    <p className="text-lg font-semibold text-slate-900">${bid.bid_amount?.toFixed(2) || '0.00'}</p>
+                    <p className="text-lg font-semibold text-slate-900">
+                      ${bid.bid_amount != null ? bid.bid_amount.toFixed(2) : '0.00'}
+                    </p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
