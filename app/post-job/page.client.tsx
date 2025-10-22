@@ -155,10 +155,8 @@ function ContractorCard({
       <div className="flex items-center gap-3">
         {c.activeNow ? (
           <div className="text-right">
-            <div className="text-xs text-slate-500">Typical arrival</div>
-            <div className="font-medium text-slate-900 flex items-center gap-1">
-              <Clock className="h-4 w-4 text-emerald-600" /> {c.etaMin} min
-            </div>
+            <div className="text-xs text-emerald-600 font-medium">Available Now</div>
+            <div className="text-xs text-slate-500">Will share ETA & price</div>
           </div>
         ) : (
           <div className="text-right text-xs text-slate-500">Currently unavailable</div>
