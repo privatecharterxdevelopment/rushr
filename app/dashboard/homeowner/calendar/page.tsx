@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { useProAuth } from '../../../../contexts/ProAuthContext'
+import { useAuth } from '../../../../contexts/AuthContext'
 import { supabase } from '../../../../lib/supabaseClient'
 import {
   ArrowLeft,
@@ -11,12 +11,6 @@ import {
   ChevronRight,
   Clock,
   MapPin,
-  User,
-  DollarSign,
-  CheckCircle2,
-  AlertCircle,
-  Plus,
-  Filter
 } from 'lucide-react'
 
 interface CalendarEvent {
@@ -41,21 +35,21 @@ const MONTHS = [
 
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
-export default function ContractorCalendarPage() {
-  const { user, contractorProfile } = useProAuth()
+export default function HomeownerCalendarPage() {
+  const { user, userProfile } = useAuth()
   const [currentDate, setCurrentDate] = useState(new Date())
   const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null)
   const [viewMode, setViewMode] = useState<'month' | 'week' | 'day'>('month')
 
-  // Redirect if not contractor
-  if (!user || !contractorProfile) {
+  // Redirect if not homeowner
+  if (!user || !userProfile) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
-          <h2 className="text-xl font-semibold mb-4">Contractor access required</h2>
-          <Link href="/pro" className="btn-primary">Go to Pro Dashboard</Link>
+          <h2 className="text-xl font-semibold mb-4">Homeowner access required</h2>
+          <Link href="/" className="btn-primary">Go to Home</Link>
         </div>
       </div>
     )
@@ -160,7 +154,7 @@ export default function ContractorCalendarPage() {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600 mx-auto mb-4"></div>
           <p>Loading your calendar...</p>
         </div>
       </div>
@@ -172,7 +166,7 @@ export default function ContractorCalendarPage() {
       {/* Header */}
       <div className="mb-6">
         <div className="flex items-center gap-4 mb-4">
-          <Link href="/dashboard/contractor" className="btn btn-outline">
+          <Link href="/dashboard/homeowner" className="btn btn-outline">
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to Dashboard
           </Link>
@@ -240,12 +234,12 @@ export default function ContractorCalendarPage() {
                 key={index}
                 className={`min-h-[120px] p-2 border-r border-b last:border-r-0 ${
                   !isCurrentMonth ? 'bg-gray-50' : ''
-                } ${isToday ? 'bg-blue-50' : ''}`}
+                } ${isToday ? 'bg-emerald-50' : ''}`}
               >
                 {day && (
                   <>
                     <div className={`text-sm font-medium mb-2 ${
-                      isToday ? 'text-blue-600' : isCurrentMonth ? 'text-gray-900' : 'text-gray-400'
+                      isToday ? 'text-emerald-600' : isCurrentMonth ? 'text-gray-900' : 'text-gray-400'
                     }`}>
                       {day.getDate()}
                     </div>
@@ -290,8 +284,8 @@ export default function ContractorCalendarPage() {
             <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-4" />
             <h3 className="text-lg font-medium text-gray-900 mb-2">No scheduled events</h3>
             <p className="text-gray-600 mb-4">Your accepted jobs will automatically appear on your calendar</p>
-            <Link href="/dashboard/contractor/jobs" className="btn-primary">
-              Browse Available Jobs
+            <Link href="/post-job" className="btn-primary">
+              Post a New Job
             </Link>
           </div>
         ) : (
@@ -400,18 +394,18 @@ export default function ContractorCalendarPage() {
 
                 <div className="flex gap-3 pt-4 border-t">
                   <Link
-                    href={`/dashboard/contractor/jobs/${selectedEvent.job_id}`}
+                    href={`/dashboard/homeowner/jobs/${selectedEvent.job_id}`}
                     className="btn-primary"
                     onClick={() => setSelectedEvent(null)}
                   >
                     View Job Details
                   </Link>
                   <Link
-                    href={`/dashboard/contractor/messages`}
+                    href={`/dashboard/homeowner/messages`}
                     className="btn btn-outline"
                     onClick={() => setSelectedEvent(null)}
                   >
-                    Message Client
+                    Message Contractor
                   </Link>
                 </div>
               </div>

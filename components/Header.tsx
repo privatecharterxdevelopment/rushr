@@ -281,28 +281,23 @@ export default function Header() {
   const findWorkItems = isSignedInAsContractor ? [
     // Contractor is logged in - go to dashboard pages
     { label: 'Browse Jobs',               href: '/dashboard/contractor/jobs' },
-    { label: 'Messages',                  href: '/dashboard/contractor/messages' },
-    { label: 'Calendar',                  href: '/dashboard/contractor/calendar' },
     { label: 'Signals ★',                 href: '/pro/signals' },
   ] : [
     // Not logged in - open Pro login modal
     { label: 'Browse Jobs',               onClick: () => openProAuth() },
-    { label: 'Messages',                  onClick: () => openProAuth() },
-    { label: 'Calendar',                  onClick: () => openProAuth() },
     { label: 'Signals ★',                 onClick: () => openProAuth() },
   ]
   const moreItems = [
     { label: 'About',   href: '/about' },
     { label: 'Contact', href: '/contact' },
     { label: 'Pricing', href: '/pricing' },
-    { label: 'Terms',   href: '/terms' },
-    { label: 'Privacy', href: '/privacy' },
   ]
 
   // "Active" underline only applies to local sections
   const findProActive = ['/post-job', '/rushrmap', '/how-it-works'].some(isActive)
   const findWorkActive = ['/jobs', '/find-work', '/signals'].some(isActive)
   const moreActive = ['/about', '/contact', '/pricing'].some(isActive)
+  const messagesActive = pathname.includes('/messages')
 
   // FORCE HEADER COLORS BASED ON USER TYPE
   const headerStyle = isContractor ? {
@@ -363,6 +358,12 @@ export default function Header() {
           />
           {/* RushrMap */}
           <NavA href="/rushrmap">RushrMap</NavA>
+          {/* Messages - show for logged in users only */}
+          {signedIn && (
+            <NavA href={isSignedInAsContractor ? '/dashboard/contractor/messages' : '/dashboard/homeowner/messages'}>
+              Messages
+            </NavA>
+          )}
         </nav>
 
         <div className="ml-auto flex items-center gap-1 sm:gap-2 relative z-10 min-w-0 flex-shrink-0">

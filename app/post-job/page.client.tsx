@@ -603,19 +603,21 @@ export default function PostJobInner({ userId }: Props) {
   }, [emergencyType, address])
 
   const filteredNearby = useMemo(() => {
+    // Only show contractors if we have a location (userLocation OR valid ZIP in address)
+    const hasLocation = userLocation !== null || address.match(/\d{5}/)
+    if (!hasLocation) return []
+
     const base = nearbyContractors.length > 0
       ? (onlyActive ? nearbyContractors.filter(m => m.activeNow) : nearbyContractors)
-      : (onlyActive ? MOCK.filter(m => m.activeNow) : MOCK) // Fallback to MOCK if no data
+      : [] // Don't fallback to MOCK - only show real data
     const sorted = [...base].sort((a, b) =>
       sortBy === 'eta' ? a.etaMin - b.etaMin : sortBy === 'distance' ? a.distanceKm - b.distanceKm : b.rating - a.rating
     )
     return sorted
-  }, [nearbyContractors, onlyActive, sortBy])
+  }, [nearbyContractors, onlyActive, sortBy, userLocation, address])
 
   const selectedContractor = useMemo(() =>
-    nearbyContractors.length > 0
-      ? nearbyContractors.find((m) => m.id === picked) || null
-      : MOCK.find((m) => m.id === picked) || null
+    nearbyContractors.find((m) => m.id === picked) || null
   , [picked, nearbyContractors])
 
   function onUpload(e: React.ChangeEvent<HTMLInputElement>) {
@@ -1027,9 +1029,32 @@ export default function PostJobInner({ userId }: Props) {
             {/* Professionals list */}
             {sending ? (
               <ListSkeleton rows={3} />
+            ) : !userLocation && !address.match(/\d{5}/) ? (
+              <div className="card p-8 text-center bg-slate-50">
+                <MapPin className="h-12 w-12 text-slate-400 mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-slate-900 mb-2">Provide Your Location</h3>
+                <p className="text-slate-600 mb-4">
+                  Enter your address or use your current location to see available emergency professionals nearby.
+                </p>
+                <button
+                  type="button"
+                  onClick={getCurrentLocation}
+                  className="px-6 py-3 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors font-medium"
+                >
+                  📍 Use My Current Location
+                </button>
+              </div>
+            ) : filteredNearby.length === 0 ? (
+              <div className="card p-8 text-center bg-slate-50">
+                <Users className="h-12 w-12 text-slate-400 mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-slate-900 mb-2">Loading Contractors...</h3>
+                <p className="text-slate-600">
+                  Searching for emergency professionals in your area.
+                </p>
+              </div>
             ) : (
               <div className="space-y-4">
-                {(sendAll ? filteredNearby : MOCK).map((c) => (
+                {filteredNearby.map((c) => (
                   <ContractorCard
                     key={c.id}
                     c={c}
