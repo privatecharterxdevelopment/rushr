@@ -5,52 +5,86 @@ import { useParams } from 'next/navigation'
 import { useAuth } from '../../../../contexts/AuthContext'
 import { supabase } from '../../../../lib/supabaseClient'
 
-interface JobWithBids {
+interface Bid {
+  id: string
   job_id: string
-  job_title: string
-  homeowner_id: string
-  job_status: string
-  bid_count: number
-  bid_id: string
   contractor_id: string
-  contractor_name: string
-  bid_amount: number
-  estimated_duration_hours: number | null
+  bid_amount: number | null
+  message: string | null
+  status: string
+  created_at: string
+  contractor_name?: string
+  contractor_business_name?: string
+}
+
+interface Job {
+  id: string
+  title: string
   description: string
-  available_date: string | null
-  materials_included: boolean
-  warranty_months: number
-  bid_status: string
-  bid_submitted_at: string
-  contractor_rating: number
-  contractor_jobs_completed: number
 }
 
 export default function CompareBids(){
   const { user } = useAuth()
   const { id } = useParams<{id:string}>()
-  const [bids, setBids] = useState<JobWithBids[]>([])
+  const [bids, setBids] = useState<Bid[]>([])
+  const [job, setJob] = useState<Job | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [accepting, setAccepting] = useState<string | null>(null)
 
   useEffect(() => {
-    const fetchBids = async () => {
+    const fetchData = async () => {
       if (!user || !id) return
 
       try {
-        const { data, error } = await supabase
+        // Fetch job details
+        const { data: jobData, error: jobError } = await supabase
+          .from('homeowner_jobs')
+          .select('id, title, description')
+          .eq('id', id)
+          .eq('homeowner_id', user.id)
+          .single()
+
+        if (jobError) {
+          setError('Job not found or access denied')
+          setLoading(false)
+          return
+        }
+
+        setJob(jobData)
+
+        // Fetch all bids for this job
+        const { data: bidsData, error: bidsError } = await supabase
           .from('job_bids')
           .select('*')
           .eq('job_id', id)
           .eq('homeowner_id', user.id)
           .order('bid_amount', { ascending: true })
 
-        if (error) {
-          setError(error.message)
+        if (bidsError) {
+          setError(bidsError.message)
+          setLoading(false)
           return
         }
 
-        setBids(data || [])
+        // Enrich bids with contractor info
+        const enrichedBids = await Promise.all(
+          (bidsData || []).map(async (bid) => {
+            const { data: contractorData } = await supabase
+              .from('pro_contractors')
+              .select('name, business_name')
+              .eq('id', bid.contractor_id)
+              .single()
+
+            return {
+              ...bid,
+              contractor_name: contractorData?.name,
+              contractor_business_name: contractorData?.business_name
+            }
+          })
+        )
+
+        setBids(enrichedBids)
       } catch (err: any) {
         setError(err.message || 'Failed to load bids')
       } finally {
@@ -58,7 +92,7 @@ export default function CompareBids(){
       }
     }
 
-    fetchBids()
+    fetchData()
   }, [user, id])
 
   if (loading) {
@@ -84,132 +118,121 @@ export default function CompareBids(){
     )
   }
 
+  const handleAcceptBid = async (bidId: string) => {
+    if (!user || accepting) return
+
+    setAccepting(bidId)
+
+    try {
+      // Update bid status
+      const { error: bidError } = await supabase
+        .from('job_bids')
+        .update({ status: 'accepted', accepted_at: new Date().toISOString() })
+        .eq('id', bidId)
+
+      if (bidError) {
+        alert('Error accepting bid: ' + bidError.message)
+        setAccepting(null)
+        return
+      }
+
+      // Update job status
+      const { error: jobError } = await supabase
+        .from('homeowner_jobs')
+        .update({ status: 'in_progress' })
+        .eq('id', id)
+
+      if (jobError) {
+        console.error('Error updating job:', jobError)
+      }
+
+      alert('Bid accepted successfully!')
+      window.location.reload()
+    } catch (err) {
+      console.error('Error accepting bid:', err)
+      alert('Failed to accept bid')
+    } finally {
+      setAccepting(null)
+    }
+  }
+
   if (bids.length === 0) {
     return (
-      <section className="section">
-        <div className="flex items-center justify-between mb-3">
-          <h1 className="text-xl font-semibold text-ink">Compare Bids</h1>
-          <Link href={`/jobs/${id}`} className="btn btn-outline">Back to job</Link>
+      <div className="container mx-auto px-4 py-8 max-w-6xl">
+        <div className="flex items-center justify-between mb-6">
+          <h1 className="text-3xl font-bold text-slate-900">Compare Bids</h1>
+          <Link href="/dashboard/homeowner" className="px-4 py-2 text-emerald-600 hover:text-emerald-700 font-medium">
+            Back to Dashboard
+          </Link>
         </div>
-        <div className="card p-6">No bids available for comparison.</div>
-      </section>
+        <div className="bg-white border border-slate-200 rounded-lg p-8 text-center">
+          <p className="text-slate-600">No bids available for this job yet.</p>
+        </div>
+      </div>
     )
   }
 
-  const jobTitle = bids[0]?.job_title || 'Job'
-
   return (
-    <section className="section">
-      <div className="flex items-center justify-between mb-3">
-        <h1 className="text-xl font-semibold text-ink">Compare Bids — {jobTitle}</h1>
-        <Link href={`/jobs/${id}`} className="btn btn-outline">Back to job</Link>
-      </div>
-
-      <div className="overflow-auto">
-        <table className="min-w-[720px] w-full text-sm bg-white rounded-lg border border-gray-200">
-          <thead>
-            <tr className="text-left text-slate-600 border-b">
-              <th className="py-3 px-4 font-medium">Contractor</th>
-              {bids.map(bid => (
-                <th key={bid.bid_id} className="py-3 px-4 font-medium">
-                  {bid.contractor_name}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            <tr className="border-b">
-              <td className="py-3 px-4 font-medium text-gray-900">Bid Amount</td>
-              {bids.map(bid => (
-                <td key={bid.bid_id} className="py-3 px-4 font-semibold text-green-600">
-                  ${bid.bid_amount}
-                </td>
-              ))}
-            </tr>
-            <tr className="border-b">
-              <td className="py-3 px-4 font-medium text-gray-900">Rating</td>
-              {bids.map(bid => (
-                <td key={bid.bid_id} className="py-3 px-4">
-                  ⭐ {bid.contractor_rating.toFixed(1)}
-                </td>
-              ))}
-            </tr>
-            <tr className="border-b">
-              <td className="py-3 px-4 font-medium text-gray-900">Jobs Completed</td>
-              {bids.map(bid => (
-                <td key={bid.bid_id} className="py-3 px-4">
-                  {bid.contractor_jobs_completed} jobs
-                </td>
-              ))}
-            </tr>
-            <tr className="border-b">
-              <td className="py-3 px-4 font-medium text-gray-900">Estimated Duration</td>
-              {bids.map(bid => (
-                <td key={bid.bid_id} className="py-3 px-4">
-                  {bid.estimated_duration_hours ? `${bid.estimated_duration_hours} hours` : '—'}
-                </td>
-              ))}
-            </tr>
-            <tr className="border-b">
-              <td className="py-3 px-4 font-medium text-gray-900">Available Date</td>
-              {bids.map(bid => (
-                <td key={bid.bid_id} className="py-3 px-4">
-                  {bid.available_date ? new Date(bid.available_date).toLocaleDateString() : 'Not specified'}
-                </td>
-              ))}
-            </tr>
-            <tr className="border-b">
-              <td className="py-3 px-4 font-medium text-gray-900">Materials Included</td>
-              {bids.map(bid => (
-                <td key={bid.bid_id} className="py-3 px-4">
-                  {bid.materials_included ? '✅ Yes' : '❌ No'}
-                </td>
-              ))}
-            </tr>
-            <tr className="border-b">
-              <td className="py-3 px-4 font-medium text-gray-900">Warranty</td>
-              {bids.map(bid => (
-                <td key={bid.bid_id} className="py-3 px-4">
-                  {bid.warranty_months} months
-                </td>
-              ))}
-            </tr>
-            <tr className="border-b">
-              <td className="py-3 px-4 font-medium text-gray-900">Bid Status</td>
-              {bids.map(bid => (
-                <td key={bid.bid_id} className="py-3 px-4">
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                    bid.bid_status === 'accepted' ? 'bg-green-100 text-green-800' :
-                    bid.bid_status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                    'bg-red-100 text-red-800'
-                  }`}>
-                    {bid.bid_status.toUpperCase()}
-                  </span>
-                </td>
-              ))}
-            </tr>
-            <tr>
-              <td className="py-3 px-4 font-medium text-gray-900">Proposal</td>
-              {bids.map(bid => (
-                <td key={bid.bid_id} className="py-3 px-4 text-sm text-gray-600 max-w-xs">
-                  <div className="truncate" title={bid.description}>
-                    {bid.description || '—'}
-                  </div>
-                </td>
-              ))}
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
-      <div className="mt-6 text-center">
-        <Link
-          href={`/dashboard/homeowner/bids?job=${id}`}
-          className="btn-primary"
-        >
-          Manage All Bids
+    <div className="container mx-auto px-4 py-8 max-w-6xl">
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h1 className="text-3xl font-bold text-slate-900">Compare Bids</h1>
+          <p className="text-slate-600 mt-1">{job?.title}</p>
+        </div>
+        <Link href="/dashboard/homeowner" className="px-4 py-2 text-emerald-600 hover:text-emerald-700 font-medium">
+          Back to Dashboard
         </Link>
       </div>
-    </section>
+
+      <div className="space-y-4">
+        {bids.map((bid) => (
+          <div key={bid.id} className="bg-white border border-slate-200 rounded-lg p-6 shadow-sm">
+            <div className="flex items-start justify-between mb-4">
+              <div>
+                <h3 className="text-xl font-semibold text-slate-900">
+                  {bid.contractor_business_name || bid.contractor_name || `Contractor ${bid.contractor_id.substring(0, 8)}`}
+                </h3>
+                <p className="text-sm text-slate-500 mt-1">Submitted {new Date(bid.created_at).toLocaleDateString()}</p>
+              </div>
+              <div className="text-right">
+                <p className="text-3xl font-bold text-emerald-600">
+                  ${bid.bid_amount != null ? bid.bid_amount.toFixed(2) : '0.00'}
+                </p>
+                <p className="text-sm text-slate-500">Bid Amount</p>
+              </div>
+            </div>
+
+            {bid.message && (
+              <div className="mb-4 p-4 bg-slate-50 rounded-lg">
+                <p className="text-sm font-medium text-slate-700 mb-1">Message:</p>
+                <p className="text-slate-600">{bid.message}</p>
+              </div>
+            )}
+
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                  bid.status === 'accepted' ? 'bg-green-100 text-green-700' :
+                  bid.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
+                  'bg-red-100 text-red-700'
+                }`}>
+                  {bid.status.charAt(0).toUpperCase() + bid.status.slice(1)}
+                </span>
+              </div>
+
+              {bid.status === 'pending' && (
+                <button
+                  onClick={() => handleAcceptBid(bid.id)}
+                  disabled={accepting === bid.id}
+                  className="px-6 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {accepting === bid.id ? 'Accepting...' : 'Accept Bid'}
+                </button>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
   )
 }
