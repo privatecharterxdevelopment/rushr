@@ -354,8 +354,8 @@ export function ProAuthProvider({ children }: { children: React.ReactNode }) {
       console.error('[PRO-AUTH] Signout error:', err)
     }
 
-    // Force redirect to home and reload to clear all state
-    window.location.href = '/'
+    // Redirect to contractor home page
+    window.location.href = '/contractors'
   }
 
   const isProUser = contractorProfile?.subscription_type === 'pro' || false

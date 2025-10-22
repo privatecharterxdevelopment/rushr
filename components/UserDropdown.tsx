@@ -242,9 +242,10 @@ export default function UserDropdown() {
             <button
               onClick={async () => {
                 setShowDropdown(false)
-                await signOut()
+                // Show toaster BEFORE signout (signOut will redirect immediately)
                 showGlobalToast('Successfully logged out', 'success')
-                router.push('/')
+                await signOut()
+                // signOut handles redirect to appropriate page (contractor vs homeowner)
               }}
               className="flex items-center gap-3 w-full px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
             >

@@ -272,34 +272,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const signOut = async () => {
-    // Clear local state
+    console.log('[HOMEOWNER-AUTH] Signing out homeowner')
+
+    // Clear local state FIRST
     setUser(null)
     setUserProfile(null)
     setSession(null)
 
-    // Supabase sign out (handles its own storage cleanup)
+    // Supabase sign out - this clears the session completely
     try {
-      await supabase.auth.signOut()
+      await supabase.auth.signOut({ scope: 'global' })
     } catch (err) {
-      console.error('Supabase signout error:', err)
+      console.error('[HOMEOWNER-AUTH] Signout error:', err)
     }
 
-    // Clear only app-specific storage keys (not Supabase keys)
-    try {
-      const appKeysToRemove = ['userProfile', 'lastSync']
-      appKeysToRemove.forEach(key => {
-        try {
-          localStorage.removeItem(key)
-          sessionStorage.removeItem(key)
-        } catch (e) {
-          // Ignore individual key errors
-        }
-      })
-    } catch (err) {
-      console.error('Failed to clear storage:', err)
-    }
-
-    // Redirect to homepage
+    // Redirect to homeowner home page
     window.location.href = '/'
   }
 
