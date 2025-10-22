@@ -7,9 +7,12 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2024-11-20.acacia'
-})
+// Initialize Stripe only if key is available
+const stripe = process.env.STRIPE_SECRET_KEY
+  ? new Stripe(process.env.STRIPE_SECRET_KEY, {
+      apiVersion: '2024-11-20.acacia'
+    })
+  : null
 
 /**
  * POST /api/payments/capture
@@ -17,6 +20,14 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
  */
 export async function POST(request: NextRequest) {
   try {
+    // Check if Stripe is configured
+    if (!stripe) {
+      return NextResponse.json(
+        { error: 'Payment system not configured. Please add STRIPE_SECRET_KEY to environment variables.' },
+        { status: 503 }
+      )
+    }
+
     const { paymentHoldId, homeownerId } = await request.json()
 
     if (!paymentHoldId || !homeownerId) {
