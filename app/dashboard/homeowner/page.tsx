@@ -5,12 +5,10 @@ import Link from 'next/link'
 import { useAuth } from '../../../contexts/AuthContext'
 import { useHomeownerStats } from '../../../lib/hooks/useHomeownerStats'
 import { supabase } from '../../../lib/supabaseClient'
-import NotificationBell from '../../../components/NotificationBell'
 import LoadingSpinner from '../../../components/LoadingSpinner'
 import dynamic from 'next/dynamic'
 
 // const ContractorTracker = dynamic(() => import('../../../components/ContractorTracker'), { ssr: false })
-const PaymentHistory = dynamic(() => import('../../../components/PaymentHistory'), { ssr: false })
 import {
   CalendarDays,
   CheckCircle2,
@@ -29,6 +27,14 @@ import {
   Battery,
   Zap,
   Receipt,
+  Bell,
+  CreditCard,
+  ThumbsUp,
+  X,
+  Home,
+  Building2,
+  Plus,
+  Settings,
 } from 'lucide-react'
 
 /* ----------------------------- tiny helpers ----------------------------- */
@@ -125,13 +131,19 @@ export default function HomeownerDashboardPage() {
   // Always call the hook - it handles the user check internally
   const { stats, jobs: realJobs, messages, loading: statsLoading, refreshStats } = useHomeownerStats()
 
-  // Get real trusted contractors from database - MUST BE BEFORE CONDITIONAL RETURNS
-  const [savedPros, setSavedPros] = useState<any[]>([])
-  const [loadingTrustedPros, setLoadingTrustedPros] = useState(true)
 
   // Contractor tracking state
   const [activeJob, setActiveJob] = useState<any>(null)
   const [showTracker, setShowTracker] = useState(false)
+
+  // Add Address modal state
+  const [showAddressModal, setShowAddressModal] = useState(false)
+  const [addressForm, setAddressForm] = useState({
+    address: '',
+    name: '',
+    tags: '',
+    instructions: ''
+  })
 
   // Move all useMemo hooks to the top to avoid React hooks error
   const completeness: CompletenessField[] = useMemo(() => {
@@ -190,7 +202,87 @@ export default function HomeownerDashboardPage() {
     [displayJobs]
   )
 
+  // Compute pending actions for the banner
+  type PendingAction = {
+    id: string
+    type: 'rate' | 'confirm_completion' | 'add_payment' | 'kyc' | 'bid_action'
+    title: string
+    description: string
+    href: string
+    icon: React.ReactNode
+  }
+
+  const pendingActions = useMemo((): PendingAction[] => {
+    const actions: PendingAction[] = []
+
+    // Jobs needing rating (completed jobs without rating)
+    const jobsNeedingRating = displayJobs.filter(j => j.status === 'Completed' && !j.rated)
+    if (jobsNeedingRating.length > 0) {
+      actions.push({
+        id: 'rate-jobs',
+        type: 'rate',
+        title: `Rate ${jobsNeedingRating.length} completed ${jobsNeedingRating.length === 1 ? 'job' : 'jobs'}`,
+        description: 'Help other homeowners by rating your experience',
+        href: `/jobs/${jobsNeedingRating[0].id}`,
+        icon: <Star className="h-4 w-4" />
+      })
+    }
+
+    // Jobs needing completion confirmation (for escrow release)
+    const jobsNeedingConfirmation = displayJobs.filter(j =>
+      j.status === 'In Progress' && j.contractor_marked_complete
+    )
+    if (jobsNeedingConfirmation.length > 0) {
+      actions.push({
+        id: 'confirm-completion',
+        type: 'confirm_completion',
+        title: `Confirm ${jobsNeedingConfirmation.length} completed ${jobsNeedingConfirmation.length === 1 ? 'job' : 'jobs'}`,
+        description: 'Release payment to contractor',
+        href: `/jobs/${jobsNeedingConfirmation[0].id}`,
+        icon: <ThumbsUp className="h-4 w-4" />
+      })
+    }
+
+    // Missing payment method
+    if (userProfile && !userProfile.stripe_customer_id) {
+      actions.push({
+        id: 'add-payment',
+        type: 'add_payment',
+        title: 'Add payment method',
+        description: 'Required for emergency services',
+        href: '/dashboard/homeowner/billing',
+        icon: <CreditCard className="h-4 w-4" />
+      })
+    }
+
+    // KYC not verified
+    if (userProfile && !userProfile.kyc_verified) {
+      actions.push({
+        id: 'complete-kyc',
+        type: 'kyc',
+        title: 'Verify your identity',
+        description: 'Required for platform trust and security',
+        href: '/profile/kyc',
+        icon: <ShieldCheck className="h-4 w-4" />
+      })
+    }
+
+    return actions
+  }, [displayJobs, userProfile])
+
   const upcoming = useMemo(()=> displayJobs.filter(j=>j.status==='Confirmed' && j.nextAppt).slice(0,3),[displayJobs])
+
+  // Get past (completed) jobs for the Past Jobs section
+  const pastJobs = useMemo(() =>
+    displayJobs.filter(j => j.status === 'Completed').slice(0, 3),
+    [displayJobs]
+  )
+
+  // Get active jobs for the Jobs Table (pending, confirmed, in progress - NOT completed)
+  const activeJobs = useMemo(() =>
+    displayJobs.filter(j => j.status !== 'Completed'),
+    [displayJobs]
+  )
 
   // smart next step (simple rules; expand later)
   const nextStep = useMemo(()=>{
@@ -222,99 +314,6 @@ export default function HomeownerDashboardPage() {
     }
   }, [displayJobs, completeness])
 
-  // Transform messages for display with proper sender names - MUST BE BEFORE CONDITIONAL RETURNS
-  const displayMessages = useMemo(() => {
-    const realMessages = messages || []
-    return realMessages.map(msg => ({
-      ...msg,
-      sender_name: msg.sender_id === '00000000-0000-0000-0000-000000000000'
-        ? 'Rushr Support'
-        : msg.sender_name || 'Unknown',
-      preview: msg.content?.substring(0, 100) || 'No content'
-    }))
-  }, [messages])
-
-  // Fetch trusted contractors - MUST BE BEFORE CONDITIONAL RETURNS
-  useEffect(() => {
-    const fetchTrustedPros = async () => {
-      if (!user) return
-
-      try {
-        // First, check if there are any trusted contractors at all
-        const { data, error } = await supabase
-          .from('trusted_contractors')
-          .select('*')
-          .eq('homeowner_id', user.id)
-          .order('last_job_date', { ascending: false })
-          .limit(5)
-
-        if (error) {
-          console.error('Error fetching trusted contractors:', error?.message || error || 'Unknown error')
-          setSavedPros([]) // Set empty array on error
-          return
-        }
-
-        if (!data || data.length === 0) {
-          setSavedPros([])
-          return
-        }
-
-        // Fetch contractor details for each trusted contractor
-        const contractorIds = data.map(tc => tc.contractor_id)
-        const { data: contractors, error: contractorError } = await supabase
-          .from('contractor_profiles')
-          .select('*')
-          .in('id', contractorIds)
-
-        if (contractorError) {
-          console.error('Error fetching contractor details:', contractorError)
-          // Still show trusted contractors data without full contractor info
-          setSavedPros(data.map(tc => ({
-            ...tc,
-            contractor_profiles: {
-              name: 'Unknown Contractor',
-              business_name: null,
-              rating: 0,
-              jobs_completed: 0,
-              categories: [],
-              service_area_zips: [],
-              phone: null,
-              email: null,
-              avatar_url: null
-            }
-          })))
-          return
-        }
-
-        // Combine trusted contractor data with contractor profile data
-        const combinedData = data.map(tc => {
-          const contractor = contractors.find(c => c.id === tc.contractor_id)
-          return {
-            ...tc,
-            contractor_profiles: contractor || {
-              name: 'Unknown Contractor',
-              business_name: null,
-              rating: 0,
-              jobs_completed: 0,
-              categories: [],
-              service_area_zips: [],
-              phone: null,
-              email: null,
-              avatar_url: null
-            }
-          }
-        })
-
-        setSavedPros(combinedData)
-      } catch (err) {
-        console.error('Error fetching trusted contractors:', err)
-      } finally {
-        setLoadingTrustedPros(false)
-      }
-    }
-
-    fetchTrustedPros()
-  }, [user])
 
   // Auto-detect jobs with accepted bids for tracking
   useEffect(() => {
@@ -425,91 +424,102 @@ export default function HomeownerDashboardPage() {
 
         {/* Action buttons - horizontal scroll on mobile, flex on desktop */}
         <div className="flex items-center gap-2 overflow-x-auto pb-2 lg:pb-0 -mx-4 px-4 lg:mx-0 lg:px-0">
-          <NotificationBell />
           <Link href="/post-job?urgent=1" className="btn-primary whitespace-nowrap flex-shrink-0">Emergency Help</Link>
-          <Link href="/dashboard/homeowner/bids" className="btn whitespace-nowrap flex-shrink-0">Manage Bids</Link>
+          <Link href="/profile" className="btn whitespace-nowrap flex-shrink-0 flex items-center gap-1.5">
+            <UserRound className="w-4 h-4" />
+            Profile
+          </Link>
+          <Link href="/profile/settings" className="btn whitespace-nowrap flex-shrink-0 flex items-center gap-1.5">
+            <Settings className="w-4 h-4" />
+            Account Settings
+          </Link>
           <Link href="/dashboard/homeowner/billing" className="btn whitespace-nowrap flex-shrink-0 flex items-center gap-1.5">
             <Receipt className="w-4 h-4" />
             Billing
           </Link>
-          <Link href="/rushrmap" className="btn whitespace-nowrap flex-shrink-0">Find a Pro</Link>
         </div>
       </div>
 
-      {/* KPIs + Next step - Real-time tracking from database */}
-      <section className="grid grid-cols-1 gap-4 lg:grid-cols-4">
-        <StatCard
-          label="Active Services"
-          value={statsLoading ? "..." : kpis.active}
-          hint="Pending, confirmed, in progress"
-          icon={<Siren className="h-4 w-4" />}
-        />
-        <StatCard
-          label="Completed"
-          value={statsLoading ? "..." : kpis.completed}
-          hint="Total completed services"
-          tone="blue"
-          icon={<CheckCircle2 className="h-4 w-4" />}
-        />
-        <StatCard
-          label="Messages"
-          value={statsLoading ? "..." : kpis.unread}
-          hint="Unread messages"
-          tone="amber"
-          icon={<MessageSquare className="h-4 w-4" />}
-        />
-        <StatCard
-          label="Trusted Pros"
-          value={statsLoading ? "..." : kpis.saved}
-          hint="Quick booking"
-          tone="rose"
-          icon={<Star className="h-4 w-4" />}
-        />
-      </section>
+      {/* Pending Actions Banner */}
+      {pendingActions.length > 0 && (
+        <section className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-2xl p-4 shadow-sm">
+          <div className="flex items-start gap-3">
+            <div className="p-2 bg-amber-100 rounded-lg flex-shrink-0">
+              <Bell className="h-5 w-5 text-amber-600" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <h3 className="font-semibold text-amber-900 mb-2">Action Needed</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                {pendingActions.slice(0, 4).map(action => (
+                  <Link
+                    key={action.id}
+                    href={action.href}
+                    className="flex items-center gap-3 p-3 bg-white rounded-lg border border-amber-200 hover:border-amber-300 hover:shadow-sm transition-all group"
+                  >
+                    <div className="p-2 bg-amber-50 rounded-lg text-amber-600 group-hover:bg-amber-100 transition-colors">
+                      {action.icon}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium text-sm text-gray-900 truncate">{action.title}</div>
+                      <div className="text-xs text-gray-600 truncate">{action.description}</div>
+                    </div>
+                    <ChevronRight className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                  </Link>
+                ))}
+              </div>
+              {pendingActions.length > 4 && (
+                <p className="text-xs text-amber-700 mt-2">
+                  +{pendingActions.length - 4} more action{pendingActions.length - 4 !== 1 ? 's' : ''} needed
+                </p>
+              )}
+            </div>
+          </div>
+        </section>
+      )}
 
-      {/* Emergency Services Section */}
+      {/* Active Emergencies Section */}
       <section className="mb-6">
         <div className="rounded-2xl border border-red-200 bg-white shadow-sm">
-          <div className="border-b border-red-200 bg-gradient-to-r from-red-50 to-orange-50 px-6 py-4 rounded-t-2xl">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center">
-                  <Siren className="h-4 w-4 text-red-600" />
-                </div>
-                <div>
-                  <h3 className="font-bold text-red-900">🚨 Emergency Services</h3>
-                  <p className="text-sm text-red-700">
-                    {emergencyJobs.length > 0
-                      ? `${emergencyJobs.length} active emergency request${emergencyJobs.length > 1 ? 's' : ''}`
-                      : 'No active emergency requests'
-                    }
-                  </p>
-                </div>
+          <div className="border-b border-red-200 bg-gradient-to-r from-red-50 to-orange-50 px-6 py-4 rounded-t-2xl flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center">
+                <Siren className="h-4 w-4 text-red-600" />
               </div>
-              <Link
-                href="/post-job"
-                className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-medium transition-colors text-sm"
-              >
-                Request Emergency Help
-              </Link>
+              <div>
+                <h3 className="font-bold text-red-900">Active Emergencies</h3>
+                <p className="text-sm text-red-700">
+                  {activeJobs.length > 0
+                    ? `${activeJobs.length} active emergency ${activeJobs.length > 1 ? 'requests' : 'request'}`
+                    : 'No active emergency requests'
+                  }
+                </p>
+              </div>
             </div>
+            <Link
+              href="/post-job"
+              className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-medium transition-colors text-sm"
+            >
+              Request Emergency Help
+            </Link>
           </div>
 
           <div className="p-6">
-            {emergencyJobs.length > 0 ? (
+            {activeJobs.length > 0 ? (
               <div className="space-y-4">
-                {emergencyJobs.map(job => (
+                {activeJobs.map(job => (
                   <div key={job.id} className="border border-red-200 rounded-lg p-4 bg-red-50">
                     <div className="flex items-start justify-between gap-4">
                       <div className="flex-1">
                         <div className="flex items-start gap-3">
                           <div className="w-2 h-2 bg-red-500 rounded-full mt-2 flex-shrink-0"></div>
-                          <div>
+                          <div className="flex-1 min-w-0">
                             <h4 className="font-semibold text-gray-900 mb-1">{job.title}</h4>
                             <div className="flex items-center gap-2 mb-2">
-                              <span className="bg-red-100 text-red-800 text-xs font-semibold px-2 py-1 rounded-full">
-                                🚨 EMERGENCY
-                              </span>
+                              {job.priority === 'Emergency' && (
+                                <span className="bg-red-100 text-red-800 text-xs font-semibold px-2 py-1 rounded-full">
+                                  🚨 EMERGENCY
+                                </span>
+                              )}
                               <span className={`text-xs font-medium px-2 py-1 rounded-full ${
                                 job.status === 'Pending' ? 'bg-amber-100 text-amber-800' :
                                 job.status === 'Confirmed' ? 'bg-blue-100 text-blue-800' :
@@ -522,15 +532,17 @@ export default function HomeownerDashboardPage() {
                             <p className="text-sm text-gray-600 mb-1">
                               Category: <span className="font-medium">{job.category}</span>
                             </p>
-                            <p className="text-xs text-gray-500">
-                              Posted {timeAgo(job.created_at)}
-                            </p>
+                            {job.proName && (
+                              <p className="text-sm text-gray-600">
+                                Contractor: <span className="font-medium">{job.proName}</span>
+                              </p>
+                            )}
                           </div>
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
                         {job.status === 'Pending' && (
-                          <div className="text-center">
+                          <div className="text-center mr-2">
                             <div className="text-xs text-amber-600 font-medium">⏳ Finding Pro</div>
                             <div className="text-xs text-gray-500">ETA: 5-15 min</div>
                           </div>
@@ -551,9 +563,9 @@ export default function HomeownerDashboardPage() {
                 <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
                   <Siren className="h-8 w-8 text-gray-400" />
                 </div>
-                <h4 className="text-lg font-medium text-gray-900 mb-2">No Emergency Services Active</h4>
+                <h4 className="text-lg font-medium text-gray-900 mb-2">No Active Emergencies</h4>
                 <p className="text-gray-600 mb-4">
-                  When you need urgent help, emergency professionals will be displayed here.
+                  When you need urgent help, your active emergencies will be displayed here
                 </p>
                 <Link
                   href="/post-job"
@@ -567,59 +579,42 @@ export default function HomeownerDashboardPage() {
         </div>
       </section>
 
-      <section className="grid grid-cols-1 gap-4 xl:grid-cols-3">
-        {/* Next step card */}
-        <div className="rounded-2xl border border-emerald-200 bg-white p-4 shadow-sm">
-          <SectionTitle>Next step</SectionTitle>
-          <Link
-            href={nextStep.href}
-            className={`flex items-center justify-between rounded-xl border p-4 transition ${
-              nextStep.tone==='amber' ? 'border-amber-200 bg-amber-50 hover:bg-amber-100' :
-              nextStep.tone==='blue' ? 'border-blue-200 bg-blue-50 hover:bg-blue-100' :
-              'border-emerald-200 bg-emerald-50 hover:bg-emerald-100'
-            }`}
-          >
-            <div className="flex items-center gap-3">
-              <span className="text-slate-700">{nextStep.icon}</span>
-              <div>
-                <div className="font-semibold text-ink dark:text-white">{nextStep.title}</div>
-                <div className="text-sm text-slate-600">{nextStep.desc}</div>
-              </div>
-            </div>
-            <ChevronRight className="h-5 w-5 text-slate-500" />
-          </Link>
-          {/* Profile nudge if completeness < 80 */}
-          {completenessPct < 80 && (
-            <div className="mt-3 flex items-center gap-2 rounded-lg border border-slate-200 bg-white p-3 text-sm">
-              <AlertTriangle className="h-4 w-4 text-amber-600" />
-              <span>Boost trust by finishing your profile.</span>
-              <Link href="/profile/settings" className="ml-auto text-brand underline">Complete it</Link>
-            </div>
-          )}
-        </div>
-
-        {/* Upcoming (schedule) */}
-        <div className="rounded-2xl border border-slate-200 p-4">
-          <SectionTitle action={<Link href="/calendar" className="text-brand underline text-sm">Calendar</Link>}>
-            Upcoming
+      <section className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        {/* Saved Addresses */}
+        <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-4">
+          <SectionTitle action={<Link href="/profile/settings" className="text-brand underline text-sm">Manage</Link>}>
+            Saved Addresses
           </SectionTitle>
-          {upcoming.length === 0 ? (
-            <div className="text-sm text-slate-600">No appointments yet.</div>
-          ) : (
-            <ul className="space-y-2">
-              {upcoming.map(u=>(
-                <li key={u.id} className="flex items-center justify-between rounded-lg border bg-white p-3">
-                  <div>
-                    <div className="font-medium text-ink dark:text-white">{u.title}</div>
-                    <div className="text-xs text-slate-600 flex items-center gap-1">
-                      <CalendarDays className="h-4 w-4" /> {u.proName} in {timeUntil(u.nextAppt!)}
-                    </div>
+          <div className="space-y-2">
+            {userProfile?.address ? (
+              <div className="rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 p-3">
+                <div className="flex items-start gap-3">
+                  <div className="p-2 bg-emerald-100 dark:bg-emerald-950 rounded-lg">
+                    <Home className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
                   </div>
-                  <Link href={`/jobs/${u.id}`} className="btn btn-outline text-sm">Details</Link>
-                </li>
-              ))}
-            </ul>
-          )}
+                  <div className="flex-1 min-w-0">
+                    <div className="font-medium text-slate-900 dark:text-white">Primary Address</div>
+                    <div className="text-sm text-slate-600 dark:text-slate-400 truncate">{userProfile.address}</div>
+                  </div>
+                  <button className="text-emerald-600 hover:text-emerald-700 text-sm font-medium">
+                    Use
+                  </button>
+                </div>
+              </div>
+            ) : null}
+
+            <button
+              onClick={() => setShowAddressModal(true)}
+              className="flex items-center justify-center gap-2 rounded-lg border-2 border-dashed border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-800 p-4 text-slate-600 dark:text-slate-400 hover:border-emerald-500 hover:text-emerald-600 transition-colors w-full"
+            >
+              <Plus className="h-4 w-4" />
+              <span className="text-sm font-medium">Add Address</span>
+            </button>
+
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">
+              Save addresses for faster emergency requests
+            </p>
+          </div>
         </div>
 
         {/* Profile completeness */}
@@ -649,164 +644,94 @@ export default function HomeownerDashboardPage() {
         </div>
       </section>
 
-      {/* Jobs table */}
-      <section>
-        <SectionTitle action={<Link href="/history" className="text-brand underline text-sm">View all</Link>}>
-          Emergency services
-        </SectionTitle>
-        <div className="overflow-hidden rounded-2xl border border-slate-200">
-          <table className="min-w-full text-sm">
-            <thead className="bg-slate-50 text-slate-700">
-              <tr>
-                <th className="px-4 py-3 text-left font-medium">Service</th>
-                <th className="px-4 py-3 text-left font-medium">Status</th>
-                <th className="px-4 py-3 text-left font-medium">Pro</th>
-                <th className="px-4 py-3 text-left font-medium">Rate/Cost</th>
-                <th className="px-4 py-3 text-left font-medium">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="bg-white">
-              {displayJobs.map(j=>(
-                <tr key={j.id} className={`border-t border-slate-100 ${
-                  j.priority === 'Emergency' ? 'bg-red-50 border-red-100' : ''
-                }`}>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-2">
-                      {j.title}
-                      {j.priority === 'Emergency' && (
-                        <span className="bg-red-100 text-red-800 text-xs font-semibold px-2 py-0.5 rounded-full">
-                          🚨 EMERGENCY
-                        </span>
-                      )}
-                      {j.priority === 'Urgent' && (
-                        <span className="bg-amber-100 text-amber-800 text-xs font-semibold px-2 py-0.5 rounded-full">
-                          URGENT
-                        </span>
-                      )}
-                    </div>
-                  </td>
-                  <td className="px-4 py-3">
-                    <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
-                      j.status==='Pending' ? 'bg-amber-100 text-amber-700' :
-                      j.status==='Confirmed' ? 'bg-blue-100 text-blue-700' :
-                      j.status==='In Progress' ? 'bg-purple-100 text-purple-700' : 'bg-emerald-100 text-emerald-700'
-                    }`}>{j.status}</span>
-                  </td>
-                  <td className="px-4 py-3">{j.proName || 'Assigning...'}</td>
-                  <td className="px-4 py-3">
-                    {j.totalCost ? `$${j.totalCost}` : j.hourlyRate ? `$${j.hourlyRate}/hr` : '-'}
-                  </td>
-                  <td className="px-4 py-3">
-                    <Link href={`/jobs/${j.id}`} className="text-brand underline">View</Link>
-                    {j.status === 'In Progress' && (
-                      <>
-                        <span className="mx-2 text-slate-300">|</span>
-                        <Link href={`/messages?job=${j.id}`} className="text-brand underline">Message</Link>
-                      </>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </section>
+      {/* Past Jobs Section */}
+      <section className="mb-6">
+        <div className="rounded-2xl border border-slate-200 bg-white dark:bg-slate-900 shadow-sm">
+          <div className="border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-6 py-4 rounded-t-2xl flex items-center justify-between">
+            <div>
+              <h3 className="font-bold text-slate-900 dark:text-white">Recent Jobs</h3>
+              <p className="text-sm text-slate-600 dark:text-slate-400">
+                Your most recent completed emergencies
+              </p>
+            </div>
+            <Link
+              href="/history"
+              className="flex items-center gap-1 text-sm text-emerald-600 hover:text-emerald-700 font-medium"
+            >
+              View All
+              <ChevronRight className="h-4 w-4" />
+            </Link>
+          </div>
 
-      {/* Messages + Trusted pros */}
-      <section className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        <div className="lg:col-span-2 rounded-2xl border border-slate-200 p-4">
-          <SectionTitle action={<Link href="/messages" className="text-brand underline text-sm">Open inbox</Link>}>
-            Pro messages
-          </SectionTitle>
-          <div className="divide-y divide-slate-100">
-            {displayMessages.length > 0 ? (
-              displayMessages.slice(0, 3).map(msg => (
-                <div key={msg.id} className="flex items-center justify-between gap-3 py-3">
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2">
-                      <div className="font-medium">{msg.sender_name}</div>
-                      {!msg.read_at && <span className="rounded-full bg-amber-100 px-1.5 py-0.5 text-[11px] text-amber-700">new</span>}
-                      {msg.sender_name === 'Rushr Support' && (
-                        <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">
-                          SUPPORT
-                        </span>
-                      )}
+          <div className="p-6">
+            {pastJobs.length > 0 ? (
+              <div className="space-y-3">
+                {pastJobs.map(job => (
+                  <div key={job.id} className="border border-slate-200 dark:border-slate-700 rounded-lg p-4 hover:shadow-sm transition-shadow">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex-1">
+                        <div className="flex items-start gap-3">
+                          <CheckCircle2 className="h-5 w-5 text-emerald-600 flex-shrink-0 mt-0.5" />
+                          <div className="flex-1 min-w-0">
+                            <h4 className="font-semibold text-slate-900 dark:text-white mb-1">{job.title}</h4>
+                            <div className="flex flex-wrap items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
+                              <span className="flex items-center gap-1">
+                                <span className="font-medium">{job.category}</span>
+                              </span>
+                              {job.proName && (
+                                <>
+                                  <span className="text-slate-400">•</span>
+                                  <span>{job.proName}</span>
+                                </>
+                              )}
+                              {job.endTime && (
+                                <>
+                                  <span className="text-slate-400">•</span>
+                                  <span>{new Date(job.endTime).toLocaleDateString()}</span>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3 flex-shrink-0">
+                        {job.totalCost && (
+                          <div className="text-right">
+                            <div className="text-lg font-bold text-slate-900 dark:text-white">
+                              ${job.totalCost.toFixed(2)}
+                            </div>
+                          </div>
+                        )}
+                        <Link
+                          href={`/jobs/${job.id}`}
+                          className="btn btn-outline text-sm"
+                        >
+                          View
+                        </Link>
+                      </div>
                     </div>
-                    <div className="truncate text-sm text-slate-600">{msg.preview}</div>
                   </div>
-                  <div className="text-xs text-slate-500">{timeAgo(msg.created_at)}</div>
-                  <Link href={`/messages?conversation=${msg.conversation_id}`} className="btn btn-outline">Reply</Link>
-                </div>
-              ))
+                ))}
+              </div>
             ) : (
-              <div className="py-6 text-center text-slate-500">
-                <MessageSquare className="h-8 w-8 mx-auto mb-2 text-slate-300" />
-                <p>No messages yet</p>
-                <p className="text-sm mt-1">Messages from pros will appear here</p>
+              <div className="text-center py-8">
+                <div className="w-16 h-16 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Clock className="h-8 w-8 text-slate-400" />
+                </div>
+                <h4 className="text-lg font-medium text-slate-900 dark:text-white mb-2">No Completed Jobs Yet</h4>
+                <p className="text-slate-600 dark:text-slate-400 mb-4">
+                  Your completed emergency services will appear here
+                </p>
+                <Link
+                  href="/post-job"
+                  className="btn-primary"
+                >
+                  Post Your First Emergency
+                </Link>
               </div>
             )}
           </div>
         </div>
-        <div className="rounded-2xl border border-emerald-200 bg-white p-4">
-          <SectionTitle action={<Link href="/rushrmap" className="text-brand underline text-sm">Browse</Link>}>
-            Trusted pros
-          </SectionTitle>
-
-          {loadingTrustedPros ? (
-            <div className="flex items-center justify-center py-4">
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-emerald-600"></div>
-              <span className="ml-2 text-sm text-gray-600">Loading...</span>
-            </div>
-          ) : savedPros.length > 0 ? (
-            <ul className="space-y-2">
-              {savedPros.map(p=>(
-                <li key={p.id} className="rounded-lg border bg-white p-3">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-100 font-semibold text-emerald-700">
-                      {p.contractor_profiles?.name?.split(' ').map(s=>s[0]).join('').slice(0,2) || 'TC'}
-                    </div>
-                    <div className="min-w-0">
-                      <div className="truncate font-medium">{p.contractor_profiles?.name || p.contractor_profiles?.business_name}</div>
-                      <div className="text-[11px] text-slate-500">
-                        2.5 mi • {p.jobs_completed || 0} jobs • {Number(p.average_rating || p.contractor_profiles?.rating || 0).toFixed(1)}★
-                      </div>
-                      <div className="text-[10px] text-emerald-600 font-medium">
-                        {p.trust_level === 1 ? 'Saved' : p.trust_level === 2 ? 'Preferred' : 'Trusted'} • Last: {p.last_job_date ? new Date(p.last_job_date).toLocaleDateString() : 'Unknown'}
-                      </div>
-                    </div>
-                    <div className="ml-auto flex gap-2">
-                      <Link href={`/contractors/${p.contractor_id}`} className="btn btn-outline text-sm">View</Link>
-                      <Link href={`/post-job?contractor=${p.contractor_id}`} className="btn text-sm">Book</Link>
-                    </div>
-                  </div>
-                  <div className="mt-2 flex flex-wrap gap-1">
-                    {p.contractor_profiles?.categories?.slice(0, 3).map((cat, i) => (
-                      <span key={i} className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-medium text-emerald-700">
-                        {cat}
-                      </span>
-                    ))}
-                    {p.total_spent > 0 && (
-                      <span className="rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-medium text-blue-700">
-                        Total: ${p.total_spent.toLocaleString()}
-                      </span>
-                    )}
-                  </div>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <div className="text-center py-6 text-gray-500">
-              <div className="text-sm">No trusted pros yet</div>
-              <div className="text-xs mt-1">Contractors you work with will appear here</div>
-            </div>
-          )}
-        </div>
-      </section>
-
-      {/* Payment History Section */}
-      <section>
-        <SectionTitle>Payment History</SectionTitle>
-        <PaymentHistory userType="homeowner" />
       </section>
 
       {/* Contractor Tracker - Shows when job has accepted bid */}
@@ -821,6 +746,142 @@ export default function HomeownerDashboardPage() {
           onClose={() => setShowTracker(false)}
         />
       )} */}
+
+      {/* Add Address Modal */}
+      {showAddressModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            {/* Modal Header */}
+            <div className="sticky top-0 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700 px-6 py-4 flex items-center justify-between">
+              <h3 className="text-xl font-bold text-slate-900 dark:text-white">Add New Address</h3>
+              <button
+                onClick={() => setShowAddressModal(false)}
+                className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
+              >
+                <X className="h-5 w-5 text-slate-500" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 space-y-6">
+              {/* Address Input */}
+              <div>
+                <label className="block text-sm font-medium text-slate-900 dark:text-white mb-2">
+                  Address *
+                </label>
+                <input
+                  type="text"
+                  value={addressForm.address}
+                  onChange={(e) => setAddressForm({ ...addressForm, address: e.target.value })}
+                  placeholder="123 Main St, City, State 12345"
+                  className="w-full px-4 py-2.5 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                />
+              </div>
+
+              {/* Static Map Placeholder */}
+              <div>
+                <label className="block text-sm font-medium text-slate-900 dark:text-white mb-2">
+                  Location Preview
+                </label>
+                <div className="relative w-full h-48 bg-gradient-to-br from-emerald-50 to-blue-50 dark:from-slate-800 dark:to-slate-700 rounded-lg border border-slate-200 dark:border-slate-600 flex items-center justify-center overflow-hidden">
+                  {/* Map background pattern */}
+                  <div className="absolute inset-0 opacity-10">
+                    <div className="absolute inset-0" style={{
+                      backgroundImage: 'linear-gradient(rgba(0,0,0,.1) 1px, transparent 1px), linear-gradient(90deg, rgba(0,0,0,.1) 1px, transparent 1px)',
+                      backgroundSize: '20px 20px'
+                    }}></div>
+                  </div>
+
+                  {/* Pin marker */}
+                  <div className="relative z-10 flex flex-col items-center">
+                    <div className="w-12 h-12 bg-red-500 rounded-full flex items-center justify-center shadow-lg mb-2">
+                      <MapPin className="h-7 w-7 text-white" />
+                    </div>
+                    <div className="bg-white dark:bg-slate-800 px-3 py-1 rounded-full shadow-md">
+                      <p className="text-xs font-medium text-slate-600 dark:text-slate-300">
+                        {addressForm.address || 'Enter address above'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                  Static location preview
+                </p>
+              </div>
+
+              {/* Name/Label Input */}
+              <div>
+                <label className="block text-sm font-medium text-slate-900 dark:text-white mb-2">
+                  Name/Label
+                </label>
+                <input
+                  type="text"
+                  value={addressForm.name}
+                  onChange={(e) => setAddressForm({ ...addressForm, name: e.target.value })}
+                  placeholder="e.g., Home, Work, Mom's House"
+                  className="w-full px-4 py-2.5 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                />
+              </div>
+
+              {/* Tags Input */}
+              <div>
+                <label className="block text-sm font-medium text-slate-900 dark:text-white mb-2">
+                  Tags
+                </label>
+                <input
+                  type="text"
+                  value={addressForm.tags}
+                  onChange={(e) => setAddressForm({ ...addressForm, tags: e.target.value })}
+                  placeholder="e.g., residential, frequent, side-entrance"
+                  className="w-full px-4 py-2.5 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                />
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                  Separate tags with commas
+                </p>
+              </div>
+
+              {/* Instructions Textarea */}
+              <div>
+                <label className="block text-sm font-medium text-slate-900 dark:text-white mb-2">
+                  Special Instructions
+                </label>
+                <textarea
+                  value={addressForm.instructions}
+                  onChange={(e) => setAddressForm({ ...addressForm, instructions: e.target.value })}
+                  placeholder="e.g., Use side entrance, Call when arrived, Dog in backyard"
+                  rows={4}
+                  className="w-full px-4 py-2.5 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 resize-none"
+                />
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="sticky bottom-0 bg-slate-50 dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700 px-6 py-4 flex items-center justify-end gap-3">
+              <button
+                onClick={() => {
+                  setShowAddressModal(false)
+                  setAddressForm({ address: '', name: '', tags: '', instructions: '' })
+                }}
+                className="px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-700 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-700 transition-colors font-medium"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  // TODO: Save address to database
+                  console.log('Saving address:', addressForm)
+                  setShowAddressModal(false)
+                  setAddressForm({ address: '', name: '', tags: '', instructions: '' })
+                }}
+                disabled={!addressForm.address.trim()}
+                className="px-6 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white rounded-lg transition-colors font-medium"
+              >
+                Save Address
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
