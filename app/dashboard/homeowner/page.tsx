@@ -28,6 +28,7 @@ import {
   Siren,
   Battery,
   Zap,
+  Receipt,
 } from 'lucide-react'
 
 /* ----------------------------- tiny helpers ----------------------------- */
@@ -106,7 +107,7 @@ type Job = {
   estimatedDuration?: string
   priority: 'Emergency' | 'Urgent' | 'Standard'
   nextAppt?: string // ISO
-  category: 'Electrical'|'HVAC'|'Roofing'|'Plumbing'|'Carpentry'|'General'|'Landscaping'|'Auto'|'Locksmith'
+  category: 'Electrical'|'HVAC'|'Roofing'|'Plumbing'|'Carpentry'|'Landscaping'|'Auto'|'Locksmith'
   totalCost?: number
   startTime?: string
   endTime?: string
@@ -427,6 +428,10 @@ export default function HomeownerDashboardPage() {
           <NotificationBell />
           <Link href="/post-job?urgent=1" className="btn-primary whitespace-nowrap flex-shrink-0">Emergency Help</Link>
           <Link href="/dashboard/homeowner/bids" className="btn whitespace-nowrap flex-shrink-0">Manage Bids</Link>
+          <Link href="/dashboard/homeowner/billing" className="btn whitespace-nowrap flex-shrink-0 flex items-center gap-1.5">
+            <Receipt className="w-4 h-4" />
+            Billing
+          </Link>
           <Link href="/rushrmap" className="btn whitespace-nowrap flex-shrink-0">Find a Pro</Link>
         </div>
       </div>

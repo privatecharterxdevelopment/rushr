@@ -20,12 +20,12 @@ export default function SendRequestForm({ contractor, onClose, onSuccess }: Send
   const [description, setDescription] = useState('')
   const [priceOffer, setPriceOffer] = useState('')
   const [urgency, setUrgency] = useState<'standard' | 'urgent' | 'emergency'>('standard')
-  const [category, setCategory] = useState('General')
+  const [category, setCategory] = useState('Plumbing')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
   const categories = [
-    'Plumbing', 'Electrical', 'HVAC', 'Roofing', 'General',
+    'Plumbing', 'Electrical', 'HVAC', 'Roofing',
     'Carpentry', 'Landscaping', 'Locksmith', 'Appliance Repair'
   ]
 

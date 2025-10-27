@@ -14,7 +14,6 @@ const CAT_EMOJI: Record<string, string> = {
   Roofing: '🏠',
   Plumbing: '🚿',
   Carpentry: '🪚',
-  General: '🧰',
   Landscaping: '🌿',
 }
 

@@ -36,15 +36,7 @@ const CAT_EMOJI: Record<string, string> = {
   'Fuel Delivery': '⛽',
   'Mobile Mechanic': '⚙️',
 
-  // General emergencies
-  'Board Up': '🔨',
-  'Storm Damage': '🌪️',
-  'Tree Service': '🌳',
-  'Pest Control': '🐛',
-  'Glass Repair': '🏠',
-
-  // Legacy/catch-all
-  General: '🧰',
+  // Other services
   Carpentry: '🔨',
   Landscaping: '🌿',
 }
@@ -277,8 +269,7 @@ export default function FindProPage() {
   // Categorized service options
   const serviceCategories = {
     'Home': ['Plumbing', 'Electrical', 'HVAC', 'Roofing', 'Water Damage', 'Locksmith', 'Appliance Repair', 'Handyman'],
-    'Auto': ['Auto Battery', 'Auto Tire', 'Auto Lockout', 'Tow', 'Fuel Delivery', 'Mobile Mechanic'],
-    'General': ['Board Up', 'Storm Damage', 'Tree Service', 'Pest Control', 'Glass Repair', 'General', 'Carpentry', 'Landscaping']
+    'Auto': ['Auto Battery', 'Auto Tire', 'Auto Lockout', 'Tow', 'Fuel Delivery', 'Mobile Mechanic']
   }
 
   return (
@@ -755,12 +746,6 @@ function MapCanvas({
             icon: '🚗',
             items: Object.entries(CAT_EMOJI).filter(([label]) =>
               ['Auto Battery', 'Auto Tire', 'Auto Lockout', 'Tow', 'Fuel Delivery', 'Mobile Mechanic'].includes(label)
-            )
-          },
-          'General': {
-            icon: '🧰',
-            items: Object.entries(CAT_EMOJI).filter(([label]) =>
-              ['Board Up', 'Storm Damage', 'Tree Service', 'Pest Control', 'Glass Repair', 'General', 'Carpentry', 'Landscaping'].includes(label)
             )
           }
         }

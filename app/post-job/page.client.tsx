@@ -217,8 +217,7 @@ function ConfirmModal({
 /** Emergency categories and services */
 const EMERGENCY_CATEGORIES = [
   { key: 'home', label: '🏠 Home Emergency' },
-  { key: 'auto', label: '🚗 Auto Emergency' },
-  { key: 'general', label: '🧰 General Emergency' }
+  { key: 'auto', label: '🚗 Auto Emergency' }
 ] as const
 
 const EMERGENCY_TYPES_MAP: Record<string, Array<{key: string, label: string, icon: string}>> = {
@@ -230,7 +229,7 @@ const EMERGENCY_TYPES_MAP: Record<string, Array<{key: string, label: string, ico
     { key: 'water-damage', label: 'Water Damage', icon: '💧' },
     { key: 'locksmith', label: 'Lockout Emergency', icon: '🔐' },
     { key: 'appliance', label: 'Appliance Emergency', icon: '🔧' },
-    { key: 'handyman', label: 'General Home Emergency', icon: '🔨' }
+    { key: 'other', label: 'Other Home Emergency', icon: '🔨' }
   ],
   'auto': [
     { key: 'battery', label: 'Dead Battery', icon: '🔋' },
@@ -238,17 +237,8 @@ const EMERGENCY_TYPES_MAP: Record<string, Array<{key: string, label: string, ico
     { key: 'lockout', label: 'Car Lockout', icon: '🔑' },
     { key: 'tow', label: 'Need Towing', icon: '🚚' },
     { key: 'fuel', label: 'Out of Fuel', icon: '⛽' },
-    { key: 'mechanic', label: 'Breakdown/Repair', icon: '⚙️' }
-  ],
-  'general': [
-    { key: 'board-up', label: 'Emergency Board Up', icon: '🛡️' },
-    { key: 'storm', label: 'Storm Damage', icon: '🌪️' },
-    { key: 'tree', label: 'Tree Emergency', icon: '🌳' },
-    { key: 'pest', label: 'Pest Emergency', icon: '🐜' },
-    { key: 'glass', label: 'Broken Glass/Window', icon: '🪟' },
-    { key: 'security', label: 'Security Emergency', icon: '🚨' },
-    { key: 'cleanup', label: 'Emergency Cleanup', icon: '🧹' },
-    { key: 'other', label: 'Other Emergency', icon: '🆘' }
+    { key: 'mechanic', label: 'Breakdown/Repair', icon: '⚙️' },
+    { key: 'other', label: 'Other Auto Emergency', icon: '🆘' }
   ]
 }
 

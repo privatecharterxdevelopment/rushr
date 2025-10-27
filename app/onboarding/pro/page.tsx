@@ -6,7 +6,7 @@ const supabase = supabaseBrowser()
 import { useRouter } from 'next/navigation'
 import AdditionalZipCodes from '../../../components/AdditionalZipCodes'
 
-const TRADES = ['HVAC','Plumbing','Electrical','Roofing','Landscaping','General']
+const TRADES = ['HVAC','Plumbing','Electrical','Roofing','Landscaping']
 
 export default function ProOnboardingPage() {
   const router = useRouter()

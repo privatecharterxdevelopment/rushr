@@ -81,7 +81,7 @@ type EmergencyJob = {
   requestedMins:number
   status:'Available'|'Accepted'|'En Route'|'In Progress'|'Completed'
   customerName:string
-  category: 'Plumbing'|'Electrical'|'HVAC'|'Locksmith'|'Auto'|'General'
+  category: 'Plumbing'|'Electrical'|'HVAC'|'Locksmith'|'Auto'
 }
 type Availability = 'online' | 'busy' | 'offline'
 type Appt = { id:string; job:string; at:string; window:string; addr:string; customerName:string }
@@ -473,6 +473,10 @@ export default function ContractorDashboardPage() {
           <Link href="/dashboard/contractor/jobs" className="btn whitespace-nowrap flex-shrink-0">My Jobs</Link>
           <Link href="/dashboard/contractor/calendar" className="btn whitespace-nowrap flex-shrink-0">Calendar</Link>
           <Link href="/dashboard/contractor/messages" className="btn whitespace-nowrap flex-shrink-0">Messages</Link>
+          <Link href="/dashboard/contractor/billing" className="btn whitespace-nowrap flex-shrink-0 flex items-center gap-1.5">
+            <DollarSign className="w-4 h-4" />
+            Billing
+          </Link>
           <Link href="/dashboard/contractor/settings" className="btn whitespace-nowrap flex-shrink-0">Settings</Link>
         </div>
       </div>

@@ -51,9 +51,6 @@ export default function HomePage() {
       {/* HERO */}
       <Hero />
 
-      {/* STATS */}
-      <StatStrip />
-
       {/* POPULAR EMERGENCIES (Home / Auto / General) */}
       <PopularEmergencies />
 
@@ -364,7 +361,7 @@ function useCountUp(to: number, duration = 800) {
    POPULAR EMERGENCIES — tabs + centered rows via ghost pads
 -------------------------------------------- */
 function PopularEmergencies() {
-  type Group = 'Home' | 'Auto' | 'General'
+  type Group = 'Home' | 'Auto'
   const [group, setGroup] = useState<Group>('Home')
 
   // Detect intended column count by breakpoint (tailwind defaults)
@@ -382,7 +379,7 @@ function PopularEmergencies() {
       { name: 'Water damage', href: '/rushrmap?category=Water%20Damage&urgent=1', icon: <Droplets className="h-6 w-6" />, hint: 'Dry-out, mitigation' },
       { name: 'Locksmith', href: '/rushrmap?category=Locksmith&urgent=1', icon: <Lock className="h-6 w-6" />, hint: 'House lockout, rekey' },
       { name: 'Appliance repair', href: '/rushrmap?category=Appliance%20Repair&urgent=1', icon: <Wrench className="h-6 w-6" />, hint: 'Fridge, washer, oven' },
-      { name: 'Handyman', href: '/rushrmap?category=Handyman&urgent=1', icon: <Hammer className="h-6 w-6" />, hint: 'Small urgent fixes' },
+      { name: 'Other', href: '/rushrmap?category=Other&urgent=1', icon: <Hammer className="h-6 w-6" />, hint: 'Tell us what you need' },
     ],
     Auto: [
       { name: 'Jump start', href: '/rushrmap?category=Auto%20Battery&urgent=1', icon: <Battery className="h-6 w-6" />, hint: 'Dead battery' },
@@ -391,14 +388,7 @@ function PopularEmergencies() {
       { name: 'Tow request', href: '/rushrmap?category=Tow&urgent=1', icon: <Car className="h-6 w-6" />, hint: 'Local tow' },
       { name: 'Fuel delivery', href: '/rushrmap?category=Fuel%20Delivery&urgent=1', icon: <Siren className="h-6 w-6" />, hint: 'Out of gas' },
       { name: 'Mobile mechanic', href: '/rushrmap?category=Mobile%20Mechanic&urgent=1', icon: <Settings className="h-6 w-6" />, hint: 'On-site diagnosis' },
-    ],
-    General: [
-      { name: 'Board-up', href: '/rushrmap?category=Board%20Up&urgent=1', icon: <Hammer className="h-6 w-6" />, hint: 'Windows, doors' },
-      { name: 'Storm damage', href: '/rushrmap?category=Storm%20Damage&urgent=1', icon: <Siren className="h-6 w-6" />, hint: 'Wind, hail' },
-      { name: 'Tree down', href: '/rushrmap?category=Tree%20Service&urgent=1', icon: <Leaf className="h-6 w-6" />, hint: 'Removal, clearance' },
-      { name: 'Pest emergency', href: '/rushrmap?category=Pest%20Control&urgent=1', icon: <Bug className="h-6 w-6" />, hint: 'Wasps, rodents' },
-      { name: 'Glass repair', href: '/rushrmap?category=Glass%20Repair&urgent=1', icon: <HomeIcon className="h-6 w-6" />, hint: 'Windows, doors' },
-      { name: 'Other', href: '/rushrmap?category=General&urgent=1', icon: <Sparkles className="h-6 w-6" />, hint: 'Tell us what happened' },
+      { name: 'Other', href: '/rushrmap?category=Auto%20Other&urgent=1', icon: <Sparkles className="h-6 w-6" />, hint: 'Tell us what you need' },
     ],
   }
 
@@ -407,6 +397,13 @@ function PopularEmergencies() {
 
   const ref = useRef(null)
   const isInView = useInView(ref, { once: true, margin: "-100px" })
+  const [hasAnimated, setHasAnimated] = useState(false)
+
+  useEffect(() => {
+    if (isInView && !hasAnimated) {
+      setHasAnimated(true)
+    }
+  }, [isInView, hasAnimated])
 
   return (
     <section ref={ref} className="mx-auto max-w-7xl px-6 py-10">
@@ -421,28 +418,37 @@ function PopularEmergencies() {
           <Link href="/rushrmap?urgent=1" className="font-semibold text-emerald-700 hover:text-emerald-800 hover:underline transition-all">See all emergencies →</Link>
         </p>
 
-        {/* Segmented control */}
-        <div className="mt-4 flex justify-center">
-          <div className="relative inline-flex rounded-full bg-slate-100 p-1">
-            {(['Home', 'Auto', 'General'] as Group[]).map((g) => {
+        {/* Enhanced Segmented control with smooth sliding animation */}
+        <div className="mt-6 flex justify-center">
+          <div className="relative inline-flex rounded-2xl bg-gradient-to-b from-slate-50 to-slate-100 p-1.5 shadow-lg shadow-slate-200/50 border border-slate-200/60">
+            {/* Single sliding pill background */}
+            <motion.div
+              className="absolute top-1.5 bottom-1.5 w-[calc(50%-6px)] rounded-xl bg-gradient-to-br from-emerald-600 to-emerald-700 shadow-lg shadow-emerald-500/40"
+              initial={false}
+              animate={{
+                x: group === 'Home' ? 6 : 'calc(100% + 6px)'
+              }}
+              transition={{
+                type: 'spring',
+                stiffness: 300,
+                damping: 30,
+                mass: 0.8
+              }}
+            />
+            {(['Home', 'Auto'] as Group[]).map((g) => {
               const active = group === g
+              const icon = g === 'Home' ? '🏠' : '🚗'
               return (
                 <button
                   key={g}
                   onClick={() => setGroup(g)}
                   className={`
-                    relative z-10 px-4 py-1.5 text-sm font-medium rounded-full transition
-                    ${active ? 'text-white' : 'text-slate-600 hover:text-slate-800'}
+                    relative z-10 px-6 py-2.5 text-sm font-semibold rounded-xl transition-colors duration-200 flex items-center gap-2 flex-1 justify-center
+                    ${active ? 'text-white' : 'text-slate-600 hover:text-slate-900'}
                   `}
                 >
-                  {g}
-                  {active && (
-                    <motion.span
-                      layoutId="pill"
-                      className="absolute inset-0 z-[-1] rounded-full bg-emerald-600"
-                      transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-                    />
-                  )}
+                  <span className="text-lg">{icon}</span>
+                  <span>{g}</span>
                 </button>
               )
             })}
@@ -454,10 +460,10 @@ function PopularEmergencies() {
       <div className="mt-6 grid gap-3 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4">
         {cats.map((c, i) => (
           <motion.div
-            key={i}
-            initial={{ opacity: 0, y: 20 }}
-            animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
-            transition={{ duration: 0.4, delay: 0.5 + i * 0.05, ease: [0.22, 1, 0.36, 1] }}
+            key={`${group}-${i}`}
+            initial={hasAnimated ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: hasAnimated ? 0 : 0.4, delay: hasAnimated ? 0 : 0.3, ease: [0.22, 1, 0.36, 1] }}
           >
             <Link href={c.href} className="group block">
               <Card className="relative h-full overflow-hidden border-emerald-200/60 bg-white/85 p-3 transition-all duration-300 hover:shadow-lg hover:scale-105 hover:-translate-y-1">

@@ -31,7 +31,7 @@ export default function JobFilter({ className = '' }: JobFilterProps) {
 
   // Service categories
   const categories = [
-    'Plumbing', 'Electrical', 'HVAC', 'Roofing', 'General', 'Carpentry',
+    'Plumbing', 'Electrical', 'HVAC', 'Roofing', 'Carpentry',
     'Landscaping', 'Appliance Repair', 'Locksmith', 'Handyman'
   ]
 

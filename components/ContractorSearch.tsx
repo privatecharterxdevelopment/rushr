@@ -31,7 +31,7 @@ export default function ContractorSearch({ className = '' }: ContractorSearchPro
 
   // Common service categories
   const categories = [
-    'Plumbing', 'Electrical', 'HVAC', 'Roofing', 'General', 'Carpentry',
+    'Plumbing', 'Electrical', 'HVAC', 'Roofing', 'Carpentry',
     'Landscaping', 'Appliance Repair', 'Locksmith', 'Handyman'
   ]
 
@@ -79,7 +79,7 @@ export default function ContractorSearch({ className = '' }: ContractorSearchPro
           business_name: 'Elite Electrical Services',
           rating: 4.8,
           total_reviews: 203,
-          categories: ['Electrical', 'General'],
+          categories: ['Electrical', 'HVAC'],
           service_area_zips: [cleanZip, '12348', '12349'],
           base_zip: '12348',
           phone: '(555) 234-5678',
@@ -91,7 +91,7 @@ export default function ContractorSearch({ className = '' }: ContractorSearchPro
           business_name: 'Park Home Services',
           rating: 4.7,
           total_reviews: 87,
-          categories: ['General', 'Handyman', 'Carpentry'],
+          categories: ['Handyman', 'Carpentry'],
           service_area_zips: [cleanZip],
           base_zip: cleanZip,
           phone: '(555) 345-6789',

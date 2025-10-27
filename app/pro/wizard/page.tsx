@@ -53,7 +53,7 @@ export default function ContractorSignup() {
   const sp = useSearchParams()
 
   const categories = useMemo<string[]>(
-    () => ['Electrical','HVAC','Roofing','Plumbing','Carpentry','General','Landscaping'],
+    () => ['Electrical','HVAC','Roofing','Plumbing','Carpentry','Landscaping'],
     []
   )
 
