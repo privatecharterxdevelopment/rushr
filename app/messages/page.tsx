@@ -487,7 +487,7 @@ function LabelsDropdown({
 
 /* ======================== Chat View ======================== */
 function ChatView({
-  thread, query, onSend, onSendOffer, onUpdateOffer, onSystem, authRole,
+  thread, query, onSend, onSendOffer, onUpdateOffer, onSystem, authRole, userType,
 }: {
   thread?: Thread
   query: string
@@ -496,6 +496,7 @@ function ChatView({
   onUpdateOffer: (msgId: string, updater: (m: Message) => Message) => void
   onSystem: (text: string) => void
   authRole?: Role
+  userType?: 'homeowner' | 'contractor'
 }) {
   const [text, setText] = useState('')
   const [showOffer, setShowOffer] = useState(false)
@@ -570,6 +571,7 @@ function ChatView({
               key={msg.id}
               msg={msg}
               isPro={thread.role === 'pro'}
+              userType={userType}
               onAccept={() => { onUpdateOffer(msg.id, m => ({ ...m, offerStatus: 'accepted' })); onSystem('Offer accepted') }}
               onDecline={() => { onUpdateOffer(msg.id, m => ({ ...m, offerStatus: 'declined' })); onSystem('Offer declined') }}
               onRequestChanges={() => onUpdateOffer(msg.id, m => ({ ...m, offerStatus: 'countered' }))}
@@ -583,7 +585,7 @@ function ChatView({
           ) : msg.kind === 'system' ? (
             <SystemBubble key={msg.id} text={msg.text || ''} />
           ) : (
-            <Bubble key={msg.id} msg={msg} query={query} />
+            <Bubble key={msg.id} msg={msg} query={query} userType={userType} />
           )
         )}
 
@@ -645,20 +647,42 @@ function ChatView({
 }
 
 /* ======================== Bubbles ======================== */
-function Bubble({ msg, query }: { msg: Message; query: string }) {
+function Bubble({ msg, query, userType }: { msg: Message; query: string; userType?: 'homeowner' | 'contractor' }) {
   const isMe = msg.fromMe
+  const isPro = userType === 'contractor'
+
+  // Color scheme based on user type
+  const myBubbleColor = isPro
+    ? 'bg-gradient-to-br from-blue-600 to-blue-700 text-white border-blue-600'
+    : 'bg-gradient-to-br from-emerald-600 to-emerald-700 text-white border-emerald-600'
+
+  const myAvatarColor = isPro
+    ? 'bg-gradient-to-br from-blue-400 to-blue-600'
+    : 'bg-gradient-to-br from-emerald-400 to-emerald-600'
+
+  const myTextColor = isPro ? 'text-blue-100/90' : 'text-emerald-100/90'
+
+  const otherAvatarColor = isPro
+    ? 'bg-gradient-to-br from-emerald-400 to-emerald-600'  // Homeowner (green) when contractor is viewing
+    : 'bg-gradient-to-br from-blue-400 to-blue-600'         // Contractor (blue) when homeowner is viewing
+
   return (
-    <div className={classNames('mb-3 flex items-end gap-2', isMe ? 'justify-end' : 'justify-start')}>
-      {!isMe && <div className="h-6 w-6 rounded-full bg-slate-200" />}
-      <div className={classNames('max-w-[72%] rounded-2xl px-3 py-2 text-sm shadow-sm border',
-        isMe ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-slate-100 text-slate-800 border-slate-200')}>
-        {msg.text && <div className="whitespace-pre-wrap">{highlight(msg.text, query)}</div>}
+    <div className={classNames('mb-4 flex items-end gap-3', isMe ? 'justify-end' : 'justify-start')}>
+      {!isMe && <div className={classNames('h-10 w-10 flex-shrink-0 rounded-full flex items-center justify-center text-white font-bold text-sm shadow-md', otherAvatarColor)}>
+        {/* Avatar placeholder */}
+      </div>}
+      <div className={classNames('max-w-[85%] rounded-3xl px-5 py-4 text-base shadow-lg border-2 transition-all hover:shadow-xl',
+        isMe ? myBubbleColor : 'bg-white text-slate-900 border-slate-200')}>
+        {msg.text && <div className="whitespace-pre-wrap leading-relaxed">{highlight(msg.text, query)}</div>}
         {msg.attachments && msg.attachments.length > 0 && <AttachmentTiles attachments={msg.attachments} dark={isMe} />}
-        <div className={classNames('mt-1 flex items-center gap-2 text-[11px]', isMe ? 'text-emerald-100/80' : 'text-slate-500')}>
+        <div className={classNames('mt-2 flex items-center gap-2 text-xs', isMe ? myTextColor : 'text-slate-500')}>
           <span>{msg.time}</span>
           {isMe && msg.status && <span>• {msg.status}</span>}
         </div>
       </div>
+      {isMe && <div className={classNames('h-10 w-10 flex-shrink-0 rounded-full flex items-center justify-center text-white font-bold text-sm shadow-md', myAvatarColor)}>
+        {/* User avatar */}
+      </div>}
     </div>
   )
 }
@@ -670,39 +694,49 @@ function SystemBubble({ text }: { text: string }) {
   )
 }
 function OfferBubble({
-  msg, isPro, onAccept, onDecline, onRequestChanges, onSubmitCounter, onAcceptCounter, query,
+  msg, isPro, userType, onAccept, onDecline, onRequestChanges, onSubmitCounter, onAcceptCounter, query,
 }: {
-  msg: Message; isPro: boolean; onAccept: () => void; onDecline: () => void; onRequestChanges: () => void;
+  msg: Message; isPro: boolean; userType?: 'homeowner' | 'contractor'; onAccept: () => void; onDecline: () => void; onRequestChanges: () => void;
   onSubmitCounter: (price: number, days: number, notes: string) => void; onAcceptCounter: () => void; query: string
 }) {
   const [showCounter, setShowCounter] = useState(false)
   const isMe = msg.fromMe
   const status = msg.offerStatus || 'pending'
 
+  // Color scheme based on user type for offer bubbles
+  const isContractor = userType === 'contractor'
+  const myBorderColor = isContractor ? 'border-blue-300' : 'border-emerald-300'
+  const headerBg = isContractor
+    ? 'bg-gradient-to-r from-blue-600 to-blue-700'
+    : 'bg-gradient-to-r from-emerald-600 to-emerald-700'
+  const otherAvatarColor = isContractor
+    ? 'bg-gradient-to-br from-emerald-400 to-emerald-600'
+    : 'bg-gradient-to-br from-blue-400 to-blue-600'
+
   return (
-    <div className={classNames('mb-3 flex items-end gap-2', isMe ? 'justify-end' : 'justify-start')}>
-      {!isMe && <div className="h-6 w-6 rounded-full bg-slate-200" />}
-      <div className={classNames('max-w-[72%] overflow-hidden rounded-2xl border bg-white text-sm shadow-sm',
-        isMe ? 'border-emerald-200' : 'border-slate-200')}>
-        <div className="flex items-center gap-2 border-b bg-emerald-600 px-3 py-2 text-white">
-          <FileTextIcon className="h-4 w-4" />
-          <div className="font-semibold">Quote</div>
+    <div className={classNames('mb-4 flex items-end gap-3', isMe ? 'justify-end' : 'justify-start')}>
+      {!isMe && <div className={classNames('h-10 w-10 flex-shrink-0 rounded-full flex items-center justify-center text-white font-bold text-sm shadow-md', otherAvatarColor)} />}
+      <div className={classNames('max-w-[85%] overflow-hidden rounded-3xl border-2 bg-white text-base shadow-lg transition-all hover:shadow-xl',
+        isMe ? myBorderColor : 'border-slate-300')}>
+        <div className={classNames('flex items-center gap-3 border-b-2 px-5 py-4 text-white', headerBg)}>
+          <FileTextIcon className="h-5 w-5" />
+          <div className="font-bold text-lg">Quote</div>
           <div className="ml-auto text-xs opacity-90">{msg.time}</div>
         </div>
-        <div className="p-3">
-          <div className="mb-1 text-[13px] font-semibold text-slate-800">
+        <div className="p-5">
+          <div className="mb-3 text-base font-bold text-slate-900">
             {highlight(msg.offerTitle || 'Service Quote', query)}
           </div>
-          <div className="mb-2 flex items-center gap-3">
-            <div className="rounded-md bg-emerald-50 px-2 py-1 text-[13px] font-semibold text-emerald-700">
+          <div className="mb-4 flex items-center gap-3 flex-wrap">
+            <div className="rounded-xl bg-emerald-50 px-4 py-2 text-base font-bold text-emerald-700 border-2 border-emerald-200">
               ${msg.offerPrice?.toLocaleString()}
             </div>
-            <div className="rounded-md border px-2 py-1 text-[12px] text-slate-600">
+            <div className="rounded-xl border-2 px-4 py-2 text-sm font-medium text-slate-700 border-slate-300">
               {msg.offerDays} {msg.offerDays === 1 ? 'day' : 'days'}
             </div>
             <StatusPill status={status} />
           </div>
-          {msg.offerNotes && <p className="whitespace-pre-wrap text-[13px] text-slate-700">{highlight(msg.offerNotes, query)}</p>}
+          {msg.offerNotes && <p className="whitespace-pre-wrap text-base leading-relaxed text-slate-700">{highlight(msg.offerNotes, query)}</p>}
 
           {status === 'countered' && (
             <div className="mt-3 rounded-md border bg-amber-50 p-2 text-[13px] text-amber-900">
@@ -825,7 +859,7 @@ function Composer({
         </div>
       )}
 
-      <div className="flex items-end gap-2 rounded-xl border bg-white p-2">
+      <div className="flex items-end gap-3 rounded-2xl border-2 border-slate-300 bg-white p-4 shadow-md focus-within:ring-2 focus-within:ring-emerald-500 focus-within:border-emerald-500 transition-all">
         <input
           ref={inputRef} type="file" multiple hidden
           onChange={e => {
@@ -837,44 +871,47 @@ function Composer({
             setAttachments([...attachments, ...newAtt])
           }}
         />
-        <button title="Attach" className="btn" onClick={() => inputRef.current?.click()}>
-          <PaperclipIcon className="h-4 w-4 text-slate-600" />
+        <button title="Attach" className="btn p-3 hover:bg-slate-100 rounded-full transition-colors" onClick={() => inputRef.current?.click()}>
+          <PaperclipIcon className="h-5 w-5 text-slate-600" />
         </button>
 
         <textarea
           value={text}
           onChange={e => setText(e.target.value)}
-          placeholder="Write a message"
+          placeholder="Write your message..."
           rows={1}
-          className="min-h-[36px] max-h-[200px] w-full resize-none bg-transparent text-sm outline-none placeholder:text-slate-400"
+          className="min-h-[44px] max-h-[200px] w-full resize-none bg-transparent text-base outline-none placeholder:text-slate-400 py-2"
           onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); onSubmit() } }}
         />
 
         <div className="relative">
-          <button title="Schedule" className="btn" onClick={() => setShowScheduler(!showScheduler)}>
-            <ClockIcon className="h-4 w-4 text-slate-600" />
+          <button title="Schedule" className="btn p-3 hover:bg-slate-100 rounded-full transition-colors" onClick={() => setShowScheduler(!showScheduler)}>
+            <ClockIcon className="h-5 w-5 text-slate-600" />
           </button>
           {showScheduler && (
-            <div className="absolute right-0 z-10 mt-2 w-48 rounded-md border bg-white p-2 text-sm shadow">
-              <div className="mb-1 text-xs font-semibold text-slate-500">Send later</div>
-              <div className="flex flex-wrap gap-1">
+            <div className="absolute right-0 bottom-full mb-2 z-10 w-48 rounded-xl border-2 bg-white p-3 shadow-xl">
+              <div className="mb-2 text-xs font-semibold text-slate-500">Send later</div>
+              <div className="flex flex-wrap gap-2">
                 {[5, 15, 60].map(m => (
-                  <button key={m} className="btn btn-outline text-xs" onClick={() => onSchedule(m)}>
+                  <button key={m} className="btn btn-outline text-xs px-3 py-1.5 rounded-lg" onClick={() => onSchedule(m)}>
                     in {m} min
                   </button>
                 ))}
               </div>
-              <div className="mt-2 text-[11px] text-slate-500">Scheduled: {scheduledCount}</div>
+              <div className="mt-3 text-xs text-slate-500">Scheduled: {scheduledCount}</div>
             </div>
           )}
         </div>
 
-        <button onClick={onSubmit} className="btn-primary text-xs font-semibold">
+        <button onClick={onSubmit} className={classNames(
+          'text-sm font-bold px-6 py-3 rounded-xl hover:scale-105 transition-transform shadow-md',
+          authRole === 'pro' ? 'bg-blue-600 hover:bg-blue-700 text-white' : 'btn-primary'
+        )}>
           Send
         </button>
       </div>
 
-      <div className="mt-2 text-[11px] text-slate-500">Press Enter to send. Shift+Enter for a new line.</div>
+      <div className="mt-3 text-xs text-slate-500 text-center">Press Enter to send • Shift+Enter for new line</div>
     </div>
   )
 }
@@ -1078,6 +1115,7 @@ function ActiveConversation({
           onUpdateOffer={handleUpdateOffer}
           onSystem={handleSystem}
           authRole={authRole}
+          userType={conversation.homeowner_id === user?.id ? 'homeowner' : 'contractor'}
         />
       </div>
     </div>

@@ -1,9 +1,10 @@
 'use client'
 import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { useParams } from 'next/navigation'
+import { useParams, useRouter } from 'next/navigation'
 import { useAuth } from '../../../../contexts/AuthContext'
 import { supabase } from '../../../../lib/supabaseClient'
+import PaymentModal from '../../../../components/PaymentModal'
 
 interface Bid {
   id: string
@@ -25,12 +26,15 @@ interface Job {
 
 export default function CompareBids(){
   const { user } = useAuth()
+  const router = useRouter()
   const { id } = useParams<{id:string}>()
   const [bids, setBids] = useState<Bid[]>([])
   const [job, setJob] = useState<Job | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [accepting, setAccepting] = useState<string | null>(null)
+  const [showPaymentModal, setShowPaymentModal] = useState(false)
+  const [selectedBid, setSelectedBid] = useState<Bid | null>(null)
 
   useEffect(() => {
     const fetchData = async () => {
@@ -155,15 +159,21 @@ export default function CompareBids(){
         console.error('Error updating job:', jobError)
       }
 
-      // Redirect to Stripe payment page with escrow amount
-      const amount = bid.bid_amount
-      const jobTitle = job?.title || 'Job'
-      window.location.href = `/payments/checkout?job_id=${id}&amount=${amount}&description=${encodeURIComponent(jobTitle)}&type=escrow`
+      // Open payment modal
+      setSelectedBid(bid)
+      setShowPaymentModal(true)
+      setAccepting(null)
     } catch (err) {
       console.error('Error accepting bid:', err)
       alert('Failed to accept bid')
       setAccepting(null)
     }
+  }
+
+  const handlePaymentSuccess = () => {
+    setShowPaymentModal(false)
+    // Redirect to tracking page
+    router.push(`/jobs/${id}/track`)
   }
 
   if (bids.length === 0) {
@@ -183,66 +193,83 @@ export default function CompareBids(){
   }
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-6xl">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-3xl font-bold text-slate-900">Compare Bids</h1>
-          <p className="text-slate-600 mt-1">{job?.title}</p>
-        </div>
-        <Link href="/dashboard/homeowner" className="px-4 py-2 text-emerald-600 hover:text-emerald-700 font-medium">
-          Back to Dashboard
-        </Link>
-      </div>
-
-      <div className="space-y-4">
-        {bids.map((bid) => (
-          <div key={bid.id} className="bg-white border border-slate-200 rounded-lg p-6 shadow-sm">
-            <div className="flex items-start justify-between mb-4">
-              <div>
-                <h3 className="text-xl font-semibold text-slate-900">
-                  {bid.contractor_business_name || bid.contractor_name || `Contractor ${bid.contractor_id.substring(0, 8)}`}
-                </h3>
-                <p className="text-sm text-slate-500 mt-1">Submitted {new Date(bid.created_at).toLocaleDateString()}</p>
-              </div>
-              <div className="text-right">
-                <p className="text-3xl font-bold text-emerald-600">
-                  ${bid.bid_amount != null ? bid.bid_amount.toFixed(2) : '0.00'}
-                </p>
-                <p className="text-sm text-slate-500">Bid Amount</p>
-              </div>
-            </div>
-
-            {bid.message && (
-              <div className="mb-4 p-4 bg-slate-50 rounded-lg">
-                <p className="text-sm font-medium text-slate-700 mb-1">Message:</p>
-                <p className="text-slate-600">{bid.message}</p>
-              </div>
-            )}
-
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                  bid.status === 'accepted' ? 'bg-green-100 text-green-700' :
-                  bid.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
-                  'bg-red-100 text-red-700'
-                }`}>
-                  {bid.status.charAt(0).toUpperCase() + bid.status.slice(1)}
-                </span>
-              </div>
-
-              {bid.status === 'pending' && (
-                <button
-                  onClick={() => handleAcceptBid(bid.id)}
-                  disabled={accepting === bid.id}
-                  className="px-6 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {accepting === bid.id ? 'Accepting...' : 'Accept Bid'}
-                </button>
-              )}
-            </div>
+    <>
+      <div className="container mx-auto px-4 py-8 max-w-6xl">
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h1 className="text-3xl font-bold text-slate-900">Compare Bids</h1>
+            <p className="text-slate-600 mt-1">{job?.title}</p>
           </div>
-        ))}
+          <Link href="/dashboard/homeowner" className="px-4 py-2 text-emerald-600 hover:text-emerald-700 font-medium">
+            Back to Dashboard
+          </Link>
+        </div>
+
+        <div className="space-y-4">
+          {bids.map((bid) => (
+            <div key={bid.id} className="bg-white border border-slate-200 rounded-lg p-6 shadow-sm">
+              <div className="flex items-start justify-between mb-4">
+                <div>
+                  <h3 className="text-xl font-semibold text-slate-900">
+                    {bid.contractor_business_name || bid.contractor_name || `Contractor ${bid.contractor_id.substring(0, 8)}`}
+                  </h3>
+                  <p className="text-sm text-slate-500 mt-1">Submitted {new Date(bid.created_at).toLocaleDateString()}</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-3xl font-bold text-emerald-600">
+                    ${bid.bid_amount != null ? bid.bid_amount.toFixed(2) : '0.00'}
+                  </p>
+                  <p className="text-sm text-slate-500">Bid Amount</p>
+                </div>
+              </div>
+
+              {bid.message && (
+                <div className="mb-4 p-4 bg-slate-50 rounded-lg">
+                  <p className="text-sm font-medium text-slate-700 mb-1">Message:</p>
+                  <p className="text-slate-600">{bid.message}</p>
+                </div>
+              )}
+
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                    bid.status === 'accepted' ? 'bg-green-100 text-green-700' :
+                    bid.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
+                    'bg-red-100 text-red-700'
+                  }`}>
+                    {bid.status.charAt(0).toUpperCase() + bid.status.slice(1)}
+                  </span>
+                </div>
+
+                {bid.status === 'pending' && (
+                  <button
+                    onClick={() => handleAcceptBid(bid.id)}
+                    disabled={accepting === bid.id}
+                    className="px-6 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {accepting === bid.id ? 'Accepting...' : 'Accept Bid'}
+                  </button>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
-    </div>
+
+      {/* Payment Modal */}
+      {showPaymentModal && selectedBid && user && (
+        <PaymentModal
+          isOpen={showPaymentModal}
+          onClose={() => setShowPaymentModal(false)}
+          bidId={selectedBid.id}
+          jobId={id}
+          amount={selectedBid.bid_amount || 0}
+          contractorName={selectedBid.contractor_business_name || selectedBid.contractor_name || 'Contractor'}
+          jobTitle={job?.title || 'Job'}
+          homeownerId={user.id}
+          onPaymentSuccess={handlePaymentSuccess}
+        />
+      )}
+    </>
   )
 }
