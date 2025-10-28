@@ -58,7 +58,7 @@ export default function BidNotificationSystem() {
         localStorage.setItem(`welcome_seen_${user.id}`, 'true')
 
         // Also create a welcome conversation in the messages
-        createWelcomeConversation(user.id)
+        // createWelcomeConversation(user.id)
       }
     }
   }, [user, userProfile])
@@ -67,6 +67,7 @@ export default function BidNotificationSystem() {
   const createWelcomeConversation = async (homeownerId: string) => {
     try {
       // First, check if we already have a welcome conversation
+      console.log('Creating welcome conversation for homeowner:', homeownerId)
       const { data: existingConv } = await supabase
         .from('conversations')
         .select('id')
@@ -74,10 +75,12 @@ export default function BidNotificationSystem() {
         .eq('title', 'Welcome to Rushr!')
         .single()
 
+      console.log('existingConv:', existingConv)
+
       if (existingConv) return // Already exists
 
       // Create conversation with Rushr as the "pro" (using a special system user ID)
-      const rushrSystemId = '00000000-0000-0000-0000-000000000000' // Special system user ID
+      const rushrSystemId = 'ece671fd-4e5a-44bc-aed1-d5a5aa3be66f' // Special system user ID
 
       const { data: conversation, error: convError } = await supabase
         .from('conversations')
@@ -88,7 +91,8 @@ export default function BidNotificationSystem() {
           status: 'active'
         })
         .select()
-        .single()
+
+        console.log('existingConv', conversation)
 
       if (convError) {
         // Suppressed: Database connection disabled
@@ -396,9 +400,8 @@ The Rushr Team`
               notifications.slice(0, 10).map((notification) => (
                 <div
                   key={notification.id}
-                  className={`p-3 border-b last:border-b-0 hover:bg-gray-50 cursor-pointer ${
-                    !notification.read ? 'bg-blue-50' : ''
-                  }`}
+                  className={`p-3 border-b last:border-b-0 hover:bg-gray-50 cursor-pointer ${!notification.read ? 'bg-blue-50' : ''
+                    }`}
                   onClick={() => {
                     markAsRead(notification.id)
                     // Handle link clicks for welcome notifications

@@ -340,29 +340,37 @@ export function ProAuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const signOut = async () => {
-    console.log('[PRO-AUTH] Signing out contractor - clearing session')
+    console.log('[PRO-AUTH] Signing out contractor - clearing everything')
 
-    // 1. Clear React state
-    setUser(null)
-    setContractorProfile(null)
-    setSession(null)
-
-    // 2. Sign out from Supabase (this clears auth tokens)
     try {
-      await supabase.auth.signOut({ scope: 'local' })
-    } catch (err) {
-      console.error('[PRO-AUTH] Signout error:', err)
-    }
+      // 1. Supabase global signout (clears local + refresh token)
+      const { error } = await supabase.auth.signOut()
 
-    // 3. Force reload to /pro to ensure clean state
-    // The supabase.auth.signOut() already cleared the session
-    window.location.href = '/pro'
+      if (error) {
+        console.error('[PRO-AUTH] Supabase signOut error:', error.message)
+      }
+
+      // 2. Clear browser storage
+      localStorage.clear()
+      sessionStorage.clear()
+
+      // 3. Reset local state
+      setUser(null)
+      setContractorProfile(null)
+      setSession(null)
+
+      // 4. Redirect cleanly to /pro
+      router.push('/pro')
+      router.refresh()
+    } catch (err) {
+      console.error('[PRO-AUTH] Fatal logout error:', err)
+    }
   }
 
   const isProUser = contractorProfile?.subscription_type === 'pro' || false
   const requiresKYC = contractorProfile?.status === 'approved' &&
-                      (contractorProfile?.kyc_status === 'not_started' ||
-                       contractorProfile?.kyc_status === 'failed')
+    (contractorProfile?.kyc_status === 'not_started' ||
+      contractorProfile?.kyc_status === 'failed')
 
   const value = {
     user,

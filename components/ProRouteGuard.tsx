@@ -6,7 +6,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { useProAuth } from '../contexts/ProAuthContext'
 
 export default function ProRouteGuard({ children }: { children: React.ReactNode }) {
-  const { userProfile: homeownerProfile } = useAuth()
+  const { userProfile: homeownerProfile, loading: homeOwnerLoading } = useAuth()
   const { user: contractorUser, contractorProfile, loading: contractorLoading } = useProAuth()
   const router = useRouter()
 
@@ -30,6 +30,17 @@ export default function ProRouteGuard({ children }: { children: React.ReactNode 
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
           <div className="text-sm text-slate-600">Loading Pro Dashboard...</div>
+        </div>
+      </div>
+    )
+  }
+
+  if (homeOwnerLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-blue-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <div className="text-sm text-slate-600">Loading Home Owner Dashboard...</div>
         </div>
       </div>
     )
