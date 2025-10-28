@@ -41,16 +41,35 @@ export default function ContractorJobsPage() {
     if (!user) return
     try {
       // Fetch all pending emergency jobs
-      const { data, error } = await supabase
+      const { data: appliedJobs, error: bidsError } = await supabase
+        .from('job_bids')
+        .select('job_id')
+        .eq('contractor_id', user.id);
+
+      if (bidsError) {
+        console.error('Error fetching bids:', bidsError);
+      }
+
+      const appliedJobIds = appliedJobs?.map(b => b.job_id) || [];
+
+      // 2️⃣ Get all jobs except those already applied to
+      const { data: availableJobs, error: jobsError } = await supabase
         .from('homeowner_jobs')
         .select('*')
         .eq('status', 'pending')
-        .order('created_at', { ascending: false })
+        .not('id', 'in', `(${appliedJobIds.join(',') || 'NULL'})`)
+        .order('created_at', { ascending: false });
 
-      if (error) {
-        console.error('Error fetching jobs:', error)
+      if (jobsError) {
+        console.error('Error fetching jobs:', jobsError);
+      }
+
+      // console.log('Available jobs:', availableJobs);
+
+      if (jobsError) {
+        console.error('Error fetching jobs:', jobsError)
       } else {
-        setJobs(data || [])
+        setJobs(availableJobs || [])
       }
     } catch (err) {
       console.error('Error fetching jobs:', err)
@@ -76,6 +95,14 @@ export default function ContractorJobsPage() {
     }
 
     setBidding(job.id)
+    console.log('job data', {
+      job_id: job.id,
+      contractor_id: user.id,
+      homeowner_id: job.homeowner_id,
+      bid_amount: parseFloat(amount),
+      description: message || null,
+      status: 'pending'
+    })
 
     try {
       const { error } = await supabase
@@ -85,7 +112,7 @@ export default function ContractorJobsPage() {
           contractor_id: user.id,
           homeowner_id: job.homeowner_id,
           bid_amount: parseFloat(amount),
-          message: message || null,
+          description: message || null,
           status: 'pending'
         }])
 

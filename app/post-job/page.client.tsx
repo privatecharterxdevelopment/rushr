@@ -58,13 +58,12 @@ function Stars({ value }: { value: number }) {
       {Array.from({ length: 5 }).map((_, i) => (
         <Star
           key={i}
-          className={`h-4 w-4 ${
-            i < full
-              ? 'fill-yellow-400 stroke-yellow-400'
-              : half && i === full
+          className={`h-4 w-4 ${i < full
+            ? 'fill-yellow-400 stroke-yellow-400'
+            : half && i === full
               ? 'fill-yellow-300 stroke-yellow-300'
               : 'stroke-slate-300'
-          }`}
+            }`}
         />
       ))}
     </div>
@@ -162,11 +161,10 @@ function ContractorCard({
           <div className="text-right text-xs text-slate-500">Currently unavailable</div>
         )}
         <button
-          className={`px-4 py-2 rounded-lg font-medium transition-all ${
-            c.activeNow
-              ? 'bg-emerald-600 text-white hover:bg-emerald-700'
-              : 'bg-slate-200 text-slate-500 cursor-not-allowed'
-          }`}
+          className={`px-4 py-2 rounded-lg font-medium transition-all ${c.activeNow
+            ? 'bg-emerald-600 text-white hover:bg-emerald-700'
+            : 'bg-slate-200 text-slate-500 cursor-not-allowed'
+            }`}
           onClick={onPick}
           disabled={!c.activeNow}
         >
@@ -220,7 +218,7 @@ const EMERGENCY_CATEGORIES = [
   { key: 'auto', label: '🚗 Auto Emergency' }
 ] as const
 
-const EMERGENCY_TYPES_MAP: Record<string, Array<{key: string, label: string, icon: string}>> = {
+const EMERGENCY_TYPES_MAP: Record<string, Array<{ key: string, label: string, icon: string }>> = {
   'home': [
     { key: 'plumbing', label: 'Plumbing Emergency', icon: '🚢' },
     { key: 'electrical', label: 'Electrical Emergency', icon: '⚡' },
@@ -257,9 +255,8 @@ function CategoryPill({
     <button
       type="button"
       onClick={onClick}
-      className={`whitespace-nowrap rounded-full border px-4 py-2 text-sm flex items-center gap-2 transition-all ${
-        active ? 'bg-emerald-600 text-white border-emerald-600 shadow-lg' : 'border-slate-200 hover:bg-emerald-50 hover:border-emerald-200'
-      }`}
+      className={`whitespace-nowrap rounded-full border px-4 py-2 text-sm flex items-center gap-2 transition-all ${active ? 'bg-emerald-600 text-white border-emerald-600 shadow-lg' : 'border-slate-200 hover:bg-emerald-50 hover:border-emerald-200'
+        }`}
     >
       <Icon className="h-4 w-4" />
       {children}
@@ -359,7 +356,7 @@ export default function PostJobInner({ userId }: Props) {
         console.error('Error message:', error.message)
 
         let errorMessage = 'Could not get your location. '
-        switch(error.code) {
+        switch (error.code) {
           case error.PERMISSION_DENIED:
             errorMessage += 'Permission denied. Please allow location access in your browser settings.'
             break
@@ -608,7 +605,7 @@ export default function PostJobInner({ userId }: Props) {
 
   const selectedContractor = useMemo(() =>
     nearbyContractors.find((m) => m.id === picked) || null
-  , [picked, nearbyContractors])
+    , [picked, nearbyContractors])
 
   function onUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files || [])
@@ -663,6 +660,8 @@ export default function PostJobInner({ userId }: Props) {
       // Import supabase
       const { supabase } = await import('../../lib/supabaseClient')
 
+      console.log({ supabase })
+
       // Prepare job data
       const jobData = {
         title: issueTitle,
@@ -687,7 +686,7 @@ export default function PostJobInner({ userId }: Props) {
         .insert([jobData])
         .select()
         .single()
-
+      
       if (error) {
         console.error('Error creating job:', error)
         alert('Failed to submit emergency request. Please try again.')
@@ -722,8 +721,8 @@ export default function PostJobInner({ userId }: Props) {
             sendAll
               ? 'We will instantly alert all active emergency pros in your area. The first to accept will be shown with live ETA tracking.'
               : selectedContractor
-              ? `We will notify ${selectedContractor.name} immediately about your emergency.`
-              : 'Please select a contractor or choose "Alert All Nearby" option.'
+                ? `We will notify ${selectedContractor.name} immediately about your emergency.`
+                : 'Please select a contractor or choose "Alert All Nearby" option.'
           }
         />
 
@@ -737,9 +736,8 @@ export default function PostJobInner({ userId }: Props) {
               <Field label="Emergency Location" required helper="Precise location helps emergency responders find you faster.">
                 <div className="flex gap-2">
                   <input
-                    className={`flex-1 px-4 py-3 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 ${
-                      touched.address && errors.address ? 'border-red-500' : 'border-slate-200'
-                    }`}
+                    className={`flex-1 px-4 py-3 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 ${touched.address && errors.address ? 'border-red-500' : 'border-slate-200'
+                      }`}
                     placeholder="Street address"
                     value={address}
                     onChange={(e) => {
@@ -769,9 +767,8 @@ export default function PostJobInner({ userId }: Props) {
               <Field label="Contact Number" required>
                 <div className="flex gap-2">
                   <input
-                    className={`flex-1 px-4 py-3 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 ${
-                      touched.phone && errors.phone ? 'border-red-500' : 'border-slate-200'
-                    }`}
+                    className={`flex-1 px-4 py-3 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 ${touched.phone && errors.phone ? 'border-red-500' : 'border-slate-200'
+                      }`}
                     placeholder="Mobile number"
                     value={phone}
                     onChange={(e) => {
@@ -826,11 +823,10 @@ export default function PostJobInner({ userId }: Props) {
                     {EMERGENCY_TYPES_MAP[category]?.map(({ key, label, icon }) => (
                       <label
                         key={key}
-                        className={`relative flex flex-col items-center gap-2 p-3 rounded-lg border-2 cursor-pointer transition-all hover:bg-slate-50 ${
-                          emergencyType === key
-                            ? 'border-emerald-500 bg-emerald-50'
-                            : 'border-slate-200'
-                        }`}
+                        className={`relative flex flex-col items-center gap-2 p-3 rounded-lg border-2 cursor-pointer transition-all hover:bg-slate-50 ${emergencyType === key
+                          ? 'border-emerald-500 bg-emerald-50'
+                          : 'border-slate-200'
+                          }`}
                       >
                         <input
                           type="radio"
@@ -885,9 +881,8 @@ export default function PostJobInner({ userId }: Props) {
                   multiple
                   accept="image/*,video/*"
                   onChange={onUpload}
-                  className={`w-full px-4 py-3 border rounded-lg ${
-                    uploadError ? 'border-red-500' : 'border-slate-200'
-                  }`}
+                  className={`w-full px-4 py-3 border rounded-lg ${uploadError ? 'border-red-500' : 'border-slate-200'
+                    }`}
                 />
                 {uploadError && (
                   <div className="mt-1 text-sm text-red-600">
@@ -926,18 +921,16 @@ export default function PostJobInner({ userId }: Props) {
               <label className="block text-sm font-medium text-slate-700 mb-4">Emergency Response Mode</label>
               <div className="grid grid-cols-2 gap-3">
                 <button
-                  className={`p-4 rounded-lg border text-left transition-all ${
-                    sendAll ? 'border-emerald-500 bg-emerald-50 text-emerald-700' : 'border-slate-200 hover:border-slate-300'
-                  }`}
+                  className={`p-4 rounded-lg border text-left transition-all ${sendAll ? 'border-emerald-500 bg-emerald-50 text-emerald-700' : 'border-slate-200 hover:border-slate-300'
+                    }`}
                   onClick={() => setSendAll(true)}
                 >
                   <div className="font-medium">Alert All Nearby</div>
                   <div className="text-sm opacity-75">Fastest response</div>
                 </button>
                 <button
-                  className={`p-4 rounded-lg border text-left transition-all ${
-                    !sendAll ? 'border-emerald-500 bg-emerald-50 text-emerald-700' : 'border-slate-200 hover:border-slate-300'
-                  }`}
+                  className={`p-4 rounded-lg border text-left transition-all ${!sendAll ? 'border-emerald-500 bg-emerald-50 text-emerald-700' : 'border-slate-200 hover:border-slate-300'
+                    }`}
                   onClick={() => setSendAll(false)}
                 >
                   <div className="font-medium">Select Pro</div>
@@ -1061,11 +1054,10 @@ export default function PostJobInner({ userId }: Props) {
                 Your contact info is shared only after a pro accepts your emergency request.
               </div>
               <button
-                className={`px-8 py-3 rounded-lg font-semibold text-lg transition-all transform hover:scale-105 ${
-                  sending || (!sendAll && !picked)
-                    ? 'bg-slate-300 text-slate-500 cursor-not-allowed'
-                    : 'bg-red-600 hover:bg-red-700 text-white shadow-lg'
-                }`}
+                className={`px-8 py-3 rounded-lg font-semibold text-lg transition-all transform hover:scale-105 ${sending || (!sendAll && !picked)
+                  ? 'bg-slate-300 text-slate-500 cursor-not-allowed'
+                  : 'bg-red-600 hover:bg-red-700 text-white shadow-lg'
+                  }`}
                 disabled={sending || (!sendAll && !picked)}
                 onClick={submit}
               >

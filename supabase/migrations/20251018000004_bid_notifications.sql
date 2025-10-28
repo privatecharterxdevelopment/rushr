@@ -27,7 +27,7 @@ BEGIN
     title,
     message,
     metadata,
-    read,
+    is_read,
     created_at
   ) VALUES (
     NEW.homeowner_id,
@@ -81,7 +81,7 @@ BEGIN
       title,
       message,
       metadata,
-      read,
+      is_read,
       created_at
     ) VALUES (
       NEW.contractor_id,
@@ -116,7 +116,7 @@ ALTER TABLE notifications
 ADD COLUMN IF NOT EXISTS metadata JSONB DEFAULT '{}';
 
 -- 6. CREATE INDEX FOR FASTER NOTIFICATION QUERIES
-CREATE INDEX IF NOT EXISTS idx_notifications_user_unread ON notifications(user_id, read);
+CREATE INDEX IF NOT EXISTS idx_notifications_user_unread ON notifications(user_id, is_read);
 CREATE INDEX IF NOT EXISTS idx_notifications_type ON notifications(type);
 CREATE INDEX IF NOT EXISTS idx_notifications_created ON notifications(created_at DESC);
 

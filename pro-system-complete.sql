@@ -411,7 +411,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Calculate profile completion score
-CREATE OR REPLACE FUNCTION pro_calculate_completion_score(contractor_id UUID)
+CREATE OR REPLACE FUNCTION pro_calculate_completion_score(v_contractor_id UUID)
 RETURNS INTEGER
 LANGUAGE plpgsql
 AS $$
@@ -419,7 +419,7 @@ DECLARE
     score INTEGER := 0;
     contractor RECORD;
 BEGIN
-    SELECT * INTO contractor FROM pro_contractors WHERE id = contractor_id;
+    SELECT * INTO contractor FROM pro_contractors WHERE id = v_contractor_id;
 
     IF contractor IS NULL THEN
         RETURN 0;

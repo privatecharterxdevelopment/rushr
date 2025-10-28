@@ -22,7 +22,7 @@ BEGIN
     title,
     message,
     link,
-    read,
+    is_read,
     created_at
   ) VALUES (
     NEW.homeowner_id,
