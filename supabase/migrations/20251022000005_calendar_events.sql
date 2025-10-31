@@ -58,6 +58,7 @@ DECLARE
   v_homeowner_id UUID;
   v_contractor_id UUID;
   v_start_time TIMESTAMPTZ;
+  v_location TEXT;
 BEGIN
   -- Only proceed if bid status changed to 'accepted'
   IF NEW.status = 'accepted' AND (OLD.status IS NULL OR OLD.status != 'accepted') THEN
@@ -67,9 +68,15 @@ BEGIN
     v_homeowner_id := v_job.homeowner_id;
     v_contractor_id := NEW.contractor_id;
 
-    -- Use estimated arrival time or default to now + 1 hour
+    -- ✅ Combine address fields into a readable location string
+    v_location := COALESCE(v_job.address, '') ||
+                  CASE WHEN v_job.city IS NOT NULL THEN ', ' || v_job.city ELSE '' END ||
+                  CASE WHEN v_job.state IS NOT NULL THEN ', ' || v_job.state ELSE '' END ||
+                  CASE WHEN v_job.zip_code IS NOT NULL THEN ' ' || v_job.zip_code ELSE '' END;
+
+    -- ✅ Use available_date or fallback to now + 1 hour
     v_start_time := COALESCE(
-      NEW.estimated_arrival,
+      NEW.available_date,
       NOW() + INTERVAL '1 hour'
     );
 
@@ -90,8 +97,8 @@ BEGIN
       'Job: ' || v_job.title,
       v_job.description,
       v_start_time,
-      v_start_time + INTERVAL '2 hours', -- Default 2 hour duration
-      v_job.location,
+      v_start_time + INTERVAL '2 hours',
+      v_location,
       'scheduled',
       'job'
     );
@@ -114,7 +121,7 @@ BEGIN
       v_job.description,
       v_start_time,
       v_start_time + INTERVAL '2 hours',
-      v_job.location,
+      v_location,
       'scheduled',
       'job'
     );
@@ -124,6 +131,7 @@ BEGIN
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
+
 
 -- Create trigger on job_bids table
 DROP TRIGGER IF EXISTS trigger_create_calendar_events ON job_bids;

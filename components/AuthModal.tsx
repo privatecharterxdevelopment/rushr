@@ -88,7 +88,7 @@ export default function AuthModal() {
     setLoading(true)
     try {
       const emailTrim = email.trim().toLowerCase()
-      const passTrim  = password.trim()
+      const passTrim = password.trim()
 
       if (!emailTrim || !passTrim) {
         setError("Please enter your email and password.")
@@ -116,6 +116,8 @@ export default function AuthModal() {
           setEmail("")
           setPassword("")
           setError(null)
+          const target = callbackRef.current || "/dashboard/homeowner"
+          router.push(target)
           // Let AuthContext handle routing via auth state change
         }, 1500)
       }
@@ -205,9 +207,8 @@ export default function AuthModal() {
               placeholder="you@example.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className={`w-full rounded-xl border border-slate-200 px-3 py-2 text-[14px] outline-none ${
-                isProRoute ? 'focus:border-blue-500' : 'focus:border-emerald-500'
-              }`}
+              className={`w-full rounded-xl border border-slate-200 px-3 py-2 text-[14px] outline-none ${isProRoute ? 'focus:border-blue-500' : 'focus:border-emerald-500'
+                }`}
             />
             <input
               type="password"
@@ -215,9 +216,8 @@ export default function AuthModal() {
               placeholder="Password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className={`w-full rounded-xl border border-slate-200 px-3 py-2 text-[14px] outline-none ${
-                isProRoute ? 'focus:border-blue-500' : 'focus:border-emerald-500'
-              }`}
+              className={`w-full rounded-xl border border-slate-200 px-3 py-2 text-[14px] outline-none ${isProRoute ? 'focus:border-blue-500' : 'focus:border-emerald-500'
+                }`}
             />
             {error && (
               <div className="text-sm text-rose-600">
@@ -241,11 +241,10 @@ export default function AuthModal() {
             <button
               type="submit"
               disabled={loading}
-              className={`w-full rounded-xl px-3 py-2 text-[14px] font-semibold text-white disabled:opacity-60 flex items-center justify-center ${
-                isProRoute
+              className={`w-full rounded-xl px-3 py-2 text-[14px] font-semibold text-white disabled:opacity-60 flex items-center justify-center ${isProRoute
                   ? 'bg-blue-600 hover:bg-blue-700'
                   : 'bg-emerald-600 hover:bg-emerald-700'
-              }`}
+                }`}
             >
               {loading && (
                 <svg className="animate-spin -ml-1 mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24">

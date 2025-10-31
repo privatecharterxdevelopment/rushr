@@ -18,7 +18,6 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 export async function POST(request: NextRequest) {
   try {
     const { bidId, homeownerId } = await request.json()
-
     if (!bidId || !homeownerId) {
       return NextResponse.json(
         { error: 'Missing bidId or homeownerId' },
@@ -30,10 +29,10 @@ export async function POST(request: NextRequest) {
     const { data: bid, error: bidError } = await supabase
       .from('job_bids')
       .select(`
-        *,
-        job:homeowner_jobs(id, title, homeowner_id),
-        contractor:user_profiles!contractor_id(id, name, email)
-      `)
+    *,
+    job:homeowner_jobs!job_bids_job_id_fkey(id, title, homeowner_id),
+    contractor:user_profiles!contractor_id(id, name, email)
+  `)
       .eq('id', bidId)
       .eq('homeowner_id', homeownerId)
       .single()
@@ -105,6 +104,7 @@ export async function POST(request: NextRequest) {
     const stripeFee = Math.round((bidAmount * 0.029 + 0.30) * 100) / 100 // Stripe fee estimate
 
     // 5. Create Stripe PaymentIntent (authorize but don't capture yet)
+
     const paymentIntent = await stripe.paymentIntents.create({
       amount: Math.round(bidAmount * 100), // Convert to cents
       currency: 'usd',
@@ -121,23 +121,26 @@ export async function POST(request: NextRequest) {
       description: `Escrow payment for: ${bid.job.title}`,
       statement_descriptor: 'RUSHR ESCROW'
     })
-
     // 6. Create payment_hold record
     const { data: paymentHold, error: holdError } = await supabase
       .from('payment_holds')
-      .insert({
-        job_id: bid.job_id,
-        bid_id: bidId,
-        homeowner_id: homeownerId,
-        contractor_id: bid.contractor_id,
-        stripe_payment_intent_id: paymentIntent.id,
-        stripe_customer_id: stripeCustomerId,
-        amount: bidAmount,
-        platform_fee: platformFee,
-        contractor_payout: contractorPayout,
-        stripe_fee: stripeFee,
-        status: 'pending'
-      })
+      .upsert(
+        {
+          job_id: bid.job_id,
+          bid_id: bidId,
+          homeowner_id: homeownerId,
+          contractor_id: bid.contractor_id,
+          stripe_payment_intent_id: paymentIntent.id,
+          stripe_customer_id: stripeCustomerId,
+          amount: bidAmount,
+          platform_fee: platformFee,
+          contractor_payout: contractorPayout,
+          stripe_fee: stripeFee,
+          status: 'pending',
+          updated_at: new Date().toISOString()
+        },
+        { onConflict: 'bid_id' } // 👈 ensures unique constraint handled
+      )
       .select()
       .single()
 
@@ -155,7 +158,14 @@ export async function POST(request: NextRequest) {
         payment_hold_id: paymentHold.id
       })
       .eq('id', bid.job_id)
-
+    console.log({
+      success: true,
+      clientSecret: paymentIntent.client_secret,
+      paymentHoldId: paymentHold.id,
+      amount: bidAmount,
+      platformFee,
+      contractorPayout
+    })
     return NextResponse.json({
       success: true,
       clientSecret: paymentIntent.client_secret,

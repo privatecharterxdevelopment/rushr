@@ -23,6 +23,10 @@ interface PaymentModalProps {
   onPaymentSuccess: () => void
 }
 
+//
+// -------------------------
+// Payment Form Component
+// -------------------------
 function PaymentForm({
   bidId,
   jobId,
@@ -37,49 +41,16 @@ function PaymentForm({
   const elements = useElements()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [clientSecret, setClientSecret] = useState<string | null>(null)
-
-  // Create PaymentIntent on mount
-  useEffect(() => {
-    createPaymentIntent()
-  }, [])
-
-  const createPaymentIntent = async () => {
-    try {
-      const response = await fetch('/api/payments/create-hold', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          bidId,
-          homeownerId
-        })
-      })
-
-      const data = await response.json()
-
-      if (data.error) {
-        setError(data.error)
-        return
-      }
-
-      setClientSecret(data.clientSecret)
-    } catch (err: any) {
-      console.error('Error creating payment intent:', err)
-      setError(err.message || 'Failed to initialize payment')
-    }
-  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-
-    if (!stripe || !elements || !clientSecret) {
-      return
-    }
+    if (!stripe || !elements) return
 
     setLoading(true)
     setError(null)
 
     try {
+      // Submit card details to Stripe
       const { error: submitError } = await elements.submit()
       if (submitError) {
         setError(submitError.message || 'Payment failed')
@@ -87,9 +58,9 @@ function PaymentForm({
         return
       }
 
+      // Confirm payment with Stripe
       const { error: confirmError } = await stripe.confirmPayment({
         elements,
-        clientSecret,
         confirmParams: {
           return_url: `${window.location.origin}/jobs/${jobId}/track`
         },
@@ -102,8 +73,7 @@ function PaymentForm({
         return
       }
 
-      // Payment successful
-      onSuccess()
+      onSuccess() // Payment succeeded
     } catch (err: any) {
       console.error('Payment error:', err)
       setError(err.message || 'Payment failed')
@@ -122,7 +92,7 @@ function PaymentForm({
         <p className="text-slate-600">Payment held in escrow until job completion</p>
       </div>
 
-      {/* Payment Details */}
+      {/* Payment Summary */}
       <div className="bg-gradient-to-br from-emerald-50 to-teal-50 rounded-xl p-6 border border-emerald-200">
         <div className="flex items-start justify-between mb-4">
           <div>
@@ -151,7 +121,7 @@ function PaymentForm({
         </div>
       </div>
 
-      {/* How Escrow Works */}
+      {/* Escrow Explanation */}
       <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
         <div className="flex items-start gap-3">
           <svg className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -168,58 +138,130 @@ function PaymentForm({
         </div>
       </div>
 
-      {/* Payment Form */}
-      {!clientSecret ? (
-        <div className="flex items-center justify-center py-8">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600"></div>
-          <span className="ml-3 text-slate-600">Initializing secure payment...</span>
+      {/* Stripe Payment Form */}
+      <form onSubmit={handleSubmit} className="space-y-6">
+        <div className="bg-white border border-slate-200 rounded-lg p-4">
+          <PaymentElement />
         </div>
-      ) : (
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="bg-white border border-slate-200 rounded-lg p-4">
-            <PaymentElement />
-          </div>
 
-          {error && (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-              <p className="text-sm text-red-800">{error}</p>
-            </div>
-          )}
-
-          {/* Action Buttons */}
-          <div className="flex gap-3 pt-4">
-            <button
-              type="button"
-              onClick={onClose}
-              disabled={loading}
-              className="flex-1 px-6 py-3 border-2 border-slate-300 text-slate-700 font-semibold rounded-lg hover:bg-slate-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={!stripe || loading}
-              className="flex-1 px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-emerald-600/25"
-            >
-              {loading ? (
-                <span className="flex items-center justify-center">
-                  <svg className="animate-spin -ml-1 mr-2 h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                  </svg>
-                  Processing...
-                </span>
-              ) : (
-                `Pay $${amount.toFixed(2)}`
-              )}
-            </button>
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+            <p className="text-sm text-red-800">{error}</p>
           </div>
-        </form>
-      )}
+        )}
+
+        <div className="flex gap-3 pt-4">
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={loading}
+            className="flex-1 px-6 py-3 border-2 border-slate-300 text-slate-700 font-semibold rounded-lg hover:bg-slate-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            disabled={!stripe || loading}
+            className="flex-1 px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-emerald-600/25"
+          >
+            {loading ? (
+              <span className="flex items-center justify-center">
+                <svg className="animate-spin -ml-1 mr-2 h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                </svg>
+                Processing...
+              </span>
+            ) : (
+              `Pay $${amount.toFixed(2)}`
+            )}
+          </button>
+        </div>
+      </form>
     </div>
   )
 }
 
+//
+// -------------------------
+// Wrapper to handle clientSecret + Elements
+// -------------------------
+function PaymentWrapper(props: PaymentModalProps) {
+  const [clientSecret, setClientSecret] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    const createPaymentIntent = async () => {
+      try {
+        const response = await fetch('/api/payments/create-hold', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            bidId: props.bidId,
+            homeownerId: props.homeownerId
+          })
+        })
+
+        const data = await response.json()
+        if (data.error) {
+          setError(data.error)
+          return
+        }
+
+        setClientSecret(data.clientSecret)
+      } catch (err: any) {
+        console.error('Error creating payment intent:', err)
+        setError(err.message || 'Failed to initialize payment')
+      }
+    }
+
+    createPaymentIntent()
+  }, [props.bidId, props.homeownerId])
+
+  if (error) {
+    return (
+      <div className="p-8 text-center text-red-600">
+        Failed to initialize payment: {error}
+      </div>
+    )
+  }
+
+  if (!clientSecret) {
+    return (
+      <div className="flex items-center justify-center py-12 text-slate-600">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600"></div>
+        <span className="ml-3">Initializing secure payment...</span>
+      </div>
+    )
+  }
+
+  return (
+    <Elements
+      stripe={stripePromise}
+      options={{
+        clientSecret,
+        appearance: {
+          theme: 'stripe',
+          variables: {
+            colorPrimary: '#059669',
+            colorBackground: '#ffffff',
+            colorText: '#1e293b',
+            colorDanger: '#ef4444',
+            fontFamily: 'system-ui, sans-serif',
+            borderRadius: '8px'
+          }
+        }
+      }}
+    >
+      <PaymentForm {...props} onSuccess={props.onPaymentSuccess} />
+    </Elements>
+  )
+}
+
+//
+// -------------------------
+// Main Modal Component
+// -------------------------
 export default function PaymentModal(props: PaymentModalProps) {
   if (!props.isOpen) return null
 
@@ -235,7 +277,6 @@ export default function PaymentModal(props: PaymentModalProps) {
       <div className="fixed inset-0 z-50 overflow-y-auto">
         <div className="flex min-h-full items-center justify-center p-4">
           <div className="relative bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            {/* Close Button */}
             <button
               onClick={props.onClose}
               className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 transition-colors"
@@ -244,26 +285,8 @@ export default function PaymentModal(props: PaymentModalProps) {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
-
             <div className="p-8">
-              <Elements
-                stripe={stripePromise}
-                options={{
-                  appearance: {
-                    theme: 'stripe',
-                    variables: {
-                      colorPrimary: '#059669',
-                      colorBackground: '#ffffff',
-                      colorText: '#1e293b',
-                      colorDanger: '#ef4444',
-                      fontFamily: 'system-ui, sans-serif',
-                      borderRadius: '8px'
-                    }
-                  }
-                }}
-              >
-                <PaymentForm {...props} onSuccess={props.onPaymentSuccess} />
-              </Elements>
+              <PaymentWrapper {...props} />
             </div>
           </div>
         </div>

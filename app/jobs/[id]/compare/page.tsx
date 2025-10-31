@@ -24,10 +24,10 @@ interface Job {
   description: string
 }
 
-export default function CompareBids(){
+export default function CompareBids() {
   const { user } = useAuth()
   const router = useRouter()
-  const { id } = useParams<{id:string}>()
+  const { id } = useParams<{ id: string }>()
   const [bids, setBids] = useState<Bid[]>([])
   const [job, setJob] = useState<Job | null>(null)
   const [loading, setLoading] = useState(true)
@@ -123,6 +123,8 @@ export default function CompareBids(){
   }
 
   const handleAcceptBid = async (bidId: string) => {
+    console.log('bidId', bidId)
+    console.log('bids', bids)
     if (!user || accepting) return
 
     const bid = bids.find(b => b.id === bidId)
@@ -139,6 +141,8 @@ export default function CompareBids(){
         .from('job_bids')
         .update({ status: 'accepted' })
         .eq('id', bidId)
+
+        console.log('bidError',bidError)
 
       if (bidError) {
         alert('Error accepting bid: ' + bidError.message)
@@ -232,11 +236,10 @@ export default function CompareBids(){
 
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                    bid.status === 'accepted' ? 'bg-green-100 text-green-700' :
-                    bid.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
-                    'bg-red-100 text-red-700'
-                  }`}>
+                  <span className={`px-3 py-1 rounded-full text-sm font-medium ${bid.status === 'accepted' ? 'bg-green-100 text-green-700' :
+                      bid.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
+                        'bg-red-100 text-red-700'
+                    }`}>
                     {bid.status.charAt(0).toUpperCase() + bid.status.slice(1)}
                   </span>
                 </div>

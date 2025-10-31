@@ -79,6 +79,7 @@ export default function ContractorJobsPage() {
   }
 
   useEffect(() => {
+    console.log({user})
     if (!user) return
     fetchJobs()
   }, [user])
@@ -100,7 +101,7 @@ export default function ContractorJobsPage() {
       contractor_id: user.id,
       homeowner_id: job.homeowner_id,
       bid_amount: parseFloat(amount),
-      description: message || null,
+      description: message || '',
       status: 'pending'
     })
 
@@ -112,7 +113,7 @@ export default function ContractorJobsPage() {
           contractor_id: user.id,
           homeowner_id: job.homeowner_id,
           bid_amount: parseFloat(amount),
-          description: message || null,
+          description: message || '',
           status: 'pending'
         }])
 
@@ -121,6 +122,7 @@ export default function ContractorJobsPage() {
         alert('Failed to submit bid. Please try again.')
       } else {
         alert('Bid submitted successfully!')
+        fetchJobs()
         setBidAmount(prev => ({ ...prev, [job.id]: '' }))
         setBidMessage(prev => ({ ...prev, [job.id]: '' }))
       }
