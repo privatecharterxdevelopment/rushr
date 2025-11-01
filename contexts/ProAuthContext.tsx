@@ -349,6 +349,7 @@ export function ProAuthProvider({ children }: { children: React.ReactNode }) {
       if (error) {
         console.error('[PRO-AUTH] Supabase signOut error:', error.message)
       }
+      window.location.href = '/pro';
 
       // 2. Clear browser storage
       localStorage.clear()
@@ -360,8 +361,6 @@ export function ProAuthProvider({ children }: { children: React.ReactNode }) {
       setSession(null)
 
       // 4. Redirect cleanly to /pro
-      router.push('/pro')
-      router.refresh()
     } catch (err) {
       console.error('[PRO-AUTH] Fatal logout error:', err)
     }

@@ -281,6 +281,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (error) {
         console.error('[HOMEOWNER-AUTH] Supabase signOut error:', error.message)
       }
+      window.location.href = '/'
 
       // 2. Clear all cached data
       localStorage.clear()
@@ -295,8 +296,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       showGlobalToast('You have been logged out successfully.', 'success')
 
       // 5. Redirect safely using Next.js router
-      router.push('/')
-      router.refresh()
     }
     catch (err) {
       console.error('[HOMEOWNER-AUTH] Fatal logout error:', err)
