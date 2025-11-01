@@ -139,11 +139,11 @@ function PaperclipIcon(props: React.SVGProps<SVGSVGElement>) {
 function FileTextIcon(props: React.SVGProps<SVGSVGElement>) {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" {...props}>
-      <path strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
-      <path strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" d="M14 2v6h6"/>
-      <path strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" d="M16 13H8"/>
-      <path strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" d="M16 17H8"/>
-      <path strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" d="M10 9H8"/>
+      <path strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
+      <path strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" d="M14 2v6h6" />
+      <path strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" d="M16 13H8" />
+      <path strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" d="M16 17H8" />
+      <path strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" d="M10 9H8" />
     </svg>
   )
 }
@@ -151,15 +151,15 @@ function RedPinIcon(props: React.SVGProps<SVGSVGElement>) {
   return (
     <svg viewBox="0 0 24 24" fill="currentColor" {...props}>
       <path d="M14 3l7 7-3.5.5L12 16 8 12l5.5-5.5L14 3z" />
-      <path d="M12 16l-6 6" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round"/>
+      <path d="M12 16l-6 6" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" />
     </svg>
   )
 }
 function ClockIcon(props: React.SVGProps<SVGSVGElement>) {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" {...props}>
-      <circle cx="12" cy="12" r="9" strokeWidth="2"/>
-      <path d="M12 7v6l4 2" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+      <circle cx="12" cy="12" r="9" strokeWidth="2" />
+      <path d="M12 7v6l4 2" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   )
 }
@@ -641,6 +641,7 @@ function ChatView({
         showScheduler={showScheduler}
         setShowScheduler={setShowScheduler}
         onSchedule={scheduleSend}
+        authRole={authRole}
       />
     </>
   )
@@ -833,7 +834,7 @@ function AttachmentTiles({ attachments, dark }: { attachments: Attachment[]; dar
 /* ======================== Composer ======================== */
 function Composer({
   text, setText, attachments, setAttachments, onSubmit,
-  scheduledCount, showScheduler, setShowScheduler, onSchedule,
+  scheduledCount, showScheduler, setShowScheduler, onSchedule, authRole
 }: {
   text: string
   setText: (v: string) => void
@@ -844,6 +845,7 @@ function Composer({
   showScheduler: boolean
   setShowScheduler: (v: boolean) => void
   onSchedule: (mins: number) => void
+  authRole?: Role
 }) {
   const inputRef = useRef<HTMLInputElement>(null)
   return (
