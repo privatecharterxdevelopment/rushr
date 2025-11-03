@@ -164,7 +164,7 @@ export default function ProMapExplorer() {
               loc,
               services: contractor.categories || [], // Map categories to services
               rating: contractor.rating || 4.5,
-              city: contractor.business_address || contractor.base_zip || contractor.service_area_zips?.[0] || 'NYC'
+              city: contractor.address || contractor.base_zip || contractor.service_area_zips?.[0] || 'NYC'
             }
           }).filter(c => c.loc !== null) // Only include contractors with valid locations
 

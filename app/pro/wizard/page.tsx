@@ -18,7 +18,7 @@ type FormDataT = {
   name: string; email: string; phone: string
   businessName: string; website: string
   yearsInBusiness: string; teamSize: string; about: string
-  baseZip: string; radiusMiles: number; extraZips: string[]
+  baseZip: string; address: string; latitude: number | null; longitude: number | null; radiusMiles: number; extraZips: string[]
   categories: string[]; specialties: string[]
   emergency: boolean; hours: Hours
   licenseNumber: string; licenseType: string; licenseState: string; licenseExpires: string
@@ -61,7 +61,7 @@ export default function ContractorSignup() {
     name:'', email:'', phone:'',
     businessName:'', website:'',
     yearsInBusiness:'', teamSize:'', about:'',
-    baseZip:'', radiusMiles:10, extraZips:[],
+    baseZip:'', address:'', latitude:null, longitude:null, radiusMiles:10, extraZips:[],
     categories:[], specialties:[],
     emergency:false, hours:{...EMPTY_HOURS},
     licenseNumber:'', licenseType:'', licenseState:'', licenseExpires:'',
@@ -81,6 +81,8 @@ export default function ContractorSignup() {
 
   const [errors, setErrors] = useState<Record<string,string>>({})
   const [busy, setBusy] = useState(false)
+  const [geocoding, setGeocoding] = useState(false)
+  const [locationError, setLocationError] = useState<string | null>(null)
 
   /* ---------------- Draft load + URL sync ---------------- */
   useEffect(()=>{
@@ -114,6 +116,74 @@ export default function ContractorSignup() {
   function toggle<T>(arr: T[], v: T): T[] { return arr.includes(v) ? arr.filter(x=>x!==v) : [...arr, v] }
   const zip5 = (z:string) => /^\d{5}$/.test(z)
 
+  /* ---------------- Geocoding Functions ---------------- */
+  async function geocodeAddress(address: string, zip: string): Promise<{lat: number, lng: number} | null> {
+    const MAPBOX_TOKEN = 'pk.eyJ1IjoicnVzaHJhZG1pbiIsImEiOiJjbWdiaTlobmcwdHc3MmtvbHhhOTJjNnJvIn0.st2PXkQQtqnh3tHrjp9pzw'
+
+    const query = encodeURIComponent(`${address}, ${zip}`)
+    const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${query}.json?access_token=${MAPBOX_TOKEN}&limit=1`
+
+    try {
+      const response = await fetch(url)
+      const data = await response.json()
+
+      if (data.features && data.features.length > 0) {
+        const [lng, lat] = data.features[0].center
+        return { lat, lng }
+      }
+      return null
+    } catch (error) {
+      console.error('Geocoding error:', error)
+      return null
+    }
+  }
+
+  async function useCurrentLocation() {
+    if (!navigator.geolocation) {
+      setLocationError('Geolocation not supported by your browser')
+      return
+    }
+
+    setGeocoding(true)
+    setLocationError(null)
+
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const { latitude, longitude } = position.coords
+
+        // Reverse geocode to get address
+        const MAPBOX_TOKEN = 'pk.eyJ1IjoicnVzaHJhZG1pbiIsImEiOiJjbWdiaTlobmcwdHc3MmtvbHhhOTJjNnJvIn0.st2PXkQQtqnh3tHrjp9pzw'
+        const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${longitude},${latitude}.json?access_token=${MAPBOX_TOKEN}&limit=1`
+
+        try {
+          const response = await fetch(url)
+          const data = await response.json()
+
+          if (data.features && data.features.length > 0) {
+            const feature = data.features[0]
+            const address = feature.place_name
+            const zipMatch = feature.context?.find((c: any) => c.id.startsWith('postcode'))
+            const zip = zipMatch?.text || ''
+
+            set('address', address)
+            set('latitude', latitude)
+            set('longitude', longitude)
+            if (zip) set('baseZip', zip)
+          }
+        } catch (error) {
+          setLocationError('Failed to get address from location')
+        } finally {
+          setGeocoding(false)
+        }
+      },
+      (error) => {
+        setLocationError('Failed to get your location: ' + error.message)
+        setGeocoding(false)
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+    )
+  }
+
   /* ---------------- Validation ---------------- */
   const validateBasics = (f: FormDataT) => {
     const e: Record<string,string> = {}
@@ -125,6 +195,7 @@ export default function ContractorSignup() {
   }
   const validateArea = (f: FormDataT) => {
     const e: Record<string,string> = {}
+    if (!f.address.trim()) e.address = 'Street address required'
     if (!zip5(f.baseZip)) e.baseZip = '5-digit ZIP'
     if (!f.categories.length) e.categories = 'Pick at least one'
     const bad = f.extraZips.find(z=>!zip5(z))
@@ -231,6 +302,9 @@ async function submitAll(e?: React.FormEvent) {
         license_state: form.licenseState,
         insurance_carrier: form.insuranceCarrier,
         categories: form.categories,
+        address: form.address,
+        latitude: form.latitude,
+        longitude: form.longitude,
         base_zip: form.baseZip,
         service_area_zips: [form.baseZip, ...form.extraZips],
         service_radius_miles: form.radiusMiles,
@@ -380,9 +454,82 @@ async function submitAll(e?: React.FormEvent) {
 
             {step==='area' && (
               <div className="grid md:grid-cols-2 gap-4">
+                <div className="md:col-span-2" data-err="address">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Business Address *
+                    <span className="text-xs text-gray-500 ml-2">(This will be shown on the map)</span>
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      className={`flex-1 px-3 py-2 border rounded-md ${badgeErr('address')}`}
+                      value={form.address}
+                      onChange={async (e) => {
+                        set('address', e.target.value)
+                        // Auto-geocode when valid address + ZIP entered
+                        if (e.target.value && form.baseZip && /^\d{5}$/.test(form.baseZip)) {
+                          setGeocoding(true)
+                          const coords = await geocodeAddress(e.target.value, form.baseZip)
+                          if (coords) {
+                            set('latitude', coords.lat)
+                            set('longitude', coords.lng)
+                          }
+                          setGeocoding(false)
+                        }
+                      }}
+                      placeholder="123 Main Street, Brooklyn, NY"
+                    />
+                    <button
+                      type="button"
+                      onClick={useCurrentLocation}
+                      disabled={geocoding}
+                      className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 whitespace-nowrap flex items-center gap-2"
+                    >
+                      {geocoding ? (
+                        <>
+                          <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></div>
+                          Getting...
+                        </>
+                      ) : (
+                        <>
+                          <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                          </svg>
+                          Use My Location
+                        </>
+                      )}
+                    </button>
+                  </div>
+                  {hintErr('address')}
+                  {locationError && <div className="mt-1 text-xs text-amber-600">{locationError}</div>}
+                  {form.latitude && form.longitude && (
+                    <div className="mt-1 text-xs text-green-600">
+                      ✓ Location verified: {form.latitude.toFixed(6)}, {form.longitude.toFixed(6)}
+                    </div>
+                  )}
+                </div>
+
                 <div data-err="baseZip">
                   <label className="block text-sm font-medium text-gray-700 mb-1">Base ZIP *</label>
-                  <input className={`w-full px-3 py-2 border rounded-md ${badgeErr('baseZip')}`} value={form.baseZip} onChange={e=>set('baseZip', e.target.value)} placeholder="11215" inputMode="numeric" />
+                  <input
+                    className={`w-full px-3 py-2 border rounded-md ${badgeErr('baseZip')}`}
+                    value={form.baseZip}
+                    onChange={async (e) => {
+                      set('baseZip', e.target.value)
+                      // Auto-geocode when valid ZIP is entered with address
+                      if (/^\d{5}$/.test(e.target.value) && form.address) {
+                        setGeocoding(true)
+                        const coords = await geocodeAddress(form.address, e.target.value)
+                        if (coords) {
+                          set('latitude', coords.lat)
+                          set('longitude', coords.lng)
+                        }
+                        setGeocoding(false)
+                      }
+                    }}
+                    placeholder="11215"
+                    inputMode="numeric"
+                  />
                   {hintErr('baseZip')}
                 </div>
                 <div>

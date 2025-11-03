@@ -553,7 +553,7 @@ export default function ProMapInner({
       if (!mapRef.current || mapObjRef.current) return
       try {
         const mapboxgl = (await import('mapbox-gl')).default
-        ;(mapboxgl as any).accessToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN || ''
+        ;(mapboxgl as any).accessToken = 'pk.eyJ1IjoicnVzaHJhZG1pbiIsImEiOiJjbWdiaTlobmcwdHc3MmtvbHhhOTJjNnJvIn0.st2PXkQQtqnh3tHrjp9pzw'
 
         // searchCenter is [lat, lng], but Mapbox needs [lng, lat]
         const initialCenter: [number, number] = searchCenter

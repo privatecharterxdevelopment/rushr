@@ -133,9 +133,22 @@ export default function ContractorDashboardPage() {
           const myBids = myBidsResult.data
           const availableJobsData = availableJobsResult.data
 
+          // Check if wizard is completed - redirect if not
+          if (!contractor || !contractor.base_zip || !contractor.categories?.length) {
+            console.log('[DASHBOARD] Wizard not completed, redirecting to wizard')
+            router.push('/pro/wizard')
+            return
+          }
+
           if (contractor) {
             setContractorData(contractor)
             setContractorZips(contractor.service_area_zips || [contractor.base_zip || ''].filter(Boolean))
+            // Set initial availability based on status (default to offline for new contractors)
+            if (contractor.status === 'approved' || contractor.status === 'online') {
+              setAvailability('online')
+            } else {
+              setAvailability('offline')
+            }
           }
 
           if (myBids) {
