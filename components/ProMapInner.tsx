@@ -562,62 +562,29 @@ export default function ProMapInner({
 
         map = new mapboxgl.Map({
           container: mapRef.current,
-          style: 'mapbox://styles/mapbox/light-v11', // Light grey style
+          style: 'mapbox://styles/mapbox/light-v11',
           center: initialCenter,
           zoom: 11,
-          pitch: 0, // Bird's-eye view (top-down, not tilted)
+          pitch: 0,
           bearing: 0,
-          antialias: true
+          antialias: false,
+          trackResize: true,
+          renderWorldCopies: false,
+          maxPitch: 0
         })
+
+        // Disable pitch and rotation immediately
+        map.touchZoomRotate.disableRotation()
+        map.dragRotate.disable()
 
         mapObjRef.current = map
 
         // Add navigation controls
         map.addControl(new mapboxgl.NavigationControl(), 'top-right')
 
-        // Add 3D buildings layer when map loads
+        // Add markers when map loads
         map.on('load', () => {
-          // Add 3D buildings
-          const layers = map.getStyle().layers
-          const labelLayerId = layers.find(
-            (layer: any) => layer.type === 'symbol' && layer.layout['text-field']
-          )?.id
-
-          map.addLayer(
-            {
-              id: '3d-buildings',
-              source: 'composite',
-              'source-layer': 'building',
-              filter: ['==', 'extrude', 'true'],
-              type: 'fill-extrusion',
-              minzoom: 15,
-              paint: {
-                'fill-extrusion-color': '#aaa',
-                'fill-extrusion-height': [
-                  'interpolate',
-                  ['linear'],
-                  ['zoom'],
-                  15,
-                  0,
-                  15.05,
-                  ['get', 'height']
-                ],
-                'fill-extrusion-base': [
-                  'interpolate',
-                  ['linear'],
-                  ['zoom'],
-                  15,
-                  0,
-                  15.05,
-                  ['get', 'min_height']
-                ],
-                'fill-extrusion-opacity': 0.6
-              }
-            },
-            labelLayerId
-          )
-
-          // Add markers initially
+          // Add markers immediately (skip 3D buildings for better performance)
           console.log('Map loaded, adding initial markers:', pros.length)
           refreshMarkersMapbox(map, pros, category)
 
@@ -707,7 +674,7 @@ export default function ProMapInner({
         map.flyTo({
           center: [ll[1], ll[0]], // Mapbox uses [lng, lat]
           zoom: 14,
-          pitch: 45
+          pitch: 0
         })
 
         // Remove existing user location marker if any
