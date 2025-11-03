@@ -57,7 +57,7 @@ export default function ContractorJobsPage() {
         .from('homeowner_jobs')
         .select('*')
         .eq('status', 'pending')
-        .not('id', 'in', `(${appliedJobIds.join(',') || 'NULL'})`)
+        .not('id', 'in', `(${appliedJobIds.join(',') || ''})`)
         .order('created_at', { ascending: false });
 
       if (jobsError) {

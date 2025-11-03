@@ -343,26 +343,31 @@ export function ProAuthProvider({ children }: { children: React.ReactNode }) {
     console.log('[PRO-AUTH] Signing out contractor - clearing everything')
 
     try {
-      // 1. Supabase global signout (clears local + refresh token)
+      // 1️⃣ Supabase global sign-out (clears access + refresh tokens)
       const { error } = await supabase.auth.signOut()
-
       if (error) {
         console.error('[PRO-AUTH] Supabase signOut error:', error.message)
+        // Optional: show toast or alert here
+        return
       }
-      window.location.href = '/pro';
 
-      // 2. Clear browser storage
+      // 2️⃣ Clear all client-side caches *after* Supabase is done
       localStorage.clear()
       sessionStorage.clear()
 
-      // 3. Reset local state
+      // 3️⃣ Reset React state in a single batch (minimize re-renders)
       setUser(null)
       setContractorProfile(null)
       setSession(null)
 
-      // 4. Redirect cleanly to /pro
+      // 4️⃣ Optional user feedback (toast, snackbar, etc.)
+      // showGlobalToast('You have been logged out successfully.', 'success')
+
+      // 5️⃣ Redirect cleanly using Next.js router
+      router.push('/pro')
     } catch (err) {
       console.error('[PRO-AUTH] Fatal logout error:', err)
+      // showGlobalToast('Logout failed. Please try again.', 'error')
     }
   }
 

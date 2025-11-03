@@ -275,29 +275,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     console.log('[HOMEOWNER-AUTH] Signing out user - clearing everything')
 
     try {
-      // 1. Sign out from Supabase fully (clear local + refresh token)
+      // 1. Sign out fully (Supabase clears tokens)
       const { error } = await supabase.auth.signOut()
-
       if (error) {
         console.error('[HOMEOWNER-AUTH] Supabase signOut error:', error.message)
+        showGlobalToast('Logout failed. Please try again.', 'error')
+        return
       }
-      window.location.href = '/'
 
-      // 2. Clear all cached data
+      // 2. Clear app caches AFTER Supabase completes
       localStorage.clear()
       sessionStorage.clear()
 
-      // 3. Reset state
+      // 3. Reset in-memory state
       setUser(null)
       setUserProfile(null)
       setSession(null)
 
-      // 4. Show a global toast
+      // 4. Toast feedback (non-blocking)
       showGlobalToast('You have been logged out successfully.', 'success')
 
-      // 5. Redirect safely using Next.js router
-    }
-    catch (err) {
+      // 5. Use Next.js router instead of window.href for a clean transition
+      router.push('/')
+    } catch (err) {
       console.error('[HOMEOWNER-AUTH] Fatal logout error:', err)
       showGlobalToast('Logout failed. Please try again.', 'error')
     }
