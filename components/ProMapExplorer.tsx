@@ -132,6 +132,7 @@ export default function ProMapExplorer() {
         const { data, error } = await supabase
           .from('pro_contractors')
           .select('*')
+          .limit(100) // Limit to 100 contractors for better performance
 
         if (error) {
           console.error('[RUSHRMAP] Error fetching contractors:', error)
