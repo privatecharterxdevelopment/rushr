@@ -562,13 +562,20 @@ export default function ProMapInner({
 
         map = new mapboxgl.Map({
           container: mapRef.current,
-          style: 'mapbox://styles/mapbox/light-v11', // Light grey style
+          style: 'mapbox://styles/mapbox/light-v11',
           center: initialCenter,
           zoom: 11,
-          pitch: 0, // Bird's-eye view (top-down, not tilted)
+          pitch: 0,
           bearing: 0,
-          antialias: true
+          antialias: false,
+          trackResize: true,
+          renderWorldCopies: false,
+          maxPitch: 0
         })
+
+        // Disable pitch and rotation immediately
+        map.touchZoomRotate.disableRotation()
+        map.dragRotate.disable()
 
         mapObjRef.current = map
 
@@ -667,7 +674,7 @@ export default function ProMapInner({
         map.flyTo({
           center: [ll[1], ll[0]], // Mapbox uses [lng, lat]
           zoom: 14,
-          pitch: 45
+          pitch: 0
         })
 
         // Remove existing user location marker if any
