@@ -3,7 +3,7 @@
 import React from 'react'
 import { usePathname } from 'next/navigation'
 
-export default function LogoWordmark({ className = '' }: { className?: string }) {
+export default function LogoWordmark({ className = '', variant = 'header' }: { className?: string, variant?: 'header' | 'footer' }) {
   const pathname = usePathname()
   const [isProHost, setIsProHost] = React.useState(false)
 
@@ -23,14 +23,25 @@ export default function LogoWordmark({ className = '' }: { className?: string })
                          pathname?.startsWith('/settings')
 
   const isPro = (pathname?.startsWith('/pro') || pathname?.startsWith('/dashboard/contractor') || isProHost) && !isHomeownerPage
-  const src = isPro ? '/rushr-pro2.jpg' : '/rushr.png'
+
+  // Choose logo based on variant (header/footer) and user type (pro/homeowner)
+  let src: string
+  if (variant === 'footer') {
+    src = isPro ? '/rushr-contractor-footer.jpeg' : '/rushr-homeowner-footer.jpeg'
+  } else {
+    src = isPro ? '/rushr-contractor-header.jpeg' : '/rushr-homeowner-header.jpeg'
+  }
+
   const alt = isPro ? 'Rushr — for pros' : 'Rushr'
+
+  // Different sizes for header vs footer
+  const heightClass = variant === 'footer' ? 'h-12' : 'h-16'
 
   return (
     <img
       src={src}
       alt={alt}
-      className={`block h-10 w-auto select-none ${className}`}
+      className={`block ${heightClass} w-auto select-none ${className}`}
       // small visual padding to soften any edge rounding
       style={{ paddingRight: 2 }}
       draggable={false}

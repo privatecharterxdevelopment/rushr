@@ -87,7 +87,7 @@ export default function Footer() {
     <footer className="mt-20 border-t border-slate-100 bg-white dark:bg-slate-900 dark:border-slate-800">
       <div className="container-max py-10 grid sm:grid-cols-2 lg:grid-cols-4 gap-8 text-sm text-slate-600 dark:text-slate-300">
         <div>
-          <LogoWordmark className="mb-2" />
+          <LogoWordmark className="mb-2" variant="footer" />
           <p className="max-w-xs">
             Linking Homeowners with Local Pros Instantly. Post a job, get bids, hire with confidence.
           </p>
