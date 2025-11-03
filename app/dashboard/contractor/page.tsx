@@ -93,6 +93,8 @@ export default function ContractorDashboardPage() {
   const { user, contractorProfile, loading } = useProAuth()
   const [availability, setAvailability] = useState<Availability>('online')
   const [contractorData, setContractorData] = useState<any>(null)
+  const [stripeConnectStatus, setStripeConnectStatus] = useState<any>(null)
+  const [loadingStripe, setLoadingStripe] = useState(true)
   const [realJobs, setRealJobs] = useState<EmergencyJob[]>([])
   const [contractorStats, setContractorStats] = useState({
     todayJobs: 0,
@@ -181,6 +183,32 @@ export default function ContractorDashboardPage() {
     loadContractorData()
   }, [user])
 
+  // Check Stripe Connect status
+  useEffect(() => {
+    const checkStripeStatus = async () => {
+      if (user) {
+        try {
+          const response = await fetch('/api/stripe/connect/check-status', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ contractorId: user.id })
+          })
+
+          if (response.ok) {
+            const data = await response.json()
+            setStripeConnectStatus(data)
+          }
+        } catch (error) {
+          console.error('Error checking Stripe status:', error)
+        } finally {
+          setLoadingStripe(false)
+        }
+      }
+    }
+
+    checkStripeStatus()
+  }, [user])
+
   // Load available jobs in contractor's ZIP areas
   useEffect(() => {
     const loadNearbyJobs = async () => {
@@ -232,6 +260,56 @@ export default function ContractorDashboardPage() {
   const handleStartKYC = () => {
     // Navigate to the comprehensive onboarding wizard
     router.push('/pro/wizard')
+  }
+
+  const handleCompleteStripeSetup = async () => {
+    try {
+      const response = await fetch('/api/stripe/connect/onboarding-link', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contractorId: user?.id })
+      })
+
+      const data = await response.json()
+
+      if (data.success && data.url) {
+        // Redirect to Stripe hosted onboarding
+        window.location.href = data.url
+      } else {
+        alert('Failed to generate onboarding link. Please try again.')
+      }
+    } catch (error) {
+      console.error('Error generating Stripe link:', error)
+      alert('An error occurred. Please try again.')
+    }
+  }
+
+  // Check if contractor can go online
+  const canGoOnline = contractorData?.status === 'approved' &&
+                      contractorData?.kyc_status === 'completed' &&
+                      stripeConnectStatus?.payoutsEnabled === true
+
+  // Handle availability change
+  const handleAvailabilityChange = async (newStatus: Availability) => {
+    if (newStatus === 'online' && !canGoOnline) {
+      alert('You must complete payment setup before going online.')
+      return
+    }
+
+    setAvailability(newStatus)
+
+    // Update database
+    try {
+      await supabase
+        .from('pro_contractors')
+        .update({
+          status: newStatus === 'online' ? 'online' : 'approved',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', user?.id)
+    } catch (error) {
+      console.error('Error updating availability:', error)
+    }
   }
 
   // All emergency job data now comes from the real database
@@ -418,7 +496,39 @@ export default function ContractorDashboardPage() {
         </div>
       )}
 
-      {/* 4. ONLINE - Receiving jobs */}
+      {/* 4. STRIPE SETUP REQUIRED - Need to complete payment setup */}
+      {contractorData &&
+       contractorData.kyc_status === 'completed' &&
+       contractorData.status === 'approved' &&
+       !loadingStripe &&
+       !stripeConnectStatus?.payoutsEnabled && (
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-6">
+          <div className="flex items-center">
+            <div className="flex-shrink-0">
+              <DollarSign className="h-8 w-8 text-amber-500" />
+            </div>
+            <div className="ml-3 flex-1">
+              <h3 className="text-lg font-medium text-amber-800">Payment Setup Required</h3>
+              <p className="text-amber-700 mt-1">
+                Complete your payment setup to receive payments and go online.
+              </p>
+              <p className="text-amber-600 text-sm mt-2">
+                This takes about 2 minutes. You'll provide bank account details and verify your identity with Stripe.
+              </p>
+            </div>
+            <div className="ml-4">
+              <button
+                onClick={handleCompleteStripeSetup}
+                className="px-4 py-2 bg-amber-600 text-white rounded-md hover:bg-amber-700 inline-block font-medium"
+              >
+                Complete Setup
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 5. ONLINE - Receiving jobs */}
       {contractorData && contractorData.status === 'online' && (
         <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-6">
           <div className="flex items-center">
@@ -458,10 +568,12 @@ export default function ContractorDashboardPage() {
           <span className="text-sm text-slate-600">Status:</span>
           <select
             value={availability}
-            onChange={(e) => setAvailability(e.target.value as Availability)}
-            className={`px-3 py-1 rounded-full text-sm font-medium border ${getAvailabilityColor(availability)}`}
+            onChange={(e) => handleAvailabilityChange(e.target.value as Availability)}
+            disabled={!canGoOnline && availability !== 'online'}
+            className={`px-3 py-1 rounded-full text-sm font-medium border ${getAvailabilityColor(availability)} ${!canGoOnline && availability !== 'online' ? 'opacity-50 cursor-not-allowed' : ''}`}
+            title={!canGoOnline ? 'Complete payment setup to go online' : ''}
           >
-            <option value="online">Online</option>
+            <option value="online" disabled={!canGoOnline}>Online</option>
             <option value="busy">Busy</option>
             <option value="offline">Offline</option>
           </select>
@@ -474,10 +586,12 @@ export default function ContractorDashboardPage() {
             <span className="text-sm text-slate-600">Status:</span>
             <select
               value={availability}
-              onChange={(e) => setAvailability(e.target.value as Availability)}
-              className={`px-3 py-1 rounded-full text-sm font-medium border ${getAvailabilityColor(availability)}`}
+              onChange={(e) => handleAvailabilityChange(e.target.value as Availability)}
+              disabled={!canGoOnline && availability !== 'online'}
+              className={`px-3 py-1 rounded-full text-sm font-medium border ${getAvailabilityColor(availability)} ${!canGoOnline && availability !== 'online' ? 'opacity-50 cursor-not-allowed' : ''}`}
+              title={!canGoOnline ? 'Complete payment setup to go online' : ''}
             >
-              <option value="online">Online</option>
+              <option value="online" disabled={!canGoOnline}>Online</option>
               <option value="busy">Busy</option>
               <option value="offline">Offline</option>
             </select>

@@ -15,7 +15,7 @@ type StepId = 'basics'|'area'|'credentials'|'pricing'|'review'
 type Mode = 'wizard'|'full'
 
 type FormDataT = {
-  name: string; email: string; phone: string
+  name: string; email: string; password: string; phone: string
   businessName: string; website: string
   yearsInBusiness: string; teamSize: string; about: string
   baseZip: string; address: string; latitude: number | null; longitude: number | null; radiusMiles: number; extraZips: string[]
@@ -58,7 +58,7 @@ export default function ContractorSignup() {
   )
 
   const [form, setForm] = useState<FormDataT>(()=>({
-    name:'', email:'', phone:'',
+    name:'', email:'', password:'', phone:'',
     businessName:'', website:'',
     yearsInBusiness:'', teamSize:'', about:'',
     baseZip:'', address:'', latitude:null, longitude:null, radiusMiles:10, extraZips:[],
@@ -189,6 +189,7 @@ export default function ContractorSignup() {
     const e: Record<string,string> = {}
     if (!f.name.trim()) e.name = 'Required'
     if (!/^\S+@\S+\.\S+$/.test(f.email)) e.email = 'Valid email required'
+    if (!f.password || f.password.length < 6) e.password = 'Password must be at least 6 characters'
     if (!/^[-+() 0-9]{7,}$/.test(f.phone)) e.phone = 'Phone looks off'
     if (!f.businessName.trim()) e.businessName = 'Required'
     return e
@@ -274,29 +275,55 @@ async function submitAll(e?: React.FormEvent) {
   console.log('[WIZARD] Submit started - validation passed')
 
   try {
-    // Get current user session
-    const { data: { session }, error: sessErr } = await supabase.auth.getSession()
-    console.log('[WIZARD] Session error?', sessErr || 'None')
+    // Check if user already has a session
+    let { data: { session } } = await supabase.auth.getSession()
 
+    // If no session, create new account
     if (!session) {
-      console.error('[WIZARD] No session found!')
-      alert('Please sign in first.')
-      router.push('/pro/sign-in')
-      setBusy(false)
-      return
+      console.log('[WIZARD] No session - creating new account')
+      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+        email: form.email,
+        password: form.password,
+        options: {
+          data: {
+            name: form.name,
+            business_name: form.businessName,
+          }
+        }
+      })
+
+      if (signUpError) {
+        console.error('[WIZARD] Signup error:', signUpError)
+        alert(`Signup error: ${signUpError.message}`)
+        setBusy(false)
+        return
+      }
+
+      session = signUpData.session
+      if (!session) {
+        alert('Account created but could not sign in. Please sign in manually.')
+        router.push('/pro/sign-in')
+        setBusy(false)
+        return
+      }
+      console.log('[WIZARD] Account created successfully, User ID:', session.user?.id)
+    } else {
+      console.log('[WIZARD] Existing session found, User ID:', session.user?.id)
     }
-    console.log('[WIZARD] User ID:', session.user?.id)
 
     // KYC FLOW:
     // 1. Wizard submit → status: pending_approval, kyc_status: in_progress
     // 2. Admin approves → status: approved, kyc_status: completed
     // 3. Contractor goes online → status: online
 
-    const { data: updateData, error: profileError } = await supabase
+    // Create or update contractor profile
+    const { data: upsertData, error: profileError } = await supabase
       .from('pro_contractors')
-      .update({
+      .upsert({
+        id: session.user.id,
         name: form.name,
         business_name: form.businessName,
+        email: form.email,
         phone: form.phone,
         license_number: form.licenseNumber,
         license_state: form.licenseState,
@@ -311,7 +338,6 @@ async function submitAll(e?: React.FormEvent) {
         status: 'pending_approval',
         kyc_status: 'in_progress'
       })
-      .eq('id', session.user.id)
       .select()
 
     if (profileError) {
@@ -327,10 +353,37 @@ async function submitAll(e?: React.FormEvent) {
       return
     }
 
-    console.log('[WIZARD] Update successful:', updateData)
+    console.log('[WIZARD] Profile saved successfully:', upsertData)
+
+    // Create Stripe Connect account for payouts
+    console.log('[WIZARD] Creating Stripe Connect account...')
+    try {
+      const stripeResponse = await fetch('/api/stripe/connect/create-account', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contractorId: session.user.id,
+          email: form.email,
+          businessName: form.businessName,
+          name: form.name
+        })
+      })
+
+      const stripeData = await stripeResponse.json()
+
+      if (!stripeData.success) {
+        console.error('[WIZARD] Stripe account creation failed:', stripeData.error)
+        // Don't fail wizard - can complete Stripe setup later
+      } else {
+        console.log('[WIZARD] Stripe Connect account created:', stripeData.accountId)
+      }
+    } catch (stripeError) {
+      console.error('[WIZARD] Stripe Connect error:', stripeError)
+      // Don't fail wizard - can complete Stripe setup later
+    }
 
     clearDraft()
-    alert('KYC Verification submitted! Your profile is now pending approval. You will be notified once approved.')
+    alert('Welcome to Rushr Pro! Your profile has been submitted. Please complete your payment setup to receive payments.')
     console.log('[WIZARD] Redirecting to dashboard...')
     router.push('/dashboard/contractor')
   } catch (err: any) {
@@ -394,8 +447,13 @@ async function submitAll(e?: React.FormEvent) {
                 </div>
                 <div data-err="email">
                   <label className="block text-sm font-medium text-gray-700 mb-1">Email *</label>
-                  <input className={`w-full px-3 py-2 border rounded-md ${badgeErr('email')}`} value={form.email} onChange={e=>set('email', e.target.value)} placeholder="you@company.com" />
+                  <input type="email" className={`w-full px-3 py-2 border rounded-md ${badgeErr('email')}`} value={form.email} onChange={e=>set('email', e.target.value)} placeholder="you@company.com" />
                   {hintErr('email')}
+                </div>
+                <div data-err="password">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Password *</label>
+                  <input type="password" className={`w-full px-3 py-2 border rounded-md ${badgeErr('password')}`} value={form.password} onChange={e=>set('password', e.target.value)} placeholder="Create a secure password (min 6 chars)" minLength={6} />
+                  {hintErr('password')}
                 </div>
                 <div data-err="phone">
                   <label className="block text-sm font-medium text-gray-700 mb-1">Phone *</label>

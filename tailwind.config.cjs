@@ -22,6 +22,9 @@ module.exports = {
   		}
   	},
   	extend: {
+  		fontFamily: {
+  			sans: ['var(--font-satoshi)', 'Satoshi', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial', 'sans-serif'],
+  		},
   		colors: {
   			primary: {
   				DEFAULT: 'hsl(var(--primary))',

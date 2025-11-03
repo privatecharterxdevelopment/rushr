@@ -1,6 +1,7 @@
 // app/layout.tsx
 import './globals.css'
 import type { Metadata } from 'next'
+import localFont from 'next/font/local'
 import Providers from './providers'
 import Header from '../components/Header'
 import Footer from '../components/Footer'
@@ -8,6 +9,39 @@ import BrandClassController from '../components/BrandClassController'
 import RouteGuard from '../components/RouteGuard'
 import { headers as nextHeaders } from 'next/headers'
 import React from 'react'
+
+// Load Satoshi font with Next.js font optimization
+const satoshi = localFont({
+  src: [
+    {
+      path: '../public/fonts/satoshi/Satoshi-Light.woff2',
+      weight: '300',
+      style: 'normal',
+    },
+    {
+      path: '../public/fonts/satoshi/Satoshi-Regular.woff2',
+      weight: '400',
+      style: 'normal',
+    },
+    {
+      path: '../public/fonts/satoshi/Satoshi-Medium.woff2',
+      weight: '500',
+      style: 'normal',
+    },
+    {
+      path: '../public/fonts/satoshi/Satoshi-Bold.woff2',
+      weight: '700',
+      style: 'normal',
+    },
+    {
+      path: '../public/fonts/satoshi/Satoshi-Black.woff2',
+      weight: '900',
+      style: 'normal',
+    },
+  ],
+  variable: '--font-satoshi',
+  display: 'swap',
+})
 
 export const metadata: Metadata = {
   title: 'Rushr',
@@ -38,7 +72,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       }
 
   return (
-    <html lang="en" suppressHydrationWarning data-site={isPro ? 'pro' : 'main'}>
+    <html lang="en" suppressHydrationWarning data-site={isPro ? 'pro' : 'main'} className={satoshi.variable}>
       <head>
         {/* keep theme + density pre hydration */}
         <script

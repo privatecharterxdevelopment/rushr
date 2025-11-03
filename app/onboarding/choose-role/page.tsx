@@ -30,7 +30,7 @@ export default function ChooseRolePage() {
       .eq('id', session.user.id)
 
     if (role === 'homeowner') router.replace('/dashboard')
-    else router.replace('/contractor-signup') // use your existing wizard
+    else router.replace('/pro/wizard') // redirect to wizard for contractors
   }
 
   if (loading) return <div className="section"><div className="max-w-md mx-auto">Loading...</div></div>
