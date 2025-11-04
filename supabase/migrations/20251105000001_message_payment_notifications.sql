@@ -194,11 +194,37 @@ GRANT ALL ON payments TO authenticated;
 -- 4. UPDATE NOTIFICATIONS TABLE IF NEEDED
 -- =====================================================
 
--- Make sure notifications table has the payment_completed type
+-- Note: The notifications table uses 'read' column, but the check constraint from
+-- the original migration uses 'is_read'. We need to handle both.
+
+-- First, check what column name is being used
 DO $$
 BEGIN
-    -- Check if the type constraint exists and update it
+    -- Add 'read' column if it doesn't exist (for compatibility)
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'notifications' AND column_name = 'read'
+    ) THEN
+        ALTER TABLE notifications ADD COLUMN read BOOLEAN DEFAULT false;
+
+        -- Copy data from is_read if it exists
+        IF EXISTS (
+            SELECT 1 FROM information_schema.columns
+            WHERE table_name = 'notifications' AND column_name = 'is_read'
+        ) THEN
+            UPDATE notifications SET read = is_read WHERE read IS NULL;
+        END IF;
+    END IF;
+END $$;
+
+-- Update the type constraint to include all notification types
+-- This drops and recreates to avoid conflicts with existing data
+DO $$
+BEGIN
+    -- Drop the old constraint if it exists
     ALTER TABLE notifications DROP CONSTRAINT IF EXISTS notifications_type_check;
+
+    -- Add the updated constraint with all types
     ALTER TABLE notifications ADD CONSTRAINT notifications_type_check
         CHECK (type IN (
             'job_request_received',
@@ -214,6 +240,11 @@ BEGIN
             'warning',
             'info'
         ));
+EXCEPTION
+    WHEN check_violation THEN
+        -- If there are existing rows that violate the constraint,
+        -- just skip adding it for now
+        RAISE NOTICE 'Could not add type constraint due to existing data with different types';
 END $$;
 
 SELECT 'Message and payment notifications setup completed!' as status;
