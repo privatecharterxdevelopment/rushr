@@ -129,11 +129,6 @@ export default function UserDropdown() {
       href: getDashboardUrl(),
     },
     {
-      icon: UserIcon,
-      label: 'Profile Settings',
-      href: '/profile/settings',
-    },
-    {
       icon: MessageIcon,
       label: 'Messages',
       href: isContractor ? '/dashboard/contractor/messages' : '/dashboard/homeowner/messages',
@@ -141,8 +136,8 @@ export default function UserDropdown() {
     },
     {
       icon: SettingsIcon,
-      label: 'Account Settings',
-      href: '/profile/settings',
+      label: isContractor ? 'Account Settings' : 'Profile Settings',
+      href: isContractor ? '/dashboard/contractor/settings' : '/profile/settings',
     },
   ]
 
