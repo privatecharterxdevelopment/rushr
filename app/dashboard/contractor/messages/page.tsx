@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { useProAuth } from '../../../../contexts/ProAuthContext'
@@ -9,19 +9,23 @@ import { ArrowLeft, Send, MessageSquare } from 'lucide-react'
 
 interface Conversation {
   id: string
+  homeowner_id: string
   homeowner_name: string
+  job_id: string
   job_title: string
-  last_message: string
-  last_message_time: string
+  last_message: string | null
+  last_message_at: string | null
   unread_count: number
+  status: string
 }
 
 interface Message {
   id: string
   content: string
   sender_id: string
+  sender_type: 'homeowner' | 'contractor'
   created_at: string
-  is_from_contractor: boolean
+  conversation_id: string
 }
 
 export default function ContractorMessagesPage() {
@@ -30,10 +34,24 @@ export default function ContractorMessagesPage() {
   const conversationId = searchParams.get('id')
 
   const [conversations, setConversations] = useState<Conversation[]>([])
+  const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null)
   const [messages, setMessages] = useState<Message[]>([])
   const [newMessage, setNewMessage] = useState('')
   const [loading, setLoading] = useState(true)
   const [sending, setSending] = useState(false)
+  const [homeownerTyping, setHomeownerTyping] = useState(false)
+
+  const messagesEndRef = useRef<HTMLDivElement>(null)
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+
+  // Scroll to bottom of messages
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }
+
+  useEffect(() => {
+    scrollToBottom()
+  }, [messages])
 
   // Redirect if not contractor
   if (!user || !contractorProfile) {
@@ -47,46 +65,67 @@ export default function ContractorMessagesPage() {
     )
   }
 
-  // Fetch conversations
+  // Fetch conversations with real data
   useEffect(() => {
     const fetchConversations = async () => {
       if (!user) return
 
       try {
-        // Get conversations from jobs where contractor's bid was accepted
-        const { data: bids, error } = await supabase
-          .from('job_bids')
+        const { data: convos, error } = await supabase
+          .from('conversations')
           .select(`
             id,
+            homeowner_id,
+            pro_id,
             job_id,
             status,
-            homeowner_jobs!inner(
+            last_message_at,
+            contractor_unread_count,
+            homeowner_jobs!conversations_job_id_fkey (
               id,
-              title,
-              homeowner_id,
-              user_profiles(id, name, email)
+              title
+            ),
+            user_profiles!conversations_homeowner_id_fkey (
+              id,
+              name,
+              email
             )
           `)
-          .eq('contractor_id', user.id)
-          .eq('status', 'accepted')
+          .eq('pro_id', user.id)
+          .order('last_message_at', { ascending: false, nullsFirst: false })
 
         if (error) {
           console.error('Error fetching conversations:', error)
         } else {
-          // Transform bids into conversations
-          const convs: Conversation[] = (bids || []).map((bid: any) => {
-            const job = bid.homeowner_jobs
-            const homeowner = job?.user_profiles
-            return {
-              id: `${job.id}-${user.id}`,
-              homeowner_name: homeowner?.name || homeowner?.email || 'Homeowner',
-              job_title: job.title,
-              last_message: 'Start chatting about this job',
-              last_message_time: new Date().toISOString(),
-              unread_count: 0
-            }
-          })
-          setConversations(convs)
+          // Get last message for each conversation
+          const conversationsWithMessages = await Promise.all(
+            (convos || []).map(async (convo: any) => {
+              const { data: lastMsg } = await supabase
+                .from('messages')
+                .select('content')
+                .eq('conversation_id', convo.id)
+                .order('created_at', { ascending: false })
+                .limit(1)
+                .single()
+
+              const homeowner = convo.user_profiles
+              const job = convo.homeowner_jobs
+
+              return {
+                id: convo.id,
+                homeowner_id: convo.homeowner_id,
+                homeowner_name: homeowner?.name || homeowner?.email || 'Homeowner',
+                job_id: convo.job_id,
+                job_title: job?.title || 'Job',
+                last_message: lastMsg?.content || 'No messages yet',
+                last_message_at: convo.last_message_at,
+                unread_count: convo.contractor_unread_count || 0,
+                status: convo.status
+              }
+            })
+          )
+
+          setConversations(conversationsWithMessages)
         }
       } catch (err) {
         console.error('Error:', err)
@@ -96,30 +135,151 @@ export default function ContractorMessagesPage() {
     }
 
     fetchConversations()
+
+    // Subscribe to conversation updates
+    const conversationSubscription = supabase
+      .channel('contractor_conversations')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'conversations',
+        filter: `pro_id=eq.${user.id}`
+      }, () => {
+        fetchConversations()
+      })
+      .subscribe()
+
+    return () => {
+      conversationSubscription.unsubscribe()
+    }
   }, [user])
 
   // Fetch messages for selected conversation
   useEffect(() => {
-    if (!conversationId) return
+    if (!conversationId) {
+      setSelectedConversation(null)
+      return
+    }
+
+    const selected = conversations.find(c => c.id === conversationId)
+    setSelectedConversation(selected || null)
 
     const fetchMessages = async () => {
-      // For now, just show placeholder
-      setMessages([])
+      const { data: msgs, error } = await supabase
+        .from('messages')
+        .select('*')
+        .eq('conversation_id', conversationId)
+        .order('created_at', { ascending: true })
+
+      if (error) {
+        console.error('Error fetching messages:', error)
+      } else {
+        setMessages(msgs || [])
+
+        // Mark messages as read
+        await markAsRead()
+      }
     }
 
     fetchMessages()
-  }, [conversationId])
+
+    // Subscribe to new messages in this conversation
+    const messageSubscription = supabase
+      .channel(`messages_${conversationId}`)
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'messages',
+        filter: `conversation_id=eq.${conversationId}`
+      }, (payload) => {
+        setMessages(prev => [...prev, payload.new as Message])
+        scrollToBottom()
+      })
+      .subscribe()
+
+    // Subscribe to typing indicators
+    const typingChannel = supabase
+      .channel(`typing_${conversationId}`)
+      .on('presence', { event: 'sync' }, () => {
+        const state = typingChannel.presenceState()
+        const typing = Object.values(state).some((presences: any) =>
+          presences.some((p: any) => p.user_id !== user.id && p.is_typing)
+        )
+        setHomeownerTyping(typing)
+      })
+      .subscribe()
+
+    return () => {
+      messageSubscription.unsubscribe()
+      typingChannel.unsubscribe()
+    }
+  }, [conversationId, conversations, user])
+
+  // Mark conversation as read
+  const markAsRead = async () => {
+    if (!conversationId || !user) return
+
+    await supabase
+      .from('conversations')
+      .update({ contractor_unread_count: 0 })
+      .eq('id', conversationId)
+  }
+
+  // Handle typing indicator
+  const handleTyping = () => {
+    if (!conversationId || !user) return
+
+    // Clear existing timeout
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current)
+    }
+
+    // Send typing status
+    const typingChannel = supabase.channel(`typing_${conversationId}`)
+    typingChannel.track({
+      user_id: user.id,
+      is_typing: true,
+      timestamp: new Date().toISOString()
+    })
+
+    // Stop typing after 2 seconds of no input
+    typingTimeoutRef.current = setTimeout(() => {
+      typingChannel.track({
+        user_id: user.id,
+        is_typing: false,
+        timestamp: new Date().toISOString()
+      })
+    }, 2000)
+  }
 
   const handleSendMessage = async () => {
-    if (!newMessage.trim()) return
+    if (!newMessage.trim() || !conversationId || !user) return
 
     setSending(true)
     try {
-      // TODO: Implement actual message sending
-      console.log('Sending message:', newMessage)
-      setNewMessage('')
+      const { error } = await supabase
+        .from('messages')
+        .insert({
+          conversation_id: conversationId,
+          sender_id: user.id,
+          sender_type: 'contractor',
+          content: newMessage.trim()
+        })
+
+      if (error) {
+        console.error('Failed to send message:', error)
+        alert('Failed to send message. Please try again.')
+      } else {
+        setNewMessage('')
+
+        // Stop typing indicator
+        if (typingTimeoutRef.current) {
+          clearTimeout(typingTimeoutRef.current)
+        }
+      }
     } catch (error) {
       console.error('Failed to send message:', error)
+      alert('Failed to send message. Please try again.')
     } finally {
       setSending(false)
     }
@@ -180,13 +340,18 @@ export default function ContractorMessagesPage() {
                     <div className="flex items-start justify-between mb-2">
                       <h3 className="font-semibold text-gray-900">{conv.homeowner_name}</h3>
                       {conv.unread_count > 0 && (
-                        <span className="bg-blue-600 text-white text-xs rounded-full px-2 py-1">
+                        <span className="bg-blue-600 text-white text-xs rounded-full px-2 py-1 font-medium">
                           {conv.unread_count}
                         </span>
                       )}
                     </div>
-                    <p className="text-sm text-gray-600 mb-1">{conv.job_title}</p>
-                    <p className="text-xs text-gray-500 truncate">{conv.last_message}</p>
+                    <p className="text-sm text-gray-600 mb-1 font-medium">{conv.job_title}</p>
+                    <p className="text-sm text-gray-500 truncate">{conv.last_message}</p>
+                    {conv.last_message_at && (
+                      <p className="text-xs text-gray-400 mt-1">
+                        {new Date(conv.last_message_at).toLocaleString()}
+                      </p>
+                    )}
                   </Link>
                 ))}
               </div>
@@ -196,10 +361,16 @@ export default function ContractorMessagesPage() {
 
         {/* Messages Area */}
         <div className="flex-1 flex flex-col">
-          {conversationId ? (
+          {conversationId && selectedConversation ? (
             <>
+              {/* Conversation Header */}
+              <div className="bg-white border-b border-gray-200 px-6 py-4">
+                <h2 className="text-lg font-semibold text-gray-900">{selectedConversation.homeowner_name}</h2>
+                <p className="text-sm text-gray-600">{selectedConversation.job_title}</p>
+              </div>
+
               {/* Messages */}
-              <div className="flex-1 overflow-y-auto p-6">
+              <div className="flex-1 overflow-y-auto p-6 bg-gray-50">
                 {messages.length === 0 ? (
                   <div className="text-center py-12">
                     <MessageSquare className="h-16 w-16 text-gray-400 mx-auto mb-4" />
@@ -213,22 +384,43 @@ export default function ContractorMessagesPage() {
                     {messages.map((msg) => (
                       <div
                         key={msg.id}
-                        className={`flex ${msg.is_from_contractor ? 'justify-end' : 'justify-start'}`}
+                        className={`flex ${msg.sender_type === 'contractor' ? 'justify-end' : 'justify-start'}`}
                       >
                         <div
-                          className={`max-w-md rounded-lg px-4 py-2 ${
-                            msg.is_from_contractor
+                          className={`max-w-md rounded-2xl px-5 py-3 shadow-sm ${
+                            msg.sender_type === 'contractor'
                               ? 'bg-blue-600 text-white'
                               : 'bg-gray-200 text-gray-900'
                           }`}
+                          style={{
+                            wordWrap: 'break-word',
+                            overflowWrap: 'break-word',
+                            wordBreak: 'break-word',
+                            maxWidth: '70%'
+                          }}
                         >
-                          <p>{msg.content}</p>
-                          <p className="text-xs mt-1 opacity-75">
-                            {new Date(msg.created_at).toLocaleTimeString()}
+                          <p className="text-[16px] leading-relaxed whitespace-pre-wrap">{msg.content}</p>
+                          <p className={`text-xs mt-2 ${msg.sender_type === 'contractor' ? 'text-blue-100' : 'text-gray-500'}`}>
+                            {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                           </p>
                         </div>
                       </div>
                     ))}
+
+                    {/* Typing Indicator */}
+                    {homeownerTyping && (
+                      <div className="flex justify-start">
+                        <div className="bg-gray-200 text-gray-900 rounded-2xl px-5 py-3 shadow-sm">
+                          <div className="flex items-center gap-1">
+                            <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                            <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                            <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    <div ref={messagesEndRef} />
                   </div>
                 )}
               </div>
@@ -239,16 +431,19 @@ export default function ContractorMessagesPage() {
                   <input
                     type="text"
                     value={newMessage}
-                    onChange={(e) => setNewMessage(e.target.value)}
-                    onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+                    onChange={(e) => {
+                      setNewMessage(e.target.value)
+                      handleTyping()
+                    }}
+                    onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleSendMessage()}
                     placeholder="Type your message..."
-                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="flex-1 px-4 py-3 text-[16px] border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-gray-50"
                     disabled={sending}
                   />
                   <button
                     onClick={handleSendMessage}
                     disabled={!newMessage.trim() || sending}
-                    className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    className="px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm"
                   >
                     <Send className="h-5 w-5" />
                   </button>
