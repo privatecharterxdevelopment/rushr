@@ -36,7 +36,7 @@ interface TypingStatus {
 }
 
 export default function HomeownerMessagesPage() {
-  const { user, userProfile } = useAuth()
+  const { user, userProfile, loading: authLoading } = useAuth()
   const searchParams = useSearchParams()
   const conversationId = searchParams.get('id')
 
@@ -60,6 +60,18 @@ export default function HomeownerMessagesPage() {
   useEffect(() => {
     scrollToBottom()
   }, [messages])
+
+  // Show loading while auth is loading
+  if (authLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600 mx-auto mb-4"></div>
+          <p>Loading messages...</p>
+        </div>
+      </div>
+    )
+  }
 
   // Redirect if not homeowner
   if (!user || !userProfile) {

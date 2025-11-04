@@ -672,9 +672,20 @@ function Bubble({ msg, query, userType }: { msg: Message; query: string; userTyp
       {!isMe && <div className={classNames('h-10 w-10 flex-shrink-0 rounded-full flex items-center justify-center text-white font-bold text-sm shadow-md', otherAvatarColor)}>
         {/* Avatar placeholder */}
       </div>}
-      <div className={classNames('max-w-[85%] rounded-3xl px-5 py-4 text-base shadow-lg border-2 transition-all hover:shadow-xl',
+      <div className={classNames('max-w-[85%] rounded-3xl px-5 py-4 shadow-lg border-2 transition-all hover:shadow-xl',
         isMe ? myBubbleColor : 'bg-white text-slate-900 border-slate-200')}>
-        {msg.text && <div className="whitespace-pre-wrap leading-relaxed">{highlight(msg.text, query)}</div>}
+        {msg.text && (
+          <div
+            className="text-[16px] leading-relaxed whitespace-pre-wrap"
+            style={{
+              wordWrap: 'break-word',
+              overflowWrap: 'break-word',
+              wordBreak: 'break-word'
+            }}
+          >
+            {highlight(msg.text, query)}
+          </div>
+        )}
         {msg.attachments && msg.attachments.length > 0 && <AttachmentTiles attachments={msg.attachments} dark={isMe} />}
         <div className={classNames('mt-2 flex items-center gap-2 text-xs', isMe ? myTextColor : 'text-slate-500')}>
           <span>{msg.time}</span>
