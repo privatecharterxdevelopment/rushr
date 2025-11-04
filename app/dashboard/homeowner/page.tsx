@@ -145,6 +145,9 @@ export default function HomeownerDashboardPage() {
     instructions: ''
   })
 
+  // Payment method state
+  const [hasPaymentMethod, setHasPaymentMethod] = useState(false)
+
   // Move all useMemo hooks to the top to avoid React hooks error
   const completeness: CompletenessField[] = useMemo(() => {
     if (!user || !userProfile) return []
@@ -244,7 +247,7 @@ export default function HomeownerDashboardPage() {
     }
 
     // Missing payment method
-    if (userProfile && !userProfile.stripe_customer_id) {
+    if (!hasPaymentMethod) {
       actions.push({
         id: 'add-payment',
         type: 'add_payment',
@@ -268,7 +271,7 @@ export default function HomeownerDashboardPage() {
     }
 
     return actions
-  }, [displayJobs, userProfile])
+  }, [displayJobs, userProfile, hasPaymentMethod])
 
   const upcoming = useMemo(()=> displayJobs.filter(j=>j.status==='Confirmed' && j.nextAppt).slice(0,3),[displayJobs])
 
@@ -314,6 +317,26 @@ export default function HomeownerDashboardPage() {
     }
   }, [displayJobs, completeness])
 
+
+  // Check if user has payment methods
+  useEffect(() => {
+    if (!user) return
+
+    const checkPaymentMethod = async () => {
+      try {
+        const response = await fetch(`/api/stripe/customer/payment-methods?userId=${user.id}`)
+        const data = await response.json()
+
+        if (data.success && data.paymentMethods && data.paymentMethods.length > 0) {
+          setHasPaymentMethod(true)
+        }
+      } catch (error) {
+        console.error('Failed to check payment methods:', error)
+      }
+    }
+
+    checkPaymentMethod()
+  }, [user])
 
   // Auto-detect jobs with accepted bids for tracking
   useEffect(() => {
@@ -425,13 +448,9 @@ export default function HomeownerDashboardPage() {
         {/* Action buttons - horizontal scroll on mobile, flex on desktop */}
         <div className="flex items-center gap-2 overflow-x-auto pb-2 lg:pb-0 -mx-4 px-4 lg:mx-0 lg:px-0">
           <Link href="/post-job?urgent=1" className="btn-primary whitespace-nowrap flex-shrink-0">Emergency Help</Link>
-          <Link href="/profile" className="btn whitespace-nowrap flex-shrink-0 flex items-center gap-1.5">
+          <Link href="/profile/settings" className="btn whitespace-nowrap flex-shrink-0 flex items-center gap-1.5">
             <UserRound className="w-4 h-4" />
             Profile
-          </Link>
-          <Link href="/profile/settings" className="btn whitespace-nowrap flex-shrink-0 flex items-center gap-1.5">
-            <Settings className="w-4 h-4" />
-            Account Settings
           </Link>
           <Link href="/dashboard/homeowner/billing" className="btn whitespace-nowrap flex-shrink-0 flex items-center gap-1.5">
             <Receipt className="w-4 h-4" />
