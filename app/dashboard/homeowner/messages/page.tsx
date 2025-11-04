@@ -93,33 +93,17 @@ export default function HomeownerMessagesPage() {
       try {
         const { data: convos, error } = await supabase
           .from('conversations')
-          .select(`
-            id,
-            homeowner_id,
-            pro_id,
-            job_id,
-            status,
-            last_message_at,
-            homeowner_unread_count,
-            homeowner_jobs!conversations_job_id_fkey (
-              id,
-              title
-            ),
-            pro_contractors!conversations_pro_id_fkey (
-              id,
-              business_name,
-              name
-            )
-          `)
+          .select('id, homeowner_id, pro_id, job_id, status, last_message_at, homeowner_unread_count')
           .eq('homeowner_id', user.id)
           .order('last_message_at', { ascending: false, nullsFirst: false })
 
         if (error) {
           console.error('Error fetching conversations:', error)
         } else {
-          // Get last message for each conversation
+          // Get last message and related data for each conversation
           const conversationsWithMessages = await Promise.all(
             (convos || []).map(async (convo: any) => {
+              // Fetch last message
               const { data: lastMsg } = await supabase
                 .from('messages')
                 .select('content')
@@ -128,8 +112,19 @@ export default function HomeownerMessagesPage() {
                 .limit(1)
                 .single()
 
-              const contractor = convo.pro_contractors
-              const job = convo.homeowner_jobs
+              // Fetch contractor details
+              const { data: contractor } = await supabase
+                .from('pro_contractors')
+                .select('id, business_name, name')
+                .eq('id', convo.pro_id)
+                .single()
+
+              // Fetch job details
+              const { data: job } = await supabase
+                .from('homeowner_jobs')
+                .select('id, title')
+                .eq('id', convo.job_id)
+                .single()
 
               return {
                 id: convo.id,
