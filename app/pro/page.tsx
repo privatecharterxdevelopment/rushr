@@ -140,15 +140,18 @@ function Hero() {
   <ArrowRight className="ml-2 h-5 w-5" />
 </Button>
             </Link>
-            <Link href="/pro/sign-in">
-              <Button
-                size="lg"
-                variant="outline"
-                className="border-[var(--pro)] text-[var(--pro)] hover:bg-[color:rgb(37_99_235_/_0.08)] focus-visible:ring-[var(--pro)]"
-              >
-                Already a Pro? Sign In
-              </Button>
-            </Link>
+            <Button
+              size="lg"
+              variant="outline"
+              className="border-[var(--pro)] text-[var(--pro)] hover:bg-[color:rgb(37_99_235_/_0.08)] focus-visible:ring-[var(--pro)]"
+              onClick={() => {
+                if (typeof window !== 'undefined') {
+                  window.dispatchEvent(new CustomEvent('proauth:open', { detail: { mode: 'signin' } }))
+                }
+              }}
+            >
+              Already a Pro? Sign In
+            </Button>
             <Link href="#tour">
               <Button
                 size="lg"
