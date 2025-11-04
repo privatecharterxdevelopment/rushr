@@ -50,8 +50,8 @@ export default function Header() {
   const isProRoute = pathname.startsWith('/pro') || pathname.startsWith('/dashboard/contractor')
 
   // Determine user type and signed in status
-  const isSignedInAsHomeowner = !!homeownerUser && !!userProfile
-  const isSignedInAsContractor = !!contractorUser  // Don't require profile, just user is enough
+  const isSignedInAsHomeowner = !!homeownerUser && !!userProfile && !contractorProfile
+  const isSignedInAsContractor = !!contractorUser && !!contractorProfile
   const signedIn = isSignedInAsHomeowner || isSignedInAsContractor
 
   // Theme: Pro routes get blue, everything else gets green
