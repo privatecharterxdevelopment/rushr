@@ -73,8 +73,8 @@ export default function HomeownerMessagesPage() {
     )
   }
 
-  // Redirect if not homeowner or not logged in
-  if (!user || !userProfile || userProfile.role !== 'homeowner') {
+  // Redirect if not homeowner
+  if (!user || !userProfile) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
