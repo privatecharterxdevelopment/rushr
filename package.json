@@ -57,6 +57,7 @@
     "@types/estree": "^1.0.8",
     "@types/json-schema": "^7.0.15",
     "@types/mapbox__mapbox-gl-draw": "^1.4.9",
+    "@types/mapbox-gl": "^3.4.1",
     "@types/node": "^20.11.30",
     "@types/pg": "^8.15.5",
     "@types/phoenix": "^1.6.6",

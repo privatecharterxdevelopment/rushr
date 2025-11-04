@@ -1,12 +1,14 @@
 'use client'
 
-import React, { useMemo, useEffect, useState } from 'react'
+import React, { useMemo, useEffect, useState, useRef } from 'react'
 import Link from 'next/link'
 import { useAuth } from '../../../contexts/AuthContext'
 import { useHomeownerStats } from '../../../lib/hooks/useHomeownerStats'
 import { supabase } from '../../../lib/supabaseClient'
 import LoadingSpinner from '../../../components/LoadingSpinner'
 import dynamic from 'next/dynamic'
+import mapboxgl from 'mapbox-gl'
+import 'mapbox-gl/dist/mapbox-gl.css'
 
 // const ContractorTracker = dynamic(() => import('../../../components/ContractorTracker'), { ssr: false })
 import {
@@ -21,6 +23,7 @@ import {
   UserRound,
   MapPin,
   AlertTriangle,
+  AlertCircle,
   Clock,
   ChevronRight,
   Siren,
@@ -142,8 +145,17 @@ export default function HomeownerDashboardPage() {
     address: '',
     name: '',
     tags: '',
-    instructions: ''
+    instructions: '',
+    latitude: null as number | null,
+    longitude: null as number | null
   })
+  const [geocoding, setGeocoding] = useState(false)
+  const mapContainerRef = useRef<HTMLDivElement>(null)
+  const mapRef = useRef<mapboxgl.Map | null>(null)
+  const [savedAddresses, setSavedAddresses] = useState<any[]>([])
+  const [saveSuccess, setSaveSuccess] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
+  const [saving, setSaving] = useState(false)
 
   // Payment method state
   const [hasPaymentMethod, setHasPaymentMethod] = useState(false)
@@ -370,6 +382,95 @@ export default function HomeownerDashboardPage() {
       setActiveJob(null)
     }
   }, [user, realJobs])
+
+  // Fetch saved addresses
+  const fetchSavedAddresses = async () => {
+    if (!user) return
+    try {
+      console.log('📋 Fetching saved addresses...')
+      const { data, error } = await supabase
+        .from('saved_addresses')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+
+      if (error) {
+        console.error('❌ Error fetching addresses:', error)
+        throw error
+      }
+      console.log('✅ Fetched addresses:', data)
+      setSavedAddresses(data || [])
+    } catch (error) {
+      console.error('❌ Failed to fetch saved addresses:', error)
+    }
+  }
+
+  // Geocode address function
+  const geocodeAddress = async (address: string) => {
+    if (!address.trim() || address.length < 5) {
+      return null
+    }
+
+    try {
+      const response = await fetch(
+        `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(address)}.json?access_token=${process.env.NEXT_PUBLIC_MAPBOX_TOKEN}&limit=1`
+      )
+      const data = await response.json()
+
+      if (data.features && data.features.length > 0) {
+        const [lng, lat] = data.features[0].center
+        return { latitude: lat, longitude: lng }
+      }
+    } catch (error) {
+      console.error('Geocoding error:', error)
+    }
+    return null
+  }
+
+  // Initialize Mapbox map when coordinates are available
+  useEffect(() => {
+    if (!showAddressModal || !mapContainerRef.current || !addressForm.latitude || !addressForm.longitude) {
+      if (mapRef.current) {
+        mapRef.current.remove()
+        mapRef.current = null
+      }
+      return
+    }
+
+    // Clean up existing map before creating new one
+    if (mapRef.current) {
+      mapRef.current.remove()
+      mapRef.current = null
+    }
+
+    // Initialize map
+    mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN!
+    mapRef.current = new mapboxgl.Map({
+      container: mapContainerRef.current,
+      style: 'mapbox://styles/mapbox/streets-v12',
+      center: [addressForm.longitude, addressForm.latitude],
+      zoom: 15
+    })
+
+    // Add marker
+    new mapboxgl.Marker({ color: '#ef4444' })
+      .setLngLat([addressForm.longitude, addressForm.latitude])
+      .addTo(mapRef.current)
+
+    return () => {
+      if (mapRef.current) {
+        mapRef.current.remove()
+        mapRef.current = null
+      }
+    }
+  }, [showAddressModal, addressForm.latitude, addressForm.longitude])
+
+  // Fetch saved addresses on mount
+  useEffect(() => {
+    if (user) {
+      fetchSavedAddresses()
+    }
+  }, [user])
 
   // NOW SAFE TO HAVE CONDITIONAL RETURNS AFTER ALL HOOKS
   // Show loading while auth is being determined
@@ -605,22 +706,66 @@ export default function HomeownerDashboardPage() {
             Saved Addresses
           </SectionTitle>
           <div className="space-y-2">
-            {userProfile?.address ? (
-              <div className="rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 p-3">
-                <div className="flex items-start gap-3">
-                  <div className="p-2 bg-emerald-100 dark:bg-emerald-950 rounded-lg">
-                    <Home className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+            {savedAddresses.length > 0 ? (
+              savedAddresses.map((addr) => (
+                <div key={addr.id} className="rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 p-3">
+                  <div className="flex items-start gap-3">
+                    <div className="p-2 bg-emerald-100 dark:bg-emerald-950 rounded-lg">
+                      <MapPin className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium text-slate-900 dark:text-white">
+                        {addr.name || 'Saved Address'}
+                      </div>
+                      <div className="text-sm text-slate-600 dark:text-slate-400 truncate">{addr.address}</div>
+                      {addr.tags && (
+                        <div className="text-xs text-slate-500 dark:text-slate-500 mt-1">
+                          {addr.tags}
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => {
+                          // TODO: Use this address for a job
+                          console.log('Using address:', addr)
+                        }}
+                        className="text-emerald-600 hover:text-emerald-700 text-sm font-medium whitespace-nowrap"
+                      >
+                        Use
+                      </button>
+                      <button
+                        onClick={async () => {
+                          if (!confirm('Delete this address?')) return
+                          try {
+                            const { error } = await supabase
+                              .from('saved_addresses')
+                              .delete()
+                              .eq('id', addr.id)
+
+                            if (error) throw error
+
+                            // Refresh the list
+                            await fetchSavedAddresses()
+                          } catch (error) {
+                            console.error('Failed to delete address:', error)
+                            alert('Failed to delete address')
+                          }
+                        }}
+                        className="p-1 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors"
+                        title="Delete address"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="font-medium text-slate-900 dark:text-white">Primary Address</div>
-                    <div className="text-sm text-slate-600 dark:text-slate-400 truncate">{userProfile.address}</div>
-                  </div>
-                  <button className="text-emerald-600 hover:text-emerald-700 text-sm font-medium">
-                    Use
-                  </button>
                 </div>
+              ))
+            ) : (
+              <div className="text-center py-6 text-slate-500 dark:text-slate-400 text-sm">
+                No saved addresses yet
               </div>
-            ) : null}
+            )}
 
             <button
               onClick={() => setShowAddressModal(true)}
@@ -788,43 +933,69 @@ export default function HomeownerDashboardPage() {
                 <label className="block text-sm font-medium text-slate-900 dark:text-white mb-2">
                   Address *
                 </label>
-                <input
-                  type="text"
-                  value={addressForm.address}
-                  onChange={(e) => setAddressForm({ ...addressForm, address: e.target.value })}
-                  placeholder="123 Main St, City, State 12345"
-                  className="w-full px-4 py-2.5 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
-                />
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={addressForm.address}
+                    onChange={(e) => setAddressForm({ ...addressForm, address: e.target.value })}
+                    placeholder="123 Main St, City, State 12345"
+                    className="flex-1 px-4 py-2.5 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                  />
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      setGeocoding(true)
+                      const coords = await geocodeAddress(addressForm.address)
+                      if (coords) {
+                        setAddressForm(prev => ({ ...prev, ...coords }))
+                      }
+                      setGeocoding(false)
+                    }}
+                    disabled={!addressForm.address.trim() || geocoding}
+                    className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white rounded-lg transition-colors font-medium whitespace-nowrap"
+                  >
+                    {geocoding ? 'Locating...' : 'Find on Map'}
+                  </button>
+                </div>
               </div>
 
-              {/* Static Map Placeholder */}
+              {/* Mapbox Map Preview */}
               <div>
                 <label className="block text-sm font-medium text-slate-900 dark:text-white mb-2">
                   Location Preview
                 </label>
-                <div className="relative w-full h-48 bg-gradient-to-br from-emerald-50 to-blue-50 dark:from-slate-800 dark:to-slate-700 rounded-lg border border-slate-200 dark:border-slate-600 flex items-center justify-center overflow-hidden">
-                  {/* Map background pattern */}
-                  <div className="absolute inset-0 opacity-10">
-                    <div className="absolute inset-0" style={{
-                      backgroundImage: 'linear-gradient(rgba(0,0,0,.1) 1px, transparent 1px), linear-gradient(90deg, rgba(0,0,0,.1) 1px, transparent 1px)',
-                      backgroundSize: '20px 20px'
-                    }}></div>
-                  </div>
+                {addressForm.latitude && addressForm.longitude ? (
+                  <div
+                    ref={mapContainerRef}
+                    className="w-full h-48 rounded-lg border border-slate-200 dark:border-slate-600 overflow-hidden"
+                  />
+                ) : (
+                  <div className="relative w-full h-48 bg-gradient-to-br from-emerald-50 to-blue-50 dark:from-slate-800 dark:to-slate-700 rounded-lg border border-slate-200 dark:border-slate-600 flex items-center justify-center overflow-hidden">
+                    {/* Map background pattern */}
+                    <div className="absolute inset-0 opacity-10">
+                      <div className="absolute inset-0" style={{
+                        backgroundImage: 'linear-gradient(rgba(0,0,0,.1) 1px, transparent 1px), linear-gradient(90deg, rgba(0,0,0,.1) 1px, transparent 1px)',
+                        backgroundSize: '20px 20px'
+                      }}></div>
+                    </div>
 
-                  {/* Pin marker */}
-                  <div className="relative z-10 flex flex-col items-center">
-                    <div className="w-12 h-12 bg-red-500 rounded-full flex items-center justify-center shadow-lg mb-2">
-                      <MapPin className="h-7 w-7 text-white" />
-                    </div>
-                    <div className="bg-white dark:bg-slate-800 px-3 py-1 rounded-full shadow-md">
-                      <p className="text-xs font-medium text-slate-600 dark:text-slate-300">
-                        {addressForm.address || 'Enter address above'}
-                      </p>
+                    {/* Pin marker */}
+                    <div className="relative z-10 flex flex-col items-center">
+                      <div className="w-12 h-12 bg-red-500 rounded-full flex items-center justify-center shadow-lg mb-2">
+                        <MapPin className="h-7 w-7 text-white" />
+                      </div>
+                      <div className="bg-white dark:bg-slate-800 px-3 py-1 rounded-full shadow-md">
+                        <p className="text-xs font-medium text-slate-600 dark:text-slate-300">
+                          {addressForm.address || 'Enter address above'}
+                        </p>
+                      </div>
                     </div>
                   </div>
-                </div>
+                )}
                 <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                  Static location preview
+                  {addressForm.latitude && addressForm.longitude
+                    ? `Geocoded: ${addressForm.latitude.toFixed(6)}, ${addressForm.longitude.toFixed(6)}`
+                    : 'Enter an address to see location on map'}
                 </p>
               </div>
 
@@ -874,28 +1045,101 @@ export default function HomeownerDashboardPage() {
               </div>
             </div>
 
+            {/* Success/Error Messages */}
+            {(saveSuccess || saveError) && (
+              <div className="px-6 pb-4">
+                {saveSuccess && (
+                  <div className="p-4 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-lg flex items-center gap-3">
+                    <CheckCircle2 className="h-5 w-5 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
+                    <p className="text-emerald-800 dark:text-emerald-300 font-medium">Address saved successfully!</p>
+                  </div>
+                )}
+                {saveError && (
+                  <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg flex items-center gap-3">
+                    <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-400 flex-shrink-0" />
+                    <p className="text-red-800 dark:text-red-300 font-medium">{saveError}</p>
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Modal Footer */}
             <div className="sticky bottom-0 bg-slate-50 dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700 px-6 py-4 flex items-center justify-end gap-3">
               <button
                 onClick={() => {
                   setShowAddressModal(false)
-                  setAddressForm({ address: '', name: '', tags: '', instructions: '' })
+                  setAddressForm({ address: '', name: '', tags: '', instructions: '', latitude: null, longitude: null })
                 }}
                 className="px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-700 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-700 transition-colors font-medium"
               >
                 Cancel
               </button>
               <button
-                onClick={() => {
-                  // TODO: Save address to database
-                  console.log('Saving address:', addressForm)
-                  setShowAddressModal(false)
-                  setAddressForm({ address: '', name: '', tags: '', instructions: '' })
+                onClick={async () => {
+                  if (!user) {
+                    console.log('❌ No user found')
+                    return
+                  }
+                  console.log('💾 Saving address...', addressForm)
+                  setSaveError(null)
+                  setSaveSuccess(false)
+                  setSaving(true)
+
+                  try {
+                    const { data, error } = await supabase
+                      .from('saved_addresses')
+                      .insert({
+                        user_id: user.id,
+                        address: addressForm.address.trim(),
+                        name: addressForm.name.trim() || null,
+                        tags: addressForm.tags.trim() || null,
+                        instructions: addressForm.instructions.trim() || null,
+                        latitude: addressForm.latitude,
+                        longitude: addressForm.longitude
+                      })
+                      .select()
+
+                    if (error) {
+                      console.error('❌ Supabase error:', error)
+                      throw error
+                    }
+
+                    console.log('✅ Address saved successfully:', data)
+
+                    // Fetch updated list of saved addresses
+                    await fetchSavedAddresses()
+
+                    // Show success message
+                    setSaveSuccess(true)
+                    console.log('✅ Success message should be visible now')
+
+                    // Close modal and reset form after 2 seconds
+                    setTimeout(() => {
+                      setShowAddressModal(false)
+                      setAddressForm({ address: '', name: '', tags: '', instructions: '', latitude: null, longitude: null })
+                      setSaveSuccess(false)
+                      setSaving(false)
+                    }, 2000)
+                  } catch (error: any) {
+                    console.error('❌ Failed to save address:', error)
+                    setSaveError(error.message || 'Failed to save address. Please try again.')
+                    setSaving(false)
+                  }
                 }}
-                disabled={!addressForm.address.trim()}
-                className="px-6 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white rounded-lg transition-colors font-medium"
+                disabled={!addressForm.address.trim() || saving}
+                className="px-6 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white rounded-lg transition-colors font-medium flex items-center gap-2"
               >
-                Save Address
+                {saving ? (
+                  <>
+                    <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Saving...
+                  </>
+                ) : (
+                  'Save Address'
+                )}
               </button>
             </div>
           </div>
