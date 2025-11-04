@@ -7,10 +7,13 @@ import { useProAuth } from '../contexts/ProAuthContext'
 
 export default function HomeownerRouteGuard({ children }: { children: React.ReactNode }) {
   const { user: homeownerUser, loading: homeownerLoading } = useAuth()
-  const { contractorProfile } = useProAuth()
+  const { contractorProfile, loading: contractorLoading } = useProAuth()
   const router = useRouter()
 
   useEffect(() => {
+    // Wait for both auth contexts to finish loading
+    if (homeownerLoading || contractorLoading) return
+
     // If contractor is logged in, redirect them away from homeowner routes
     if (contractorProfile) {
       router.push('/dashboard/contractor')
@@ -18,13 +21,13 @@ export default function HomeownerRouteGuard({ children }: { children: React.Reac
     }
 
     // If not loading and no user, redirect to sign-in
-    if (!homeownerLoading && !homeownerUser) {
+    if (!homeownerUser) {
       router.push('/sign-in')
     }
-  }, [contractorProfile, homeownerUser, homeownerLoading, router])
+  }, [contractorProfile, homeownerUser, homeownerLoading, contractorLoading, router])
 
   // Show loading while checking auth - GREEN for homeowner
-  if (homeownerLoading) {
+  if (homeownerLoading || contractorLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-emerald-50">
         <div className="text-center">
