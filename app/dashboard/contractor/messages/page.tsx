@@ -84,11 +84,6 @@ export default function ContractorMessagesPage() {
             homeowner_jobs!conversations_job_id_fkey (
               id,
               title
-            ),
-            user_profiles!conversations_homeowner_id_fkey (
-              id,
-              name,
-              email
             )
           `)
           .eq('pro_id', user.id)
@@ -97,9 +92,10 @@ export default function ContractorMessagesPage() {
         if (error) {
           console.error('Error fetching conversations:', error)
         } else {
-          // Get last message for each conversation
+          // Get last message and homeowner info for each conversation
           const conversationsWithMessages = await Promise.all(
             (convos || []).map(async (convo: any) => {
+              // Fetch last message
               const { data: lastMsg } = await supabase
                 .from('messages')
                 .select('content')
@@ -108,13 +104,19 @@ export default function ContractorMessagesPage() {
                 .limit(1)
                 .single()
 
-              const homeowner = convo.user_profiles
+              // Fetch homeowner profile
+              const { data: homeownerProfile } = await supabase
+                .from('user_profiles')
+                .select('name, email')
+                .eq('id', convo.homeowner_id)
+                .single()
+
               const job = convo.homeowner_jobs
 
               return {
                 id: convo.id,
                 homeowner_id: convo.homeowner_id,
-                homeowner_name: homeowner?.name || homeowner?.email || 'Homeowner',
+                homeowner_name: homeownerProfile?.name || homeownerProfile?.email || 'Homeowner',
                 job_id: convo.job_id,
                 job_title: job?.title || 'Job',
                 last_message: lastMsg?.content || 'No messages yet',

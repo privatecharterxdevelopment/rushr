@@ -834,7 +834,7 @@ export default function ContractorDashboardPage() {
           <h3 className="mb-2 font-semibold text-ink dark:text-white">Emergency services</h3>
           <p className="text-sm text-slate-600 mb-3">Manage your emergency service offerings and rates.</p>
           <div className="flex flex-wrap gap-2">
-            <Link href="/profile/settings" className="btn">Service Types & Rates</Link>
+            <Link href="/dashboard/contractor/settings" className="btn">Service Types & Rates</Link>
           </div>
         </div>
         <div className="rounded-2xl border border-slate-200 p-4">
