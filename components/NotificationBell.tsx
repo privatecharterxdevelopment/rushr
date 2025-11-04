@@ -1,9 +1,11 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { Bell, BellDot, X } from 'lucide-react'
+import { Bell, BellDot, X, MessageSquare, DollarSign, Briefcase, CheckCircle } from 'lucide-react'
+import { useRouter } from 'next/navigation'
 import { useAuth } from '../contexts/AuthContext'
 import { WelcomeService, WelcomeNotification } from '../lib/welcomeService'
+import { supabase } from '../lib/supabaseClient'
 
 interface NotificationBellProps {
   className?: string
@@ -11,15 +13,50 @@ interface NotificationBellProps {
 
 export default function NotificationBell({ className = '' }: NotificationBellProps) {
   const { user } = useAuth()
+  const router = useRouter()
   const [notifications, setNotifications] = useState<WelcomeNotification[]>([])
   const [unreadCount, setUnreadCount] = useState(0)
   const [isOpen, setIsOpen] = useState(false)
   const [loading, setLoading] = useState(false)
 
-  // Fetch notifications on mount
+  // Fetch notifications on mount and subscribe to real-time updates
   useEffect(() => {
-    if (user) {
-      loadNotifications()
+    if (!user) return
+
+    loadNotifications()
+
+    // Subscribe to real-time notification updates
+    const notificationSubscription = supabase
+      .channel('user_notifications')
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'notifications',
+        filter: `user_id=eq.${user.id}`
+      }, (payload) => {
+        // Add new notification to the list
+        const newNotification = payload.new as WelcomeNotification
+        setNotifications(prev => [newNotification, ...prev])
+        setUnreadCount(prev => prev + 1)
+
+        // Show browser notification if permitted
+        if ('Notification' in window && Notification.permission === 'granted') {
+          new Notification(newNotification.title, {
+            body: newNotification.message,
+            icon: '/favicon.ico',
+            badge: '/favicon.ico'
+          })
+        }
+      })
+      .subscribe()
+
+    // Request notification permission
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission()
+    }
+
+    return () => {
+      notificationSubscription.unsubscribe()
     }
   }, [user])
 
@@ -58,6 +95,35 @@ export default function NotificationBell({ className = '' }: NotificationBellPro
     }
   }
 
+  const handleNotificationClick = async (notification: WelcomeNotification) => {
+    // Mark as read
+    if (!notification.read) {
+      await markAsRead(notification.id)
+    }
+
+    // Navigate based on notification type
+    if (notification.type === 'new_message' && notification.conversation_id) {
+      // Determine if user is homeowner or contractor and navigate to appropriate messages page
+      const isContractor = window.location.pathname.startsWith('/dashboard/contractor') ||
+                          window.location.pathname.startsWith('/pro')
+
+      if (isContractor) {
+        router.push(`/dashboard/contractor/messages?id=${notification.conversation_id}`)
+      } else {
+        router.push(`/dashboard/homeowner/messages?id=${notification.conversation_id}`)
+      }
+      setIsOpen(false)
+    } else if (notification.type === 'payment_completed' && notification.job_id) {
+      // Navigate to job details
+      router.push(`/dashboard/homeowner/jobs/${notification.job_id}`)
+      setIsOpen(false)
+    } else if ((notification.type === 'bid_received' || notification.type === 'bid_accepted') && notification.job_id) {
+      // Navigate to job or bids page
+      router.push(`/dashboard/homeowner/bids`)
+      setIsOpen(false)
+    }
+  }
+
   const toggleNotifications = () => {
     setIsOpen(!isOpen)
   }
@@ -79,6 +145,14 @@ export default function NotificationBell({ className = '' }: NotificationBellPro
 
   const getTypeIcon = (type: string) => {
     switch (type) {
+      case 'new_message':
+        return <MessageSquare className="h-5 w-5 text-blue-500" />
+      case 'payment_completed':
+        return <DollarSign className="h-5 w-5 text-green-500" />
+      case 'bid_received':
+        return <Briefcase className="h-5 w-5 text-purple-500" />
+      case 'bid_accepted':
+        return <CheckCircle className="h-5 w-5 text-emerald-500" />
       case 'welcome':
         return '🎉'
       case 'success':
@@ -109,7 +183,7 @@ export default function NotificationBell({ className = '' }: NotificationBellPro
 
         {/* Unread Count Badge */}
         {unreadCount > 0 && (
-          <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-medium">
+          <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-medium animate-pulse">
             {unreadCount > 9 ? '9+' : unreadCount}
           </span>
         )}
@@ -157,12 +231,12 @@ export default function NotificationBell({ className = '' }: NotificationBellPro
                       className={`p-4 hover:bg-slate-50 dark:hover:bg-slate-700 cursor-pointer transition-colors ${
                         !notification.read ? 'bg-blue-50 dark:bg-blue-900/20' : ''
                       }`}
-                      onClick={() => !notification.read && markAsRead(notification.id)}
+                      onClick={() => handleNotificationClick(notification)}
                     >
                       <div className="flex items-start gap-3">
-                        <span className="text-lg flex-shrink-0 mt-0.5">
+                        <div className="flex-shrink-0 mt-0.5">
                           {getTypeIcon(notification.type)}
-                        </span>
+                        </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2">
                             <h4 className="font-medium text-slate-900 dark:text-white text-sm">

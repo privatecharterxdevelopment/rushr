@@ -9,9 +9,12 @@ export interface WelcomeNotification {
   user_id: string
   title: string
   message: string
-  type: 'welcome' | 'info' | 'warning' | 'success'
+  type: 'welcome' | 'info' | 'warning' | 'success' | 'new_message' | 'payment_completed' | 'bid_received' | 'bid_accepted'
   read: boolean
   created_at: string
+  conversation_id?: string
+  job_id?: string
+  bid_id?: string
 }
 
 export class WelcomeService {
