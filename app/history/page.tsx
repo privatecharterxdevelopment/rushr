@@ -14,7 +14,10 @@ import {
   Plus,
   AlertCircle,
   CheckCircle2,
-  XCircle
+  XCircle,
+  User,
+  Star,
+  CreditCard
 } from 'lucide-react'
 
 interface Job {
@@ -28,11 +31,30 @@ interface Job {
   completed_date: string | null
   final_cost: number | null
   description: string | null
+  accepted_bid_id: string | null
+}
+
+interface Contractor {
+  id: string
+  name: string
+  business_name: string | null
+  avatar_url: string | null
+  rating: number | null
+}
+
+interface Payment {
+  id: string
+  amount: number
+  status: string
+  payment_date: string | null
+  stripe_payment_intent_id: string | null
 }
 
 export default function History() {
   const { user, userProfile } = useAuth()
   const [jobs, setJobs] = useState<Job[]>([])
+  const [contractors, setContractors] = useState<Record<string, Contractor>>({})
+  const [payments, setPayments] = useState<Record<string, Payment>>({})
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -42,20 +64,71 @@ export default function History() {
     const fetchJobs = async () => {
       try {
         console.log('Fetching job history for user:', user.id)
-        const { data, error } = await supabase
+        const { data: jobsData, error: jobsError } = await supabase
           .from('jobs')
           .select('*')
           .eq('homeowner_id', user.id)
           .order('created_at', { ascending: false })
 
-        if (error) {
-          console.error('Error fetching jobs:', error)
-          setError(error.message)
+        if (jobsError) {
+          console.error('Error fetching jobs:', jobsError)
+          setError(jobsError.message)
           return
         }
 
-        console.log('Fetched jobs:', data)
-        setJobs(data || [])
+        console.log('Fetched jobs:', jobsData)
+        setJobs(jobsData || [])
+
+        // Fetch contractor info for jobs with accepted bids
+        const jobsWithBids = (jobsData || []).filter(job => job.accepted_bid_id)
+        if (jobsWithBids.length > 0) {
+          const bidIds = jobsWithBids.map(job => job.accepted_bid_id)
+
+          const { data: bidsData, error: bidsError } = await supabase
+            .from('bids')
+            .select('id, contractor_id')
+            .in('id', bidIds)
+
+          if (!bidsError && bidsData) {
+            const contractorIds = bidsData.map(bid => bid.contractor_id)
+
+            const { data: contractorsData, error: contractorsError } = await supabase
+              .from('pro_contractors')
+              .select('id, name, business_name, avatar_url, rating')
+              .in('id', contractorIds)
+
+            if (!contractorsError && contractorsData) {
+              const contractorsMap: Record<string, Contractor> = {}
+              bidsData.forEach(bid => {
+                const contractor = contractorsData.find(c => c.id === bid.contractor_id)
+                if (contractor) {
+                  contractorsMap[bid.id] = contractor
+                }
+              })
+              setContractors(contractorsMap)
+            }
+          }
+        }
+
+        // Fetch payment info for completed jobs
+        const completedJobs = (jobsData || []).filter(job => job.status === 'completed')
+        if (completedJobs.length > 0) {
+          const jobIds = completedJobs.map(job => job.id)
+
+          const { data: paymentsData, error: paymentsError } = await supabase
+            .from('payments')
+            .select('id, job_id, amount, status, payment_date, stripe_payment_intent_id')
+            .in('job_id', jobIds)
+            .eq('payment_type', 'final')
+
+          if (!paymentsError && paymentsData) {
+            const paymentsMap: Record<string, Payment> = {}
+            paymentsData.forEach(payment => {
+              paymentsMap[payment.job_id] = payment
+            })
+            setPayments(paymentsMap)
+          }
+        }
       } catch (err: any) {
         console.error('Unexpected error:', err)
         setError(err.message || 'Failed to load job history')
@@ -212,6 +285,58 @@ export default function History() {
                   </div>
                 )}
 
+                {/* Contractor Info */}
+                {job.accepted_bid_id && contractors[job.accepted_bid_id] && (
+                  <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 mb-4 border border-blue-200 dark:border-blue-800">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-lg">
+                        <User className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                      </div>
+                      <div className="flex-1">
+                        <h4 className="text-sm font-medium text-slate-900 dark:text-slate-100 mb-1">
+                          Contractor: {contractors[job.accepted_bid_id].business_name || contractors[job.accepted_bid_id].name}
+                        </h4>
+                        {contractors[job.accepted_bid_id].rating && (
+                          <div className="flex items-center gap-1 text-sm text-slate-600 dark:text-slate-400">
+                            <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+                            <span>{contractors[job.accepted_bid_id].rating.toFixed(1)}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Payment Info */}
+                {payments[job.id] && (
+                  <div className="bg-emerald-50 dark:bg-emerald-900/20 rounded-lg p-4 mb-4 border border-emerald-200 dark:border-emerald-800">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-emerald-100 dark:bg-emerald-900 rounded-lg">
+                        <CreditCard className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+                      </div>
+                      <div className="flex-1">
+                        <h4 className="text-sm font-medium text-slate-900 dark:text-slate-100 mb-1">
+                          Payment: ${payments[job.id].amount.toLocaleString()}
+                        </h4>
+                        <div className="flex items-center gap-2 text-sm">
+                          <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                            payments[job.id].status === 'completed'
+                              ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200'
+                              : 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200'
+                          }`}>
+                            {payments[job.id].status}
+                          </span>
+                          {payments[job.id].payment_date && (
+                            <span className="text-slate-600 dark:text-slate-400">
+                              • {new Date(payments[job.id].payment_date).toLocaleDateString()}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 <div className="flex items-center gap-2">
                   <Link
                     href={`/jobs/${job.id}`}
@@ -225,6 +350,14 @@ export default function History() {
                   >
                     View Bids
                   </Link>
+                  {job.accepted_bid_id && contractors[job.accepted_bid_id] && (
+                    <Link
+                      href={`/dashboard/homeowner/messages`}
+                      className="px-4 py-2 text-sm border border-blue-300 dark:border-blue-600 text-blue-700 dark:text-blue-300 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
+                    >
+                      Message Contractor
+                    </Link>
+                  )}
                 </div>
               </div>
             ))}

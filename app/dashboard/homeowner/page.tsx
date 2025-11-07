@@ -1076,38 +1076,53 @@ export default function HomeownerDashboardPage() {
               </button>
               <button
                 onClick={async () => {
+                  console.log('🔍 DEBUG: Button clicked')
                   if (!user) {
                     console.log('❌ No user found')
                     return
                   }
                   console.log('💾 Saving address...', addressForm)
+                  console.log('👤 User ID:', user.id)
                   setSaveError(null)
                   setSaveSuccess(false)
                   setSaving(true)
 
                   try {
+                    console.log('🔄 About to call Supabase insert...')
+                    const insertData = {
+                      user_id: user.id,
+                      address: addressForm.address.trim(),
+                      name: addressForm.name.trim() || null,
+                      tags: addressForm.tags.trim() || null,
+                      instructions: addressForm.instructions.trim() || null,
+                      latitude: addressForm.latitude,
+                      longitude: addressForm.longitude
+                    }
+                    console.log('📦 Insert data:', insertData)
+
                     const { data, error } = await supabase
                       .from('saved_addresses')
-                      .insert({
-                        user_id: user.id,
-                        address: addressForm.address.trim(),
-                        name: addressForm.name.trim() || null,
-                        tags: addressForm.tags.trim() || null,
-                        instructions: addressForm.instructions.trim() || null,
-                        latitude: addressForm.latitude,
-                        longitude: addressForm.longitude
-                      })
+                      .insert(insertData)
                       .select()
 
+                    console.log('🔙 Supabase response - data:', data, 'error:', error)
+
                     if (error) {
-                      console.error('❌ Supabase error:', error)
+                      console.error('❌ Supabase error details:', {
+                        message: error.message,
+                        details: error.details,
+                        hint: error.hint,
+                        code: error.code
+                      })
                       throw error
                     }
 
                     console.log('✅ Address saved successfully:', data)
 
                     // Fetch updated list of saved addresses
+                    console.log('🔄 Fetching updated addresses...')
                     await fetchSavedAddresses()
+                    console.log('✅ Fetched updated addresses')
 
                     // Show success message
                     setSaveSuccess(true)
@@ -1115,13 +1130,18 @@ export default function HomeownerDashboardPage() {
 
                     // Close modal and reset form after 2 seconds
                     setTimeout(() => {
+                      console.log('🧹 Cleaning up and closing modal')
                       setShowAddressModal(false)
                       setAddressForm({ address: '', name: '', tags: '', instructions: '', latitude: null, longitude: null })
                       setSaveSuccess(false)
                       setSaving(false)
                     }, 2000)
                   } catch (error: any) {
-                    console.error('❌ Failed to save address:', error)
+                    console.error('❌ Failed to save address - caught error:', {
+                      error,
+                      message: error?.message,
+                      stack: error?.stack
+                    })
                     setSaveError(error.message || 'Failed to save address. Please try again.')
                     setSaving(false)
                   }

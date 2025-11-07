@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react'
 import { Bell, BellDot, X, MessageSquare, DollarSign, Briefcase, CheckCircle } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '../contexts/AuthContext'
+import { useProAuth } from '../contexts/ProAuthContext'
 import { WelcomeService, WelcomeNotification } from '../lib/welcomeService'
 import { supabase } from '../lib/supabaseClient'
 
@@ -12,7 +13,8 @@ interface NotificationBellProps {
 }
 
 export default function NotificationBell({ className = '' }: NotificationBellProps) {
-  const { user } = useAuth()
+  const { user, userProfile } = useAuth()
+  const { contractorProfile } = useProAuth()
   const router = useRouter()
   const [notifications, setNotifications] = useState<WelcomeNotification[]>([])
   const [unreadCount, setUnreadCount] = useState(0)
@@ -101,12 +103,20 @@ export default function NotificationBell({ className = '' }: NotificationBellPro
       await markAsRead(notification.id)
     }
 
-    // Navigate based on notification type
-    if (notification.type === 'new_message' && notification.conversation_id) {
-      // Determine if user is homeowner or contractor and navigate to appropriate messages page
-      const isContractor = window.location.pathname.startsWith('/dashboard/contractor') ||
-                          window.location.pathname.startsWith('/pro')
+    // Determine if user is contractor or homeowner based on profile
+    const isContractor = !!contractorProfile
 
+    // Navigate based on notification type
+    if (notification.type === 'welcome') {
+      // Welcome notification - go to messages page
+      if (isContractor) {
+        router.push('/dashboard/contractor/messages')
+      } else {
+        router.push('/dashboard/homeowner/messages')
+      }
+      setIsOpen(false)
+    } else if (notification.type === 'new_message' && notification.conversation_id) {
+      // New message notification - go to specific conversation
       if (isContractor) {
         router.push(`/dashboard/contractor/messages?id=${notification.conversation_id}`)
       } else {

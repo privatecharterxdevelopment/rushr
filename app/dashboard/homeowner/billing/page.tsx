@@ -64,20 +64,36 @@ function AddPaymentMethodForm({ customerId, onSuccess }: { customerId: string; o
       }
 
       // Update default payment method in database
-      const { data: customer } = await supabase
+      console.log('💳 Saving payment method to database...', setupIntent.payment_method)
+      const { data: customer, error: customerError } = await supabase
         .from('stripe_customers')
         .select('user_id')
         .eq('stripe_customer_id', customerId)
         .single()
 
+      if (customerError) {
+        console.error('❌ Error fetching customer:', customerError)
+        throw customerError
+      }
+
+      console.log('✅ Found customer:', customer)
+
       if (customer && setupIntent.payment_method) {
-        await supabase
+        const { data: updateResult, error: updateError } = await supabase
           .from('stripe_customers')
           .update({
             default_payment_method_id: setupIntent.payment_method,
             updated_at: new Date().toISOString()
           })
           .eq('user_id', customer.user_id)
+          .select()
+
+        if (updateError) {
+          console.error('❌ Error updating payment method:', updateError)
+          throw updateError
+        }
+
+        console.log('✅ Payment method saved successfully:', updateResult)
       }
 
       onSuccess()
