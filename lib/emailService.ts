@@ -7,10 +7,25 @@
  * - Payment completed (to both)
  * - Work started/completed (to both)
  *
- * Uses Supabase Edge Functions to send emails via SMTP
+ * Uses Microsoft Exchange SMTP via nodemailer
  */
 
-import { supabase } from './supabaseClient'
+import nodemailer from 'nodemailer'
+
+// Create reusable SMTP transporter with Microsoft Exchange
+const transporter = nodemailer.createTransport({
+  host: process.env.SMTP_HOST || 'smtp.office365.com',
+  port: parseInt(process.env.SMTP_PORT || '587'),
+  secure: false, // use STARTTLS
+  auth: {
+    user: process.env.SMTP_USER,
+    pass: process.env.SMTP_PASSWORD,
+  },
+  tls: {
+    ciphers: 'SSLv3',
+    rejectUnauthorized: false
+  }
+})
 
 export type EmailType =
   | 'bid_received'          // Homeowner receives bid from contractor
@@ -33,24 +48,30 @@ interface EmailPayload {
 }
 
 /**
- * Send an email notification
+ * Send an email notification using Microsoft Exchange SMTP
  */
 async function sendEmail(payload: EmailPayload): Promise<{ success: boolean; error?: string }> {
   try {
-    // Call Supabase Edge Function for email sending
-    const { data, error } = await supabase.functions.invoke('send-email', {
-      body: payload
+    const info = await transporter.sendMail({
+      from: `${process.env.SMTP_FROM_NAME || 'Rushr'} <${process.env.SMTP_FROM_EMAIL || process.env.SMTP_USER}>`,
+      to: payload.to,
+      subject: payload.subject,
+      text: payload.text,
+      html: payload.html,
     })
 
-    if (error) {
-      console.error('[EMAIL] Error sending email:', error)
-      return { success: false, error: error.message }
-    }
-
-    console.log('[EMAIL] Email sent successfully:', payload.subject)
+    console.log('[EMAIL] ✅ Email sent successfully:', {
+      messageId: info.messageId,
+      subject: payload.subject,
+      to: payload.to
+    })
     return { success: true }
   } catch (err: any) {
-    console.error('[EMAIL] Failed to send email:', err)
+    console.error('[EMAIL] ❌ Failed to send email:', {
+      error: err.message,
+      subject: payload.subject,
+      to: payload.to
+    })
     return { success: false, error: err.message }
   }
 }
@@ -555,5 +576,127 @@ export async function notifySupportTicketReceived(params: {
     subject,
     html,
     text: `Hi ${userName}, We've received your support request. Ticket #${ticketId}: ${ticketSubject}. Priority: ${ticketPriority}. Status: ${ticketStatus}. View at ${ticketUrl}`
+  })
+}
+
+/**
+ * Send welcome email to new homeowner
+ */
+export async function sendWelcomeEmailHomeowner(params: {
+  email: string
+  name: string
+}) {
+  const { email, name } = params
+
+  const subject = 'Welcome to Rushr! 🎉'
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+      <div style="background: linear-gradient(135deg, #10B981 0%, #059669 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+        <h1 style="margin: 0;">Welcome to Rushr!</h1>
+      </div>
+      <div style="background: #F9FAFB; padding: 30px; border-radius: 0 0 10px 10px;">
+        <p>Hi ${name},</p>
+
+        <p>Welcome to Rushr! We're thrilled to have you join our community of homeowners finding trusted local professionals.</p>
+
+        <h3 style="color: #10B981;">🏠 What you can do:</h3>
+        <ul style="line-height: 1.8;">
+          <li>Post jobs and get competitive bids from verified contractors</li>
+          <li>Browse trusted professionals in your area</li>
+          <li>Communicate directly with contractors through our messaging system</li>
+          <li>Track your projects from start to finish</li>
+          <li>Make secure payments through our platform</li>
+        </ul>
+
+        <h3 style="color: #10B981;">💡 Pro tip:</h3>
+        <p>The more details you provide in your job posts, the better quality bids you'll receive! Include photos, specific requirements, and your preferred timeline.</p>
+
+        <p style="text-align: center; margin: 30px 0;">
+          <a href="${process.env.NEXT_PUBLIC_SITE_URL}/dashboard/homeowner"
+             style="background: #10B981; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; display: inline-block;">
+            Go to Dashboard
+          </a>
+        </p>
+
+        <p>If you have any questions, just reply to this email - we're here to help!</p>
+
+        <p>Best regards,<br>The Rushr Team</p>
+      </div>
+      <div style="text-align: center; margin-top: 30px; color: #6B7280; font-size: 14px;">
+        <p>© ${new Date().getFullYear()} Rushr. All rights reserved.</p>
+        <p><a href="${process.env.NEXT_PUBLIC_SITE_URL}" style="color: #10B981;">Visit our website</a></p>
+      </div>
+    </div>
+  `
+
+  return sendEmail({
+    to: email,
+    subject,
+    html,
+    text: `Welcome to Rushr! Start posting jobs and connecting with trusted contractors. Visit ${process.env.NEXT_PUBLIC_SITE_URL}/dashboard/homeowner`
+  })
+}
+
+/**
+ * Send welcome email to new contractor
+ */
+export async function sendWelcomeEmailContractor(params: {
+  email: string
+  name: string
+  businessName?: string
+}) {
+  const { email, name, businessName } = params
+
+  const subject = 'Welcome to Rushr Pro! 💼'
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+      <div style="background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+        <h1 style="margin: 0;">Welcome to Rushr Pro!</h1>
+      </div>
+      <div style="background: #F9FAFB; padding: 30px; border-radius: 0 0 10px 10px;">
+        <p>Hi ${businessName || name},</p>
+
+        <p>Welcome to Rushr Pro! We're excited to have you join our network of trusted professionals.</p>
+
+        <h3 style="color: #3B82F6;">🔧 Your Pro benefits:</h3>
+        <ul style="line-height: 1.8;">
+          <li>Access quality jobs in your service area</li>
+          <li>Communicate directly with homeowners</li>
+          <li>Build your reputation with reviews and ratings</li>
+          <li>Get paid securely through our platform</li>
+          <li>Grow your business with verified leads</li>
+        </ul>
+
+        <h3 style="color: #3B82F6;">⚡ Get started:</h3>
+        <ol style="line-height: 1.8;">
+          <li>Complete your profile with licenses & insurance details</li>
+          <li>Set your service areas and specialties</li>
+          <li>Start bidding on jobs that match your skills</li>
+          <li>Consider upgrading to Signals for premium leads</li>
+        </ol>
+
+        <p style="text-align: center; margin: 30px 0;">
+          <a href="${process.env.NEXT_PUBLIC_SITE_URL}/dashboard/contractor"
+             style="background: #3B82F6; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; display: inline-block;">
+            Go to Pro Dashboard
+          </a>
+        </p>
+
+        <p>Need help getting started? Reply to this email - our team is here to support your success!</p>
+
+        <p>Best regards,<br>The Rushr Team</p>
+      </div>
+      <div style="text-align: center; margin-top: 30px; color: #6B7280; font-size: 14px;">
+        <p>© ${new Date().getFullYear()} Rushr. All rights reserved.</p>
+        <p><a href="${process.env.NEXT_PUBLIC_SITE_URL}" style="color: #3B82F6;">Visit our website</a></p>
+      </div>
+    </div>
+  `
+
+  return sendEmail({
+    to: email,
+    subject,
+    html,
+    text: `Welcome to Rushr Pro! Start bidding on jobs and growing your business. Visit ${process.env.NEXT_PUBLIC_SITE_URL}/dashboard/contractor`
   })
 }

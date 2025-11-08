@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { notifyBidReceived } from '../../../../lib/emailService'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -99,6 +100,37 @@ export async function POST(request: NextRequest) {
         read: false,
         created_at: new Date().toISOString()
       })
+
+    // 4. Send email notification to homeowner (non-blocking)
+    try {
+      const { data: homeownerUser } = await supabase
+        .from('user_profiles')
+        .select('name')
+        .eq('id', homeownerId)
+        .single()
+
+      const { data: contractorProfile } = await supabase
+        .from('pro_contractors')
+        .select('name, business_name')
+        .eq('id', contractorId)
+        .single()
+
+      const { data: authUser } = await supabase.auth.admin.getUserById(homeownerId)
+
+      if (authUser?.user?.email && homeownerUser) {
+        await notifyBidReceived({
+          homeownerEmail: authUser.user.email,
+          homeownerName: homeownerUser.name,
+          contractorName: contractorProfile?.business_name || contractorProfile?.name || 'Contractor',
+          jobTitle: title,
+          bidAmount: priceOffer || 0,
+          estimatedArrival: urgency === 'emergency' ? '15 minutes' : '30 minutes'
+        })
+      }
+    } catch (emailError) {
+      console.error('Failed to send bid notification email:', emailError)
+      // Don't fail the request if email fails
+    }
 
     return NextResponse.json({
       success: true,

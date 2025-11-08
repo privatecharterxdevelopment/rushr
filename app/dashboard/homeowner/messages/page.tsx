@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useState, useRef } from 'react'
+import React, { useEffect, useState, useRef, Suspense } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { useAuth } from '../../../../contexts/AuthContext'
@@ -35,7 +35,7 @@ interface TypingStatus {
   timestamp: string
 }
 
-export default function HomeownerMessagesPage() {
+function MessagesContent() {
   const { user, userProfile, loading: authLoading } = useAuth()
   const searchParams = useSearchParams()
   const conversationId = searchParams.get('id')
@@ -483,5 +483,20 @@ export default function HomeownerMessagesPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function HomeownerMessagesPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600 mx-auto mb-4"></div>
+          <p>Loading messages...</p>
+        </div>
+      </div>
+    }>
+      <MessagesContent />
+    </Suspense>
   )
 }
