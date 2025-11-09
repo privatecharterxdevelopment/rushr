@@ -29,7 +29,7 @@ interface Message {
 }
 
 export default function ContractorMessagesPage() {
-  const { user, contractorProfile } = useProAuth()
+  const { user, contractorProfile, loading: authLoading } = useProAuth()
   const searchParams = useSearchParams()
   const conversationId = searchParams.get('id')
 
@@ -53,7 +53,22 @@ export default function ContractorMessagesPage() {
     scrollToBottom()
   }, [messages])
 
-  // Redirect if not contractor
+  // Early return if not authenticated - BEFORE any data fetching
+  if (authLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <img
+          src="https://jtrxdcccswdwlritgstp.supabase.co/storage/v1/object/public/contractor-logos/RushrLogoAnimation.gif"
+          alt="Loading..."
+          className="h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4 object-contain"
+        />
+          <p>Loading...</p>
+        </div>
+      </div>
+    )
+  }
+
   if (!user || !contractorProfile) {
     return (
       <div className="flex items-center justify-center min-h-screen">

@@ -68,7 +68,7 @@ const ZIP_COORDS: Record<string, LatLng> = {
 
 export default function FindProPage() {
   const { state } = useApp()
-  const { user, userProfile } = useAuth()
+  const { user, userProfile, loading: authLoading } = useAuth()
   const searchParams = useSearchParams()
   const allContractors: any[] = Array.isArray((state as any)?.contractors)
     ? (state as any).contractors
@@ -76,6 +76,9 @@ export default function FindProPage() {
 
   // Offer modal state
   const [offerModalContractor, setOfferModalContractor] = useState<any | null>(null)
+
+  // Check if user is logged in as homeowner
+  const isLoggedInHomeowner = !authLoading && user && userProfile
 
   // Top bar — line 1
   const [query, setQuery] = useState('')
@@ -278,7 +281,46 @@ export default function FindProPage() {
 
   return (
     <>
-      <section className="mx-auto max-w-6xl space-y-3 px-3 py-3">
+      {/* Login gate overlay for non-logged-in users */}
+      {!authLoading && !isLoggedInHomeowner && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl p-8 shadow-2xl max-w-md mx-4 text-center">
+            <div className="mb-6">
+              <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg className="w-8 h-8 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                </svg>
+              </div>
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">Login Required</h2>
+              <p className="text-gray-600">
+                Please sign in to find and contact pros in your area.
+              </p>
+            </div>
+            <div className="space-y-3">
+              <Link
+                href="/sign-in"
+                className="block w-full px-6 py-3 bg-emerald-600 text-white rounded-xl font-semibold hover:bg-emerald-700 transition-colors"
+              >
+                Sign In
+              </Link>
+              <Link
+                href="/sign-up"
+                className="block w-full px-6 py-3 bg-gray-100 text-gray-800 rounded-xl font-semibold hover:bg-gray-200 transition-colors"
+              >
+                Create Account
+              </Link>
+              <Link
+                href="/"
+                className="block text-sm text-gray-600 hover:text-gray-900 mt-4"
+              >
+                ← Back to Home
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <section className={`mx-auto max-w-6xl space-y-3 px-3 py-3 ${!isLoggedInHomeowner && !authLoading ? 'filter blur-md pointer-events-none' : ''}`}>
         {/* TOP BAR — TWO ROWS (unchanged look) */}
         <div className="w-full rounded-2xl border border-slate-200 bg-white p-2.5 shadow-sm">
           {/* LINE 1 */}
