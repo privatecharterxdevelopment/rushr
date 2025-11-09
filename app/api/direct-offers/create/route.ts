@@ -1,10 +1,13 @@
 // app/api/direct-offers/create/route.ts
 import { NextRequest, NextResponse } from 'next/server'
-import { getSupabase } from '../../../../lib/supabase-server'
+import { createClient } from '@supabase/supabase-js'
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = getSupabase()
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    )
 
     // Get authenticated user
     const {
@@ -91,9 +94,8 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Send notification to contractor (optional - can add when pro_contractors has user link)
-    // For now, notifications will be created when contractor views their dashboard
-    // TODO: Add notification system when pro_contractors table has auth.users reference
+    // Notification is automatically created by database trigger
+    // (see notify_contractor_new_offer trigger)
 
     return NextResponse.json(
       {

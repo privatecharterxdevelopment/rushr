@@ -1,10 +1,13 @@
 // app/api/direct-offers/respond/route.ts
 import { NextRequest, NextResponse } from 'next/server'
-import { getSupabase } from '../../../../lib/supabase-server'
+import { createClient } from '@supabase/supabase-js'
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = getSupabase()
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    )
 
     // Get authenticated user
     const {
@@ -86,45 +89,8 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Get offer details to notify homeowner
-    const { data: offer } = await supabase
-      .from('direct_offers')
-      .select('homeowner_id, title, offered_amount')
-      .eq('id', offer_id)
-      .single()
-
-    if (offer) {
-      // Create notification for homeowner
-      let notificationMessage = ''
-      switch (action) {
-        case 'accept':
-          notificationMessage = `Your job offer "${offer.title}" was accepted!`
-          break
-        case 'reject':
-          notificationMessage = `Your job offer "${offer.title}" was declined`
-          break
-        case 'counter_bid':
-          notificationMessage = `Counter-bid received for "${offer.title}" - $${counter_amount}`
-          break
-      }
-
-      try {
-        await supabase.from('notifications').insert({
-          user_id: offer.homeowner_id,
-          type: 'offer_response',
-          title: 'Offer Response',
-          message: notificationMessage,
-          data: {
-            offer_id: offer_id,
-            action: action,
-            counter_amount: counter_amount || null,
-          },
-        })
-      } catch (notifError) {
-        console.error('Error creating notification:', notifError)
-        // Don't fail the request if notification fails
-      }
-    }
+    // Notification is automatically created by database trigger
+    // (see notify_homeowner_offer_response trigger)
 
     return NextResponse.json(
       {
