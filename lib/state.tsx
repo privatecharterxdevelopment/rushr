@@ -83,18 +83,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const fetchContractors = async () => {
       try {
-        console.log('🔄 AppProvider: Fetching contractors from /api/contractors...')
         const response = await fetch('/api/contractors')
         if (!response.ok) {
-          console.error('❌ AppProvider: Failed to fetch contractors, status:', response.status)
+          console.error('Failed to fetch contractors, status:', response.status)
           return
         }
         const data = await response.json()
-        console.log('✅ AppProvider: Fetched contractors:', data.contractors?.length || 0, 'contractors')
-        console.log('📦 AppProvider: Contractor data:', data.contractors)
         setContractors(data.contractors || [])
       } catch (error) {
-        console.error('❌ AppProvider: Error fetching contractors:', error)
+        console.error('Error fetching contractors:', error)
       }
     }
 
