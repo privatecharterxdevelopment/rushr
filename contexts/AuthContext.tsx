@@ -88,6 +88,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     let mounted = true
 
+    // VERCEL FIX: Timeout to prevent infinite loading
+    const loadingTimeout = setTimeout(() => {
+      if (mounted) {
+        console.warn('[AuthContext] Loading timeout - forcing loading to false')
+        setLoading(false)
+      }
+    }, 5000) // 5 second timeout
+
     const initializeAuth = async () => {
       try {
         // Get current session
@@ -98,9 +106,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (error) {
           console.error('Error getting session:', {
             message: error.message,
-            status: error.status,
-            statusText: error.statusText
+            status: error.status
           })
+          clearTimeout(loadingTimeout)
           setLoading(false)
           return
         }
@@ -114,10 +122,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           await fetchUserProfile(session.user.id)
         }
 
+        clearTimeout(loadingTimeout)
         setLoading(false)
       } catch (err) {
         console.error('Auth initialization error:', err)
         if (mounted) {
+          clearTimeout(loadingTimeout)
           setLoading(false)
         }
       }
@@ -155,6 +165,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     return () => {
       mounted = false
+      clearTimeout(loadingTimeout)
       subscription.unsubscribe()
     }
   }, [router])
