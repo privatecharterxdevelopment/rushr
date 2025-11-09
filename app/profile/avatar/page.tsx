@@ -18,13 +18,13 @@ import {
 
 export default function AvatarUploadPage() {
   const { user: homeownerUser, userProfile: homeownerProfile, refreshProfile: refreshHomeownerProfile } = useAuth()
-  const { user: proUser, userProfile: proProfile, refreshProfile: refreshProProfile } = useProAuth()
+  const { user: proUser, contractorProfile, refreshProfile: refreshProProfile } = useProAuth()
   const router = useRouter()
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   // Determine which user and profile to use
   const user = homeownerUser || proUser
-  const userProfile = homeownerProfile || proProfile
+  const userProfile = homeownerProfile || contractorProfile
   const refreshProfile = homeownerProfile ? refreshHomeownerProfile : refreshProProfile
   const isContractor = !!proUser
 
@@ -127,13 +127,12 @@ export default function AvatarUploadPage() {
 
         // Update contractor profile with logo URL
         const result = await supabase
-          .from('contractor_profiles')
-          .upsert({
-            user_id: user.id,
+          .from('pro_contractors')
+          .update({
             avatar_url: publicUrl, // Store storage URL instead of base64
             updated_at: new Date().toISOString()
           })
-          .eq('user_id', user.id)
+          .eq('id', user.id)
           .select()
 
         updateError = result.error
@@ -229,12 +228,12 @@ export default function AvatarUploadPage() {
 
         // Remove from contractor profile
         const result = await supabase
-          .from('contractor_profiles')
+          .from('pro_contractors')
           .update({
             avatar_url: null,
             updated_at: new Date().toISOString()
           })
-          .eq('user_id', user.id)
+          .eq('id', user.id)
 
         updateError = result.error
       } else {
