@@ -92,7 +92,18 @@ export default function Header() {
   const [openFindWork, setOpenFindWork] = useState(false)
   const [openMore, setOpenMore] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [isScrolled, setIsScrolled] = useState(false)
   const timers = useRef<Record<string, number | null>>({ pro: null, work: null, more: null })
+
+  // Detect scroll to change header background
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 10)
+    }
+
+    window.addEventListener('scroll', handleScroll)
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [])
 
   // Close all dropdowns when clicking outside
   useEffect(() => {
@@ -275,17 +286,14 @@ export default function Header() {
   // Route menus to their owning site (absolute URLs)
   const findProItems = [
     { label: 'Post a Job',            href: '/post-job' },
-    { label: 'RushrMap',              href: '/rushrmap' },
     { label: 'How it Works',          href: '/how-it-works' },
   ]
   const findWorkItems = isSignedInAsContractor ? [
     // Contractor is logged in - go to dashboard pages
     { label: 'Browse Jobs',               href: '/dashboard/contractor/jobs' },
-    { label: 'Signals ★',                 href: '/pro/signals' },
   ] : [
     // Not logged in - open Pro login modal
     { label: 'Browse Jobs',               onClick: () => openProAuth() },
-    { label: 'Signals ★',                 onClick: () => openProAuth() },
   ]
   const moreItems = [
     { label: 'About',   href: '/about' },
@@ -294,7 +302,7 @@ export default function Header() {
   ]
 
   // "Active" underline only applies to local sections
-  const findProActive = ['/post-job', '/rushrmap', '/how-it-works'].some(isActive)
+  const findProActive = ['/post-job', '/find-pro', '/how-it-works'].some(isActive)
   const findWorkActive = ['/jobs', '/find-work', '/signals'].some(isActive)
   const moreActive = ['/about', '/contact', '/pricing'].some(isActive)
   const messagesActive = pathname.includes('/messages')
@@ -309,7 +317,7 @@ export default function Header() {
     '--color-primary': '37 99 235',
     '--color-primary-hover': '29 78 216',
     '--color-primary-foreground': '255 255 255',
-    backgroundColor: 'rgba(255,255,255,0.9)',
+    backgroundColor: isScrolled ? 'rgb(255,255,255)' : 'rgba(255,255,255,0.9)',
   } as React.CSSProperties : {
     // GREEN HOMEOWNER THEME
     '--brand-border': '#10B981',
@@ -319,7 +327,7 @@ export default function Header() {
     '--color-primary': '16 185 129',
     '--color-primary-hover': '5 150 105',
     '--color-primary-foreground': '255 255 255',
-    backgroundColor: 'rgba(255,255,255,0.9)',
+    backgroundColor: isScrolled ? 'rgb(255,255,255)' : 'rgba(255,255,255,0.9)',
   } as React.CSSProperties
 
   return (

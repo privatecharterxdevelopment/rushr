@@ -80,7 +80,11 @@ export default function ProMap(props: Props){
     return (
       <div className="h-[360px] w-full flex items-center justify-center bg-slate-50">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600 mx-auto mb-2"></div>
+          <img
+            src="https://jtrxdcccswdwlritgstp.supabase.co/storage/v1/object/public/contractor-logos/RushrLogoAnimation.gif"
+            alt="Loading..."
+            className="w-8 h-8 object-contain mx-auto mb-2"
+          />
           <div className="text-sm text-slate-600">Loading map...</div>
         </div>
       </div>

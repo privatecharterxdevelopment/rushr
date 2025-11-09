@@ -1,8 +1,7 @@
-// Supabase Edge Function to send emails via SMTP
+// Supabase Edge Function to send emails via Resend
 // Deploy with: supabase functions deploy send-email
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
-import { SmtpClient } from "https://deno.land/x/smtp@v0.7.0/mod.ts"
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -26,47 +25,46 @@ serve(async (req) => {
       )
     }
 
-    // SMTP configuration from Supabase environment variables
-    const SMTP_HOST = Deno.env.get('SMTP_HOST') || 'smtp.gmail.com'
-    const SMTP_PORT = parseInt(Deno.env.get('SMTP_PORT') || '587')
-    const SMTP_USER = Deno.env.get('SMTP_USER')
-    const SMTP_PASS = Deno.env.get('SMTP_PASS')
-    const FROM_EMAIL = Deno.env.get('FROM_EMAIL') || 'noreply@rushr.com'
+    // Get Resend API key from environment
+    const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY')
+    const FROM_EMAIL = Deno.env.get('FROM_EMAIL') || 'onboarding@resend.dev'
     const FROM_NAME = Deno.env.get('FROM_NAME') || 'Rushr'
 
-    if (!SMTP_USER || !SMTP_PASS) {
-      console.error('SMTP credentials not configured')
+    if (!RESEND_API_KEY) {
+      console.error('RESEND_API_KEY not configured')
       return new Response(
         JSON.stringify({ error: 'Email service not configured' }),
         { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
-    // Create SMTP client
-    const client = new SmtpClient()
-
-    await client.connectTLS({
-      hostname: SMTP_HOST,
-      port: SMTP_PORT,
-      username: SMTP_USER,
-      password: SMTP_PASS,
+    // Send email via Resend API
+    const response = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${RESEND_API_KEY}`,
+      },
+      body: JSON.stringify({
+        from: `${FROM_NAME} <${FROM_EMAIL}>`,
+        to: [to],
+        subject: subject,
+        html: html,
+        text: text || undefined,
+      }),
     })
 
-    // Send email
-    await client.send({
-      from: `${FROM_NAME} <${FROM_EMAIL}>`,
-      to: to,
-      subject: subject,
-      content: html,
-      html: html,
-    })
+    const data = await response.json()
 
-    await client.close()
+    if (!response.ok) {
+      console.error('Resend API error:', data)
+      throw new Error(data.message || 'Failed to send email')
+    }
 
     console.log(`Email sent successfully to ${to}: ${subject}`)
 
     return new Response(
-      JSON.stringify({ success: true, message: 'Email sent successfully' }),
+      JSON.stringify({ success: true, message: 'Email sent successfully', id: data.id }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   } catch (error) {

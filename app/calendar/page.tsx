@@ -234,7 +234,11 @@ export default function CalendarPage() {
 
         {loading ? (
           <div className="flex items-center justify-center py-12">
-            <div className="animate-spin rounded-full h-8 w-8 border-2 border-emerald-600 border-t-transparent" />
+            <img
+              src="https://jtrxdcccswdwlritgstp.supabase.co/storage/v1/object/public/contractor-logos/RushrLogoAnimation.gif"
+              alt="Loading..."
+              className="w-8 h-8 object-contain"
+            />
             <span className="ml-3 text-slate-600">Loading calendar...</span>
           </div>
         ) : (

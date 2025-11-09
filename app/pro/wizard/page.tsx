@@ -544,7 +544,11 @@ async function submitAll(e?: React.FormEvent) {
                     >
                       {geocoding ? (
                         <>
-                          <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></div>
+                          <img
+          src="https://jtrxdcccswdwlritgstp.supabase.co/storage/v1/object/public/contractor-logos/RushrLogoAnimation.gif"
+          alt="Loading..."
+          className="h-4 w-4 border-2 border-white border-t-transparent rounded-full object-contain"
+        />
                           Getting...
                         </>
                       ) : (

@@ -104,7 +104,11 @@ export default function CompareBids() {
       <section className="section">
         <div className="card p-6">
           <div className="flex items-center justify-center">
-            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-emerald-600"></div>
+            <img
+          src="https://jtrxdcccswdwlritgstp.supabase.co/storage/v1/object/public/contractor-logos/RushrLogoAnimation.gif"
+          alt="Loading..."
+          className="h-6 w-6 border-b-2 border-emerald-600 object-contain"
+        />
             <span className="ml-2">Loading bids...</span>
           </div>
         </div>

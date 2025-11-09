@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { notifyBidAccepted } from '../../../../lib/emailService'
+import { sendBidAcceptedSMS } from '../../../../lib/smsService'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -65,7 +66,7 @@ export async function POST(request: NextRequest) {
       console.error('Error updating job:', updateJobError)
     }
 
-    // 4. Send email notification to contractor (non-blocking)
+    // 4. Send email & SMS notifications to contractor (non-blocking)
     try {
       const { data: job } = await supabase
         .from('homeowner_jobs')
@@ -81,25 +82,38 @@ export async function POST(request: NextRequest) {
 
       const { data: contractor } = await supabase
         .from('pro_contractors')
-        .select('name, business_name')
+        .select('name, business_name, phone')
         .eq('id', bid.contractor_id)
         .single()
 
       const { data: contractorAuth } = await supabase.auth.admin.getUserById(bid.contractor_id)
 
+      const contractorName = contractor?.business_name || contractor?.name || 'Contractor'
+
+      // Send email notification
       if (contractorAuth?.user?.email && job && homeowner && contractor) {
         await notifyBidAccepted({
           contractorEmail: contractorAuth.user.email,
-          contractorName: contractor.business_name || contractor.name,
+          contractorName: contractorName,
           jobTitle: job.title,
           homeownerName: homeowner.name,
           homeownerPhone: homeowner.phone || 'Not provided',
           jobAddress: job.address || 'Address in job details'
         })
       }
-    } catch (emailError) {
-      console.error('Failed to send bid accepted email:', emailError)
-      // Don't fail the request if email fails
+
+      // Send SMS notification
+      if (contractor?.phone && job && homeowner) {
+        await sendBidAcceptedSMS({
+          contractorPhone: contractor.phone,
+          contractorName: contractorName,
+          homeownerName: homeowner.name,
+          jobTitle: job.title
+        })
+      }
+    } catch (error) {
+      console.error('Failed to send bid accepted notification:', error)
+      // Don't fail the request if notification fails
     }
 
     return NextResponse.json({

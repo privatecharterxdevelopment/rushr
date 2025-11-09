@@ -158,7 +158,7 @@ function HeroHome() {
 
             {/* Secondary CTAs */}
             <div className="flex flex-col sm:flex-row gap-3">
-              <Link href="/rushrmap" className="inline-flex">
+              <Link href="/find-pro" className="inline-flex">
                 <Button
                   size="lg"
                   variant="outline"
@@ -372,23 +372,23 @@ function PopularEmergencies() {
     Array<{ name: string; href: string; icon: React.ReactNode; hint?: string }>
   > = {
     Home: [
-      { name: 'Plumbing', href: '/rushrmap?category=Plumbing&urgent=1', icon: <ShowerHead className="h-6 w-6" />, hint: 'Leaks, clogs, burst pipes' },
-      { name: 'Electrical', href: '/rushrmap?category=Electrical&urgent=1', icon: <Lightbulb className="h-6 w-6" />, hint: 'No power, breakers, outlets' },
-      { name: 'HVAC', href: '/rushrmap?category=HVAC&urgent=1', icon: <Wind className="h-6 w-6" />, hint: 'No-cool, no-heat' },
-      { name: 'Roof leak', href: '/rushrmap?category=Roofing&urgent=1', icon: <HomeIcon className="h-6 w-6" />, hint: 'Active leak, tarp' },
-      { name: 'Water damage', href: '/rushrmap?category=Water%20Damage&urgent=1', icon: <Droplets className="h-6 w-6" />, hint: 'Dry-out, mitigation' },
-      { name: 'Locksmith', href: '/rushrmap?category=Locksmith&urgent=1', icon: <Lock className="h-6 w-6" />, hint: 'House lockout, rekey' },
-      { name: 'Appliance repair', href: '/rushrmap?category=Appliance%20Repair&urgent=1', icon: <Wrench className="h-6 w-6" />, hint: 'Fridge, washer, oven' },
-      { name: 'Other', href: '/rushrmap?category=Other&urgent=1', icon: <Hammer className="h-6 w-6" />, hint: 'Tell us what you need' },
+      { name: 'Plumbing', href: '/find-pro?category=Plumbing&urgent=1', icon: <ShowerHead className="h-6 w-6" />, hint: 'Leaks, clogs, burst pipes' },
+      { name: 'Electrical', href: '/find-pro?category=Electrical&urgent=1', icon: <Lightbulb className="h-6 w-6" />, hint: 'No power, breakers, outlets' },
+      { name: 'HVAC', href: '/find-pro?category=HVAC&urgent=1', icon: <Wind className="h-6 w-6" />, hint: 'No-cool, no-heat' },
+      { name: 'Roof leak', href: '/find-pro?category=Roofing&urgent=1', icon: <HomeIcon className="h-6 w-6" />, hint: 'Active leak, tarp' },
+      { name: 'Water damage', href: '/find-pro?category=Water%20Damage&urgent=1', icon: <Droplets className="h-6 w-6" />, hint: 'Dry-out, mitigation' },
+      { name: 'Locksmith', href: '/find-pro?category=Locksmith&urgent=1', icon: <Lock className="h-6 w-6" />, hint: 'House lockout, rekey' },
+      { name: 'Appliance repair', href: '/find-pro?category=Appliance%20Repair&urgent=1', icon: <Wrench className="h-6 w-6" />, hint: 'Fridge, washer, oven' },
+      { name: 'Other', href: '/find-pro?category=Other&urgent=1', icon: <Hammer className="h-6 w-6" />, hint: 'Tell us what you need' },
     ],
     Auto: [
-      { name: 'Jump start', href: '/rushrmap?category=Auto%20Battery&urgent=1', icon: <Battery className="h-6 w-6" />, hint: 'Dead battery' },
-      { name: 'Tire change', href: '/rushrmap?category=Auto%20Tire&urgent=1', icon: <Wrench className="h-6 w-6" />, hint: 'Flat, spare install' },
-      { name: 'Lockout', href: '/rushrmap?category=Auto%20Lockout&urgent=1', icon: <KeyRound className="h-6 w-6" />, hint: 'Keys inside' },
-      { name: 'Tow request', href: '/rushrmap?category=Tow&urgent=1', icon: <Car className="h-6 w-6" />, hint: 'Local tow' },
-      { name: 'Fuel delivery', href: '/rushrmap?category=Fuel%20Delivery&urgent=1', icon: <Siren className="h-6 w-6" />, hint: 'Out of gas' },
-      { name: 'Mobile mechanic', href: '/rushrmap?category=Mobile%20Mechanic&urgent=1', icon: <Settings className="h-6 w-6" />, hint: 'On-site diagnosis' },
-      { name: 'Other', href: '/rushrmap?category=Auto%20Other&urgent=1', icon: <Sparkles className="h-6 w-6" />, hint: 'Tell us what you need' },
+      { name: 'Jump start', href: '/find-pro?category=Auto%20Battery&urgent=1', icon: <Battery className="h-6 w-6" />, hint: 'Dead battery' },
+      { name: 'Tire change', href: '/find-pro?category=Auto%20Tire&urgent=1', icon: <Wrench className="h-6 w-6" />, hint: 'Flat, spare install' },
+      { name: 'Lockout', href: '/find-pro?category=Auto%20Lockout&urgent=1', icon: <KeyRound className="h-6 w-6" />, hint: 'Keys inside' },
+      { name: 'Tow request', href: '/find-pro?category=Tow&urgent=1', icon: <Car className="h-6 w-6" />, hint: 'Local tow' },
+      { name: 'Fuel delivery', href: '/find-pro?category=Fuel%20Delivery&urgent=1', icon: <Siren className="h-6 w-6" />, hint: 'Out of gas' },
+      { name: 'Mobile mechanic', href: '/find-pro?category=Mobile%20Mechanic&urgent=1', icon: <Settings className="h-6 w-6" />, hint: 'On-site diagnosis' },
+      { name: 'Other', href: '/find-pro?category=Auto%20Other&urgent=1', icon: <Sparkles className="h-6 w-6" />, hint: 'Tell us what you need' },
     ],
   }
 
@@ -415,7 +415,7 @@ function PopularEmergencies() {
       >
         <h2 className="text-2xl font-semibold text-gray-900">Popular emergencies</h2>
         <p className="mt-2 text-gray-600">Pick a category and get matched fast.{' '}
-          <Link href="/rushrmap?urgent=1" className="font-semibold text-emerald-700 hover:text-emerald-800 hover:underline transition-all">See all emergencies →</Link>
+          <Link href="/find-pro?urgent=1" className="font-semibold text-emerald-700 hover:text-emerald-800 hover:underline transition-all">See all emergencies →</Link>
         </p>
 
         {/* Enhanced Segmented control with smooth sliding animation */}
@@ -605,6 +605,16 @@ function GeoBanner() {
       setCity(guess)
     } catch { setCity(null) }
   }, [])
+  // City coordinates for precise map centering
+  const cityCoords: Record<string, { lat: number; lng: number }> = {
+    'New York, NY': { lat: 40.7128, lng: -74.0060 },
+    'Los Angeles, CA': { lat: 34.0522, lng: -118.2437 },
+    'Chicago, IL': { lat: 41.8781, lng: -87.6298 },
+    'Phoenix, AZ': { lat: 33.4484, lng: -112.0740 },
+    'Miami, FL': { lat: 25.7617, lng: -80.1918 },
+    'Seattle, WA': { lat: 47.6062, lng: -122.3321 }
+  }
+
   const popular = useMemo(
     () => ['New York, NY', 'Los Angeles, CA', 'Chicago, IL', 'Phoenix, AZ', 'Miami, FL', 'Seattle, WA'],
     []
@@ -622,11 +632,18 @@ function GeoBanner() {
           <div className="mt-1 text-sm text-slate-600">Clear rates, verified times, emergency jobs only.</div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          {popular.map((c) => (
-            <Link key={c} href={`/rushrmap?near=${encodeURIComponent(c)}`} className="rounded-full border bg-white px-3 py-1 text-xs hover:border-emerald-200 hover:bg-emerald-50">
-              {c}
-            </Link>
-          ))}
+          {popular.map((c) => {
+            const coords = cityCoords[c]
+            return (
+              <Link
+                key={c}
+                href={`/find-pro?near=${encodeURIComponent(c)}&lat=${coords.lat}&lng=${coords.lng}`}
+                className="rounded-full border bg-white px-3 py-1 text-xs hover:border-emerald-200 hover:bg-emerald-50"
+              >
+                {c}
+              </Link>
+            )
+          })}
         </div>
       </div>
     </section>
@@ -651,7 +668,7 @@ function FeaturedPros() {
           <ShieldCheck className="h-5 w-5 text-emerald-700" />
           <h2 className="text-lg font-semibold text-slate-900">Featured pros</h2>
         </div>
-        <Link href="/rushrmap?urgent=1" className="text-sm text-emerald-700 hover:text-emerald-800">Browse all →</Link>
+        <Link href="/find-pro?urgent=1" className="text-sm text-emerald-700 hover:text-emerald-800">Browse all →</Link>
       </div>
 
       <div className="grid items-stretch gap-3 sm:grid-cols-2 lg:grid-cols-4">

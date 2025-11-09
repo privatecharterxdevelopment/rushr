@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { notifyBidReceived } from '../../../../lib/emailService'
+import { sendBidReceivedSMS } from '../../../../lib/smsService'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -101,11 +102,11 @@ export async function POST(request: NextRequest) {
         created_at: new Date().toISOString()
       })
 
-    // 4. Send email notification to homeowner (non-blocking)
+    // 4. Send email & SMS notifications to homeowner (non-blocking)
     try {
       const { data: homeownerUser } = await supabase
         .from('user_profiles')
-        .select('name')
+        .select('name, phone')
         .eq('id', homeownerId)
         .single()
 
@@ -117,19 +118,33 @@ export async function POST(request: NextRequest) {
 
       const { data: authUser } = await supabase.auth.admin.getUserById(homeownerId)
 
+      const contractorName = contractorProfile?.business_name || contractorProfile?.name || 'Contractor'
+
+      // Send email notification
       if (authUser?.user?.email && homeownerUser) {
         await notifyBidReceived({
           homeownerEmail: authUser.user.email,
           homeownerName: homeownerUser.name,
-          contractorName: contractorProfile?.business_name || contractorProfile?.name || 'Contractor',
+          contractorName: contractorName,
           jobTitle: title,
           bidAmount: priceOffer || 0,
           estimatedArrival: urgency === 'emergency' ? '15 minutes' : '30 minutes'
         })
       }
-    } catch (emailError) {
-      console.error('Failed to send bid notification email:', emailError)
-      // Don't fail the request if email fails
+
+      // Send SMS notification
+      if (homeownerUser?.phone) {
+        await sendBidReceivedSMS({
+          homeownerPhone: homeownerUser.phone,
+          homeownerName: homeownerUser.name,
+          contractorName: contractorName,
+          jobTitle: title,
+          bidAmount: priceOffer || 0
+        })
+      }
+    } catch (error) {
+      console.error('Failed to send bid notification:', error)
+      // Don't fail the request if notification fails
     }
 
     return NextResponse.json({

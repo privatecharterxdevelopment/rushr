@@ -305,7 +305,11 @@ export default function KYCVerificationPage() {
                     >
                       {loading ? (
                         <>
-                          <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
+                          <img
+                          src="https://jtrxdcccswdwlritgstp.supabase.co/storage/v1/object/public/contractor-logos/RushrLogoAnimation.gif"
+                          alt="Loading..."
+                          className="w-4 h-4 object-contain"
+                        />
                           Uploading...
                         </>
                       ) : (

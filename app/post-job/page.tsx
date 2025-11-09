@@ -47,7 +47,11 @@ export default function PostJobPage() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-emerald-50 to-white">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600 mx-auto mb-4"></div>
+          <img
+          src="https://jtrxdcccswdwlritgstp.supabase.co/storage/v1/object/public/contractor-logos/RushrLogoAnimation.gif"
+          alt="Loading..."
+          className="h-12 w-12 border-b-2 border-emerald-600 mx-auto mb-4 object-contain"
+        />
           <div className="text-lg text-slate-600">Loading...</div>
         </div>
       </div>
@@ -92,7 +96,11 @@ export default function PostJobPage() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-white">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <img
+          src="https://jtrxdcccswdwlritgstp.supabase.co/storage/v1/object/public/contractor-logos/RushrLogoAnimation.gif"
+          alt="Loading..."
+          className="h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4 object-contain"
+        />
           <div className="text-lg text-slate-600">Redirecting to contractor dashboard...</div>
         </div>
       </div>

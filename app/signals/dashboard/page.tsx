@@ -141,7 +141,11 @@ export default function SignalsDashboard(){
     return (
       <div className="space-y-4">
         <div className="flex items-center justify-center py-12">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+          <img
+          src="https://jtrxdcccswdwlritgstp.supabase.co/storage/v1/object/public/contractor-logos/RushrLogoAnimation.gif"
+          alt="Loading..."
+          className="h-8 w-8 border-b-2 border-blue-600 object-contain"
+        />
           <span className="ml-3 text-gray-600">Loading signals...</span>
         </div>
       </div>

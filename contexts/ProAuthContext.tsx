@@ -327,6 +327,23 @@ export function ProAuthProvider({ children }: { children: React.ReactNode }) {
       // Fetch the created profile to set it in context
       await fetchContractorProfile(authData.user.id)
 
+      // Send welcome email via API (non-blocking - don't fail signup if email fails)
+      try {
+        await fetch('/api/send-welcome-email', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: email,
+            name: contractorData.name,
+            businessName: contractorData.businessName,
+            type: 'contractor'
+          })
+        })
+      } catch (emailError) {
+        console.error('Failed to send welcome email:', emailError)
+        // Don't fail signup if email fails
+      }
+
       console.log('[SIGNUP] Signup complete, redirecting to dashboard')
 
       return {

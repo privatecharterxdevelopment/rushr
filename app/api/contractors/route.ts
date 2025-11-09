@@ -25,6 +25,55 @@ function getSupabase(authorization?: string): SupabaseClient {
   })
 }
 
+/** ==================================================
+ *  GET /api/contractors
+ *  Returns list of contractors from pro_contractors table
+ *  ================================================== */
+export async function GET(req: Request) {
+  try {
+    const supabase = getSupabase()
+
+    const url = new URL(req.url)
+    const limit = url.searchParams.get('limit')
+
+    let query = supabase
+      .from('pro_contractors')
+      .select('*')
+      .order('created_at', { ascending: false })
+
+    if (limit) {
+      query = query.limit(parseInt(limit))
+    }
+
+    const { data, error } = await query
+
+    if (error) {
+      console.error('Error fetching contractors:', error)
+      return NextResponse.json({ contractors: [] })
+    }
+
+    // Transform data to match expected format
+    const contractors = (data || []).map((c: any) => ({
+      id: c.id,
+      name: c.name || c.business_name || 'Contractor',
+      services: c.services || c.specialties || [],
+      city: c.city,
+      state: c.state,
+      zip: c.base_zip,
+      rating: c.rating || 0,
+      years: c.years_experience || 0,
+      emergency: c.emergency || false,
+      twentyFourSeven: c.twenty_four_seven || false,
+      loc: c.location ? { lat: c.location.coordinates[1], lng: c.location.coordinates[0] } : null,
+    }))
+
+    return NextResponse.json({ contractors })
+  } catch (e: any) {
+    console.error('Server error:', e)
+    return NextResponse.json({ contractors: [] })
+  }
+}
+
 /** ---------- tiny helpers ---------- */
 function numOrNull(x: any) {
   const n = Number(x)

@@ -113,7 +113,11 @@ export default function ContractorProfilePage() {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <img
+            src="https://jtrxdcccswdwlritgstp.supabase.co/storage/v1/object/public/contractor-logos/RushrLogoAnimation.gif"
+            alt="Loading..."
+            className="w-12 h-12 object-contain mx-auto mb-4"
+          />
           <div className="text-lg font-medium text-slate-700">Loading contractor profile...</div>
         </div>
       </div>
@@ -134,7 +138,7 @@ export default function ContractorProfilePage() {
             <p className="text-slate-600 mb-6">{error || 'The contractor profile you are looking for does not exist.'}</p>
           </div>
           <div className="space-y-3">
-            <Link href="/rushrmap" className="block w-full bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition-colors font-medium">
+            <Link href="/find-pro" className="block w-full bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition-colors font-medium">
               Find Other Contractors
             </Link>
             <button onClick={() => router.back()} className="block w-full bg-slate-100 text-slate-700 px-6 py-3 rounded-lg hover:bg-slate-200 transition-colors font-medium">
@@ -154,7 +158,7 @@ export default function ContractorProfilePage() {
       <div className="container mx-auto px-4 py-8 max-w-5xl">
         {/* Back Button */}
         <Link
-          href="/rushrmap"
+          href="/find-pro"
           className="inline-flex items-center gap-2 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 mb-6"
         >
           <ArrowLeft className="h-4 w-4" />

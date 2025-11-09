@@ -26,6 +26,28 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: false, error: error.message }, { status: 400 })
     }
 
+    // Create user profile entry (in case the database trigger doesn't exist)
+    if (data.user) {
+      try {
+        const { error: profileError } = await supabase
+          .from('user_profiles')
+          .insert({
+            id: data.user.id,
+            name: name,
+            email: email,
+            role: role || 'homeowner',
+            created_at: new Date().toISOString()
+          })
+
+        if (profileError && !profileError.message.includes('duplicate')) {
+          console.error('Error creating user profile:', profileError)
+        }
+      } catch (profileErr) {
+        console.error('Failed to create user profile:', profileErr)
+        // Don't fail registration if profile creation fails
+      }
+    }
+
     // Send welcome email (non-blocking - don't fail registration if email fails)
     try {
       if (role === 'contractor') {

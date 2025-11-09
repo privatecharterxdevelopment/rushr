@@ -579,8 +579,10 @@ export default function ProMapInner({
 
         mapObjRef.current = map
 
-        // Add navigation controls
-        map.addControl(new mapboxgl.NavigationControl(), 'top-right')
+        // Add navigation controls (skip if sidebar is hidden, like in hero preview)
+        if (!hideSidebar) {
+          map.addControl(new mapboxgl.NavigationControl(), 'top-right')
+        }
 
         // Add markers when map loads
         map.on('load', () => {

@@ -6,7 +6,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { openAuth } from './AuthModal'
 import dynamic from 'next/dynamic'
 
-const AnimatedPhoneMockup = dynamic(() => import('./AnimatedPhoneMockup'), { ssr: false })
+const HeroMapPreview = dynamic(() => import('./HeroMapPreview'), { ssr: false })
 
 // Category mapping based on keywords
 const CATEGORY_KEYWORDS: Record<string, string[]> = {
@@ -107,7 +107,7 @@ export default function Hero(){
     if(zip) q.set('near', zip)
     if(detectedCategory) q.set('category', detectedCategory)
 
-    router.push(`/rushrmap${q.toString() ? `?${q.toString()}` : ''}`)
+    router.push(`/find-pro${q.toString() ? `?${q.toString()}` : ''}`)
   }
 
   return (
@@ -157,10 +157,11 @@ export default function Hero(){
                     title="Use my location"
                   >
                     {loadingLocation ? (
-                      <svg className="animate-spin h-5 w-5 text-gray-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                      </svg>
+                      <img
+                        src="https://jtrxdcccswdwlritgstp.supabase.co/storage/v1/object/public/contractor-logos/RushrLogoAnimation.gif"
+                        alt="Loading..."
+                        className="w-5 h-5 object-contain"
+                      />
                     ) : (
                       <svg className="h-5 w-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
@@ -209,11 +210,9 @@ export default function Hero(){
             </div>
           </div>
 
-          {/* Right Column - Phone Mockup Animation */}
-          <div className="hidden lg:flex items-end justify-center self-end pb-0" style={{ marginBottom: '-132px' }}>
-            <div style={{ transform: 'scale(1.4)', transformOrigin: 'bottom center' }}>
-              <AnimatedPhoneMockup />
-            </div>
+          {/* Right Column - Live Map Preview */}
+          <div className="hidden lg:flex items-end justify-center self-end pb-0" style={{ marginBottom: '-80px' }}>
+            <HeroMapPreview />
           </div>
         </div>
       </div>

@@ -253,6 +253,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (profileError) {
           console.error('Error creating homeowner profile:', profileError)
         }
+
+        // Send welcome email via API (non-blocking - don't fail signup if email fails)
+        fetch('/api/send-welcome-email', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: data.user.email!,
+            name,
+            type: 'homeowner'
+          })
+        }).catch(emailError => {
+          console.error('Failed to send welcome email:', emailError)
+          // Don't fail signup if email fails
+        })
       }
 
       // Check if user needs email confirmation

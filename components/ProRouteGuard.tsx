@@ -28,7 +28,11 @@ export default function ProRouteGuard({ children }: { children: React.ReactNode 
     return (
       <div className="min-h-screen flex items-center justify-center bg-blue-50">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <img
+            src="https://jtrxdcccswdwlritgstp.supabase.co/storage/v1/object/public/contractor-logos/RushrLogoAnimation.gif"
+            alt="Loading..."
+            className="w-12 h-12 object-contain mx-auto mb-4"
+          />
           <div className="text-sm text-slate-600">Loading Pro Dashboard...</div>
         </div>
       </div>
@@ -39,7 +43,11 @@ export default function ProRouteGuard({ children }: { children: React.ReactNode 
     return (
       <div className="min-h-screen flex items-center justify-center bg-blue-50">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <img
+            src="https://jtrxdcccswdwlritgstp.supabase.co/storage/v1/object/public/contractor-logos/RushrLogoAnimation.gif"
+            alt="Loading..."
+            className="w-12 h-12 object-contain mx-auto mb-4"
+          />
           <div className="text-sm text-slate-600">Loading Home Owner Dashboard...</div>
         </div>
       </div>

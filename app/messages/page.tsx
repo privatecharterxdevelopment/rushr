@@ -1084,7 +1084,11 @@ function ActiveConversation({
     return (
       <div className="flex flex-1 items-center justify-center">
         <div className="text-center">
-          <div className="h-6 w-6 animate-spin rounded-full border-2 border-emerald-200 border-t-emerald-600 mx-auto mb-2"></div>
+          <img
+            src="https://jtrxdcccswdwlritgstp.supabase.co/storage/v1/object/public/contractor-logos/RushrLogoAnimation.gif"
+            alt="Loading..."
+            className="w-6 h-6 object-contain mx-auto mb-2"
+          />
           <p className="text-sm text-slate-600">Loading conversation...</p>
         </div>
       </div>

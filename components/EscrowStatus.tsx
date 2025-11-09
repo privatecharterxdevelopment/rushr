@@ -138,7 +138,11 @@ export default function EscrowStatus({
     return (
       <div className="bg-white rounded-lg border border-gray-200 p-6">
         <div className="flex items-center justify-center">
-          <Loader2 className="h-6 w-6 text-gray-400 animate-spin" />
+          <img
+            src="https://jtrxdcccswdwlritgstp.supabase.co/storage/v1/object/public/contractor-logos/RushrLogoAnimation.gif"
+            alt="Loading..."
+            className="w-6 h-6 object-contain"
+          />
         </div>
       </div>
     )
@@ -241,7 +245,11 @@ export default function EscrowStatus({
               >
                 {confirming ? (
                   <>
-                    <Loader2 className="h-5 w-5 animate-spin" />
+                    <img
+                      src="https://jtrxdcccswdwlritgstp.supabase.co/storage/v1/object/public/contractor-logos/RushrLogoAnimation.gif"
+                      alt="Loading..."
+                      className="w-5 h-5 object-contain"
+                    />
                     Confirming...
                   </>
                 ) : (

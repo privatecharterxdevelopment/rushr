@@ -79,7 +79,11 @@ function CheckoutContent() {
     return (
       <div className="container mx-auto px-4 py-16 max-w-md">
         <div className="bg-white border border-slate-200 rounded-lg p-8 text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600 mx-auto mb-4"></div>
+          <img
+          src="https://jtrxdcccswdwlritgstp.supabase.co/storage/v1/object/public/contractor-logos/RushrLogoAnimation.gif"
+          alt="Loading..."
+          className="h-12 w-12 border-b-2 border-emerald-600 mx-auto mb-4 object-contain"
+        />
           <h2 className="text-xl font-semibold text-slate-900 mb-2">Preparing Payment</h2>
           <p className="text-slate-600">Redirecting to secure checkout...</p>
         </div>
@@ -112,7 +116,11 @@ export default function CheckoutPage() {
     <Suspense fallback={
       <div className="container mx-auto px-4 py-16 max-w-md">
         <div className="bg-white border border-slate-200 rounded-lg p-8 text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600 mx-auto"></div>
+          <img
+          src="https://jtrxdcccswdwlritgstp.supabase.co/storage/v1/object/public/contractor-logos/RushrLogoAnimation.gif"
+          alt="Loading..."
+          className="h-12 w-12 border-b-2 border-emerald-600 mx-auto object-contain"
+        />
         </div>
       </div>
     }>

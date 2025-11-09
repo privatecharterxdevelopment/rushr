@@ -273,7 +273,11 @@ function MessagesContent() {
     return (
       <div className="mx-auto flex h-[calc(100vh-5rem)] max-w-7xl items-center justify-center px-4 py-4">
         <div className="text-center">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-emerald-200 border-t-emerald-600 mx-auto mb-4"></div>
+          <img
+            src="https://jtrxdcccswdwlritgstp.supabase.co/storage/v1/object/public/contractor-logos/RushrLogoAnimation.gif"
+            alt="Loading..."
+            className="w-8 h-8 object-contain mx-auto mb-4"
+          />
           <p className="text-slate-600">Loading conversations...</p>
         </div>
       </div>
@@ -500,7 +504,11 @@ function ActiveConversation({
     return (
       <div className="flex flex-1 items-center justify-center">
         <div className="text-center">
-          <div className="h-6 w-6 animate-spin rounded-full border-2 border-emerald-200 border-t-emerald-600 mx-auto mb-2"></div>
+          <img
+            src="https://jtrxdcccswdwlritgstp.supabase.co/storage/v1/object/public/contractor-logos/RushrLogoAnimation.gif"
+            alt="Loading..."
+            className="w-6 h-6 object-contain mx-auto mb-2"
+          />
           <p className="text-sm text-slate-600">Loading conversation...</p>
         </div>
       </div>

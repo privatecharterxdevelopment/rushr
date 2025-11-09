@@ -246,7 +246,11 @@ export default function HomeownerBidsPage() {
                   >
                     {acceptingBid === bid.id ? (
                       <>
-                        <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full" />
+                        <img
+                          src="https://jtrxdcccswdwlritgstp.supabase.co/storage/v1/object/public/contractor-logos/RushrLogoAnimation.gif"
+                          alt="Loading..."
+                          className="w-4 h-4 object-contain"
+                        />
                         Accepting...
                       </>
                     ) : (

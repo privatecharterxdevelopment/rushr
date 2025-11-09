@@ -1,10 +1,9 @@
 'use client'
 
 import * as React from 'react'
-import { createContext, useContext } from 'react'
+import { createContext, useContext, useState, useEffect } from 'react'
 
-// This file has been replaced to remove ALL mock data
-// All functionality now uses real Supabase database queries
+// Fetches contractors from API for compatibility with existing components
 
 /* ======================= Types (exported for compatibility) ======================= */
 export type UserRole = 'HOMEOWNER' | 'CONTRACTOR' | null
@@ -78,13 +77,32 @@ interface AppContextType {
 const AppContext = createContext<AppContextType | undefined>(undefined)
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
-  console.warn('AppProvider is deprecated. Use AuthContext and direct Supabase queries instead.')
+  const [contractors, setContractors] = useState<Contractor[]>([])
+
+  // Fetch contractors from API on mount
+  useEffect(() => {
+    const fetchContractors = async () => {
+      try {
+        const response = await fetch('/api/contractors')
+        if (!response.ok) {
+          console.error('Failed to fetch contractors')
+          return
+        }
+        const data = await response.json()
+        setContractors(data.contractors || [])
+      } catch (error) {
+        console.error('Error fetching contractors:', error)
+      }
+    }
+
+    fetchContractors()
+  }, [])
 
   const value: AppContextType = {
     user: null,
     userRole: null,
     setUserRole: () => {},
-    contractors: [],
+    contractors,
     signals: [],
     jobs: [],
     messages: [],
@@ -99,12 +117,19 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>
 }
 
-// Deprecated hook - components should use AuthContext instead
+// Hook to access app context (now with real contractors from API)
 export function useApp() {
-  console.warn('useApp() is deprecated. Use useAuth() or useProAuth() and direct Supabase queries instead.')
   const context = useContext(AppContext)
   if (context === undefined) {
     return {
+      state: {
+        user: null,
+        userRole: null,
+        contractors: [],
+        signals: [],
+        jobs: [],
+        messages: [],
+      },
       user: null,
       userRole: null,
       setUserRole: () => {},
@@ -120,7 +145,17 @@ export function useApp() {
       saveContractor: () => {},
     }
   }
-  return context
+  return {
+    state: {
+      user: context.user,
+      userRole: context.userRole,
+      contractors: context.contractors,
+      signals: context.signals,
+      jobs: context.jobs,
+      messages: context.messages,
+    },
+    ...context
+  }
 }
 
 // Export empty data for any remaining components that might import these

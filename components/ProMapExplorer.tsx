@@ -335,7 +335,7 @@ export default function ProMapExplorer() {
                   </div>
                   <div className="mt-3 flex gap-2">
                     <a
-                      href={`/pro/${encodeURIComponent(String(c?.id ?? ''))}`}
+                      href={`/contractors/${encodeURIComponent(String(c?.id ?? ''))}`}
                       className="rounded-lg bg-primary px-3 py-1.5 text-sm font-semibold text-white"
                     >
                       View

@@ -7,25 +7,8 @@
  * - Payment completed (to both)
  * - Work started/completed (to both)
  *
- * Uses Microsoft Exchange SMTP via nodemailer
+ * Uses Supabase Edge Function with Microsoft Exchange SMTP
  */
-
-import nodemailer from 'nodemailer'
-
-// Create reusable SMTP transporter with Microsoft Exchange
-const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST || 'smtp.office365.com',
-  port: parseInt(process.env.SMTP_PORT || '587'),
-  secure: false, // use STARTTLS
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASSWORD,
-  },
-  tls: {
-    ciphers: 'SSLv3',
-    rejectUnauthorized: false
-  }
-})
 
 export type EmailType =
   | 'bid_received'          // Homeowner receives bid from contractor
@@ -48,26 +31,45 @@ interface EmailPayload {
 }
 
 /**
- * Send an email notification using Microsoft Exchange SMTP
+ * Send an email notification using Supabase Edge Function with Microsoft Exchange SMTP
  */
 async function sendEmail(payload: EmailPayload): Promise<{ success: boolean; error?: string }> {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+  if (!supabaseUrl || !supabaseAnonKey) {
+    console.error('[EMAIL] ❌ Supabase configuration missing')
+    return { success: false, error: 'Email service not configured' }
+  }
+
   try {
-    const info = await transporter.sendMail({
-      from: `${process.env.SMTP_FROM_NAME || 'Rushr'} <${process.env.SMTP_FROM_EMAIL || process.env.SMTP_USER}>`,
-      to: payload.to,
-      subject: payload.subject,
-      text: payload.text,
-      html: payload.html,
+    const response = await fetch(`${supabaseUrl}/functions/v1/send-email`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${supabaseAnonKey}`,
+      },
+      body: JSON.stringify({
+        to: payload.to,
+        subject: payload.subject,
+        html: payload.html,
+        text: payload.text || '',
+      }),
     })
 
-    console.log('[EMAIL] ✅ Email sent successfully:', {
-      messageId: info.messageId,
+    const data = await response.json()
+
+    if (!response.ok) {
+      throw new Error(data.error || 'Failed to send email')
+    }
+
+    console.log('[EMAIL] ✅ Email sent successfully via Supabase SMTP:', {
       subject: payload.subject,
       to: payload.to
     })
     return { success: true }
   } catch (err: any) {
-    console.error('[EMAIL] ❌ Failed to send email:', {
+    console.error('[EMAIL] ❌ Failed to send email via Supabase SMTP:', {
       error: err.message,
       subject: payload.subject,
       to: payload.to

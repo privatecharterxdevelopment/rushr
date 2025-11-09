@@ -87,7 +87,11 @@ export default function FeaturedJobs(){
       <section className="section">
         <h2 className="text-xl font-semibold text-ink mb-3">Featured jobs</h2>
         <div className="flex items-center justify-center py-8">
-          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-emerald-600"></div>
+          <img
+            src="https://jtrxdcccswdwlritgstp.supabase.co/storage/v1/object/public/contractor-logos/RushrLogoAnimation.gif"
+            alt="Loading..."
+            className="w-6 h-6 object-contain"
+          />
           <span className="ml-2 text-gray-600">Loading jobs...</span>
         </div>
       </section>

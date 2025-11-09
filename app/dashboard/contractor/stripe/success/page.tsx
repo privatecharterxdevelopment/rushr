@@ -72,7 +72,11 @@ export default function StripeOnboardingSuccessPage() {
         <div className="mb-4">
           {checking ? (
             <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-100 rounded-full">
-              <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+              <img
+              src="https://jtrxdcccswdwlritgstp.supabase.co/storage/v1/object/public/contractor-logos/RushrLogoAnimation.gif"
+              alt="Loading..."
+              className="w-8 h-8 object-contain"
+            />
             </div>
           ) : (
             <div className="inline-flex items-center justify-center w-16 h-16 bg-green-100 rounded-full">

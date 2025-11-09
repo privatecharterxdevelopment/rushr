@@ -267,7 +267,11 @@ export default function JobFilter({ className = '' }: JobFilterProps) {
           >
             {loading ? (
               <>
-                <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full"></div>
+                <img
+                  src="https://jtrxdcccswdwlritgstp.supabase.co/storage/v1/object/public/contractor-logos/RushrLogoAnimation.gif"
+                  alt="Loading..."
+                  className="w-4 h-4 object-contain"
+                />
                 Loading...
               </>
             ) : (

@@ -254,7 +254,11 @@ export default function ProfileSettingsPage() {
 
         {loading && (
           <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl flex items-center gap-3">
-            <div className="animate-spin rounded-full h-5 w-5 border-2 border-blue-600 border-t-transparent flex-shrink-0" />
+            <img
+            src="https://jtrxdcccswdwlritgstp.supabase.co/storage/v1/object/public/contractor-logos/RushrLogoAnimation.gif"
+            alt="Loading..."
+            className="w-5 h-5 object-contain flex-shrink-0"
+          />
             <span className="text-blue-700 dark:text-blue-300">Saving your profile...</span>
           </div>
         )}
@@ -543,7 +547,11 @@ export default function ProfileSettingsPage() {
               >
                 {loading ? (
                   <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
+                    <img
+                    src="https://jtrxdcccswdwlritgstp.supabase.co/storage/v1/object/public/contractor-logos/RushrLogoAnimation.gif"
+                    alt="Loading..."
+                    className="w-4 h-4 object-contain"
+                  />
                     Saving...
                   </>
                 ) : success ? (
