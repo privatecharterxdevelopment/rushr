@@ -71,6 +71,13 @@ export default function FindProPage() {
     ? (state as any).contractors
     : []
 
+  // Debug logging
+  useEffect(() => {
+    console.log('🔍 FindProPage: state =', state)
+    console.log('🔍 FindProPage: allContractors =', allContractors)
+    console.log('🔍 FindProPage: allContractors.length =', allContractors.length)
+  }, [state, allContractors])
+
   // Top bar — line 1
   const [query, setQuery] = useState('')
   const [debouncedQuery, setDebouncedQuery] = useState('')
@@ -153,48 +160,6 @@ export default function FindProPage() {
     if (z.length === 5 && ZIP_COORDS[z]) setCenter(ZIP_COORDS[z])
   }, [zip])
 
-  // Geocode city names typed in the search box
-  useEffect(() => {
-    const q = debouncedQuery.trim()
-    // Only geocode if query looks like a city (no contractor names, reasonable length)
-    if (!q || q.length < 3) return
-
-    // Skip if it looks like it might match a contractor name or service
-    const matchesContractor = allContractors.some(c =>
-      String(c?.name || '').toLowerCase().includes(q)
-    )
-    if (matchesContractor) return
-
-    // Geocode the city name using Mapbox
-    const geocodeCity = async () => {
-      const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN
-      if (!MAPBOX_TOKEN) return
-
-      try {
-        const response = await fetch(
-          `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(q)}.json?` +
-          `access_token=${MAPBOX_TOKEN}&` +
-          `types=place,locality,neighborhood&` +
-          `country=US&` +
-          `limit=1`
-        )
-
-        if (!response.ok) return
-
-        const data = await response.json()
-        if (data.features && data.features.length > 0) {
-          const [lng, lat] = data.features[0].center
-          setCenter([lat, lng])
-          console.log(`📍 Geocoded "${q}" to ${lat}, ${lng}`)
-        }
-      } catch (error) {
-        console.error('Geocoding error:', error)
-      }
-    }
-
-    geocodeCity()
-  }, [debouncedQuery, allContractors])
-
   const activeCenter = center
 
   // Distance helper
@@ -235,6 +200,14 @@ export default function FindProPage() {
   // Filter + sort
   const filtered = useMemo(() => {
     const q = debouncedQuery
+
+    console.log('🔍 Filtering contractors:', {
+      total: allContractors.length,
+      center: activeCenter,
+      radius,
+      services,
+      query: q
+    })
 
     let items = allContractors
       .map((c) => ({ ...c }))
@@ -315,6 +288,27 @@ export default function FindProPage() {
   return (
     <>
       <section className="mx-auto max-w-6xl space-y-3 px-3 py-3">
+        {/* DEBUG INFO - REMOVE AFTER FIXING */}
+        <div className="bg-yellow-50 border-2 border-yellow-400 rounded-xl p-4">
+          <div className="font-bold text-yellow-900 mb-2">🐛 DEBUG INFO (Check browser console for more details)</div>
+          <div className="text-sm space-y-1 text-yellow-800">
+            <div><strong>allContractors.length:</strong> {allContractors.length}</div>
+            <div><strong>filtered.length:</strong> {filtered.length}</div>
+            <div><strong>Current radius:</strong> {radius} miles</div>
+            <div><strong>Current center:</strong> [{activeCenter[0].toFixed(4)}, {activeCenter[1].toFixed(4)}]</div>
+            <div><strong>Selected services:</strong> {services.length > 0 ? services.join(', ') : 'Any'}</div>
+            <div><strong>State contractors:</strong> {(state as any)?.contractors?.length || 0}</div>
+            {allContractors.length > 0 && (
+              <div className="mt-2 pt-2 border-t border-yellow-300">
+                <strong>Sample contractor:</strong>
+                <pre className="text-xs mt-1 overflow-auto max-h-32">
+                  {JSON.stringify(allContractors[0], null, 2)}
+                </pre>
+              </div>
+            )}
+          </div>
+        </div>
+
         {/* TOP BAR — TWO ROWS (unchanged look) */}
         <div className="w-full rounded-2xl border border-slate-200 bg-white p-2.5 shadow-sm">
           {/* LINE 1 */}
