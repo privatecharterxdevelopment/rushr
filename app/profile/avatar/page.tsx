@@ -3,7 +3,6 @@
 import React, { useState, useRef } from 'react'
 import Link from 'next/link'
 import { useAuth } from '../../../contexts/AuthContext'
-import { useProAuth } from '../../../contexts/ProAuthContext'
 import { useRouter } from 'next/navigation'
 import { supabase } from '../../../lib/supabaseClient'
 import {
@@ -17,16 +16,9 @@ import {
 } from 'lucide-react'
 
 export default function AvatarUploadPage() {
-  const { user: homeownerUser, userProfile: homeownerProfile, refreshProfile: refreshHomeownerProfile } = useAuth()
-  const { user: proUser, contractorProfile, refreshProfile: refreshProProfile } = useProAuth()
+  const { user: homeownerUser, userProfile: homeownerProfile, refreshProfile: refreshHomeownerProfile, loading: homeownerLoading } = useAuth()
   const router = useRouter()
   const fileInputRef = useRef<HTMLInputElement>(null)
-
-  // Determine which user and profile to use
-  const user = homeownerUser || proUser
-  const userProfile = homeownerProfile || contractorProfile
-  const refreshProfile = homeownerProfile ? refreshHomeownerProfile : refreshProProfile
-  const isContractor = !!proUser
 
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [preview, setPreview] = useState<string | null>(null)
@@ -34,7 +26,24 @@ export default function AvatarUploadPage() {
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
 
-  if (!user) {
+  // Show loading spinner while auth is loading
+  if (homeownerLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <img
+            src="https://jtrxdcccswdwlritgstp.supabase.co/storage/v1/object/public/contractor-logos/RushrLogoAnimation.gif"
+            alt="Loading..."
+            className="h-8 w-8 border-b-2 border-emerald-600 mx-auto mb-4 object-contain"
+          />
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Only homeowners can access this page - check if logged in
+  if (!homeownerUser) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
@@ -95,79 +104,39 @@ export default function AvatarUploadPage() {
       const base64Data = await base64Promise
 
       // Ensure we have an email for NOT NULL constraint
-      if (!user.email) {
+      if (!homeownerUser.email) {
         throw new Error('User email is missing. Please sign out and sign back in.')
       }
 
-      // Update profile based on user type
-      let updateError: any = null
-      let updateData: any = null
+      // Update homeowner profile - use UPDATE instead of UPSERT
+      const result = await supabase
+        .from('user_profiles')
+        .update({
+          avatar_url: base64Data,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', homeownerUser.id)
+        .select()
 
-      if (isContractor) {
-        // For contractors, upload logo to Supabase storage instead of base64
-        const fileExtension = selectedFile.type.split('/')[1]
-        const fileName = `${user.id}/logo.${fileExtension}`
+      let updateError = result.error
+      let updateData = result.data
 
-        // Upload to Supabase storage (will overwrite existing logo)
-        const { data: uploadData, error: uploadError } = await supabase.storage
-          .from('contractor-logos')
-          .upload(fileName, selectedFile, {
-            cacheControl: '3600',
-            upsert: true // Allow overwriting existing logo
-          })
-
-        if (uploadError) {
-          throw new Error(`Failed to upload logo: ${uploadError.message}`)
-        }
-
-        // Get public URL for the uploaded logo
-        const { data: { publicUrl } } = supabase.storage
-          .from('contractor-logos')
-          .getPublicUrl(fileName)
-
-        // Update contractor profile with logo URL
-        const result = await supabase
-          .from('pro_contractors')
-          .update({
-            avatar_url: publicUrl, // Store storage URL instead of base64
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', user.id)
-          .select()
-
-        updateError = result.error
-        updateData = result.data
-      } else {
-        // Update homeowner profile - use UPDATE instead of UPSERT
-        const result = await supabase
+      // If update failed because profile doesn't exist, create it
+      if (updateError?.code === 'PGRST116' || (updateData && updateData.length === 0)) {
+        const insertResult = await supabase
           .from('user_profiles')
-          .update({
+          .insert({
+            id: homeownerUser.id,
+            email: homeownerUser.email,
             avatar_url: base64Data,
+            role: 'homeowner',
+            created_at: new Date().toISOString(),
             updated_at: new Date().toISOString()
           })
-          .eq('id', user.id)
           .select()
 
-        updateError = result.error
-        updateData = result.data
-
-        // If update failed because profile doesn't exist, create it
-        if (updateError?.code === 'PGRST116' || (updateData && updateData.length === 0)) {
-          const insertResult = await supabase
-            .from('user_profiles')
-            .insert({
-              id: user.id,
-              email: user.email,
-              avatar_url: base64Data,
-              role: 'homeowner',
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString()
-            })
-            .select()
-
-          updateError = insertResult.error
-          updateData = insertResult.data
-        }
+        updateError = insertResult.error
+        updateData = insertResult.data
       }
 
       if (updateError) {
@@ -184,7 +153,7 @@ export default function AvatarUploadPage() {
       console.log('Upload successful! Data:', updateData)
 
       // Refresh profile context
-      await refreshProfile()
+      await refreshHomeownerProfile()
 
       setSuccess('✅ Avatar uploaded successfully!')
 
@@ -197,8 +166,7 @@ export default function AvatarUploadPage() {
 
       // Redirect after success
       setTimeout(() => {
-        const returnPath = isContractor ? '/dashboard/contractor' : '/dashboard/homeowner'
-        router.push(returnPath)
+        router.push('/dashboard/homeowner')
       }, 2000)
 
     } catch (err: any) {
@@ -215,45 +183,20 @@ export default function AvatarUploadPage() {
     setError(null)
 
     try {
-      // Remove avatar_url from profile based on user type
-      let updateError: any = null
+      // Remove from homeowner profile
+      const result = await supabase
+        .from('user_profiles')
+        .update({
+          avatar_url: null,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', homeownerUser.id)
 
-      if (isContractor) {
-        // For contractors, remove logo from storage AND database
-        // Try to delete from storage (ignore errors if file doesn't exist)
-        const fileName = `${user.id}/logo`
-        await supabase.storage
-          .from('contractor-logos')
-          .remove([`${fileName}.png`, `${fileName}.jpg`, `${fileName}.jpeg`, `${fileName}.gif`, `${fileName}.webp`, `${fileName}.svg`])
-
-        // Remove from contractor profile
-        const result = await supabase
-          .from('pro_contractors')
-          .update({
-            avatar_url: null,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', user.id)
-
-        updateError = result.error
-      } else {
-        // Remove from homeowner profile
-        const result = await supabase
-          .from('user_profiles')
-          .update({
-            avatar_url: null,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', user.id)
-
-        updateError = result.error
+      if (result.error) {
+        throw new Error(`Failed to remove avatar: ${result.error.message}`)
       }
 
-      if (updateError) {
-        throw new Error(`Failed to remove avatar: ${updateError.message}`)
-      }
-
-      await refreshProfile()
+      await refreshHomeownerProfile()
       setSuccess('✅ Avatar removed successfully!')
 
     } catch (err: any) {
@@ -263,7 +206,7 @@ export default function AvatarUploadPage() {
     }
   }
 
-  const currentAvatarUrl = userProfile?.avatar_url
+  const currentAvatarUrl = homeownerProfile?.avatar_url
 
 
   return (
@@ -272,7 +215,7 @@ export default function AvatarUploadPage() {
         {/* Header */}
         <div className="mb-8">
           <Link
-            href={isContractor ? "/dashboard/contractor" : "/dashboard/homeowner"}
+            href="/dashboard/homeowner"
             className="inline-flex items-center gap-2 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 mb-4"
           >
             <ArrowLeft className="h-4 w-4" />
@@ -288,10 +231,7 @@ export default function AvatarUploadPage() {
                 Profile Image
               </h1>
               <p className="text-slate-600 dark:text-slate-400">
-                {isContractor
-                  ? 'Upload your profile image to represent your business'
-                  : 'Upload a photo to personalize your profile'
-                }
+                Upload a photo to personalize your profile
               </p>
             </div>
           </div>
@@ -448,7 +388,7 @@ export default function AvatarUploadPage() {
           <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-3">Image Guidelines</h3>
           <div className="space-y-2 text-sm text-slate-600 dark:text-slate-400">
             <p>• Use a clear, high-quality image</p>
-            <p>• {isContractor ? 'Business logo or professional photo' : 'Face should be clearly visible and well-lit'}</p>
+            <p>• Face should be clearly visible and well-lit</p>
             <p>• Avoid group photos or images with multiple people</p>
             <p>• Keep it professional - this helps build trust</p>
           </div>

@@ -228,7 +228,7 @@ export function ProAuthProvider({ children }: { children: React.ReactNode }) {
           setSession(session)
           setUser(session?.user ?? null)
 
-          if (session?.user) {
+          if (session?.user && session.user.user_metadata?.role === 'contractor') {
             // Check if user exists in pro_contractors table
             await fetchContractorProfile(session.user.id)
             // NO AUTO-REDIRECT - let pages handle routing

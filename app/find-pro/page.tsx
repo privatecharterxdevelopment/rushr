@@ -308,13 +308,13 @@ export default function FindProPage() {
             </div>
             <div className="space-y-3">
               <Link
-                href="/sign-in"
+                href="/?auth=signin"
                 className="block w-full px-6 py-3 bg-emerald-600 text-white rounded-xl font-semibold hover:bg-emerald-700 transition-colors"
               >
                 Sign In
               </Link>
               <Link
-                href="/sign-up"
+                href="/?auth=signup"
                 className="block w-full px-6 py-3 bg-gray-100 text-gray-800 rounded-xl font-semibold hover:bg-gray-200 transition-colors"
               >
                 Create Account
@@ -726,7 +726,7 @@ export default function FindProPage() {
                   </div>
 
                   <div className="mt-2.5 flex gap-1.5 flex-wrap">
-                    {user && userProfile?.role === 'HOMEOWNER' && (
+                    {user && userProfile?.role === 'homeowner' && (
                       <button
                         onClick={() => setOfferModalContractor(c)}
                         className="rounded-lg bg-emerald-600 hover:bg-emerald-700 px-2.5 py-1.5 text-[12px] font-semibold text-white transition-colors"
