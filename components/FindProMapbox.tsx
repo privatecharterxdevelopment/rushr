@@ -54,6 +54,48 @@ export default function FindProMapbox({
   const mapRef = useRef<HTMLDivElement>(null)
   const mapObjRef = useRef<mapboxgl.Map | null>(null)
   const markersRef = useRef<mapboxgl.Marker[]>([])
+  const radiusLayerId = 'radius-circle'
+  const radiusSourceId = 'radius-source'
+
+  // Helper function to create a circle GeoJSON
+  const createRadiusCircle = (center: LatLng, radiusMiles: number) => {
+    const points = 64
+    const coords = []
+    const distanceInMeters = radiusMiles * 1609.34 // Convert miles to meters
+    const earthRadius = 6371000 // Earth's radius in meters
+
+    const lat = center[0] * Math.PI / 180
+    const lng = center[1] * Math.PI / 180
+
+    for (let i = 0; i < points; i++) {
+      const angle = (i * 360 / points) * Math.PI / 180
+
+      const dx = distanceInMeters * Math.cos(angle)
+      const dy = distanceInMeters * Math.sin(angle)
+
+      const deltaLat = dy / earthRadius
+      const deltaLng = dx / (earthRadius * Math.cos(lat))
+
+      const pointLat = lat + deltaLat
+      const pointLng = lng + deltaLng
+
+      coords.push([
+        pointLng * 180 / Math.PI,
+        pointLat * 180 / Math.PI
+      ])
+    }
+
+    // Close the circle
+    coords.push(coords[0])
+
+    return {
+      type: 'Feature',
+      geometry: {
+        type: 'Polygon',
+        coordinates: [coords]
+      }
+    }
+  }
 
   // Initialize map
   useEffect(() => {
@@ -77,6 +119,38 @@ export default function FindProMapbox({
 
     // Add navigation controls
     map.addControl(new mapboxgl.NavigationControl(), 'top-right')
+
+    // Add radius circle when map loads
+    map.on('load', () => {
+      // Add source for radius circle
+      map.addSource(radiusSourceId, {
+        type: 'geojson',
+        data: createRadiusCircle(searchCenter, radiusMiles) as any
+      })
+
+      // Add fill layer for radius circle
+      map.addLayer({
+        id: radiusLayerId,
+        type: 'fill',
+        source: radiusSourceId,
+        paint: {
+          'fill-color': '#10b981',
+          'fill-opacity': 0.1
+        }
+      })
+
+      // Add outline for radius circle
+      map.addLayer({
+        id: `${radiusLayerId}-outline`,
+        type: 'line',
+        source: radiusSourceId,
+        paint: {
+          'line-color': '#10b981',
+          'line-width': 2,
+          'line-opacity': 0.5
+        }
+      })
+    })
 
     // Add search here button
     const searchHereBtn = document.createElement('button')
@@ -188,6 +262,26 @@ export default function FindProMapbox({
     if (!map) return
     map.flyTo({ center: [searchCenter[1], searchCenter[0]], zoom: 11 })
   }, [searchCenter])
+
+  // Update radius circle when radius or center changes
+  useEffect(() => {
+    const map = mapObjRef.current
+    if (!map) return
+
+    // Wait for map to be loaded
+    const updateRadius = () => {
+      const source = map.getSource(radiusSourceId) as mapboxgl.GeoJSONSource
+      if (source) {
+        source.setData(createRadiusCircle(searchCenter, radiusMiles) as any)
+      }
+    }
+
+    if (map.isStyleLoaded()) {
+      updateRadius()
+    } else {
+      map.on('load', updateRadius)
+    }
+  }, [radiusMiles, searchCenter])
 
   return (
     <div className="relative">

@@ -39,6 +39,8 @@ export async function GET(req: Request) {
     let query = supabase
       .from('pro_contractors')
       .select('*')
+      .not('latitude', 'is', null)
+      .not('longitude', 'is', null)
       .order('created_at', { ascending: false })
 
     if (limit) {
@@ -56,15 +58,15 @@ export async function GET(req: Request) {
     const contractors = (data || []).map((c: any) => ({
       id: c.id,
       name: c.name || c.business_name || 'Contractor',
-      services: c.services || c.specialties || [],
+      services: c.categories || c.specialties || [],
       city: c.city,
       state: c.state,
       zip: c.base_zip,
       rating: c.rating || 0,
-      years: c.years_experience || 0,
-      emergency: c.emergency || false,
+      years: c.years_in_business || 0,
+      emergency: c.emergency_service || false,
       twentyFourSeven: c.twenty_four_seven || false,
-      loc: c.location ? { lat: c.location.coordinates[1], lng: c.location.coordinates[0] } : null,
+      loc: (c.latitude && c.longitude) ? { lat: c.latitude, lng: c.longitude } : null,
     }))
 
     return NextResponse.json({ contractors })
