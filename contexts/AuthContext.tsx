@@ -138,14 +138,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // Handle SIGNED_OUT event
         if (event === 'SIGNED_OUT') {
           setUserProfile(null)
+          setLoading(false)
           return
         }
 
         if (session?.user) {
           await fetchUserProfile(session.user.id)
+          setLoading(false)
           // NO AUTO-REDIRECT - let pages handle routing
         } else {
           setUserProfile(null)
+          setLoading(false)
         }
       }
     )
