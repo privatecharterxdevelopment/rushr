@@ -64,54 +64,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (error) {
         console.error('[AuthContext] Error fetching user profile:', error)
-
-        // If profile doesn't exist, check if user is a contractor
-        if (error.code === 'PGRST116') {
-          console.log('[AuthContext] No homeowner profile found, checking if contractor...')
-
-          // Check if this user is a contractor
-          const { data: contractorCheck } = await supabase
-            .from('pro_contractors')
-            .select('id')
-            .eq('id', userId)
-            .maybeSingle()
-
-          if (contractorCheck) {
-            console.log('[AuthContext] User is a contractor, no homeowner profile needed')
-            setUserProfile(null)
-            return
-          }
-
-          // Not a contractor either, create homeowner profile
-          console.log('[AuthContext] Creating new homeowner profile for existing user')
-
-          // Get user email from auth
-          const { data: { user: authUser } } = await supabase.auth.getUser()
-          if (authUser) {
-            const { data: newProfile, error: createError } = await supabase
-              .from('user_profiles')
-              .insert({
-                id: userId,
-                email: authUser.email!,
-                name: authUser.user_metadata?.name || '',
-                role: 'homeowner',
-                subscription_type: 'free',
-                created_at: new Date().toISOString()
-              })
-              .select()
-              .single()
-
-            if (createError) {
-              console.error('[AuthContext] Error creating profile:', createError)
-              setUserProfile(null)
-            } else {
-              console.log('[AuthContext] Created new homeowner profile')
-              setUserProfile(newProfile)
-            }
-          }
-        } else {
-          setUserProfile(null)
-        }
+        setUserProfile(null)
         return
       }
 
