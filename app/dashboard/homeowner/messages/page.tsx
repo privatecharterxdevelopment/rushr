@@ -61,34 +61,6 @@ function MessagesContent() {
     scrollToBottom()
   }, [messages])
 
-  // Show loading while auth is loading
-  if (authLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <img
-          src="https://jtrxdcccswdwlritgstp.supabase.co/storage/v1/object/public/contractor-logos/RushrLogoAnimation.gif"
-          alt="Loading..."
-          className="h-8 w-8 border-b-2 border-emerald-600 mx-auto mb-4 object-contain"
-        />
-          <p>Loading messages...</p>
-        </div>
-      </div>
-    )
-  }
-
-  // Redirect if not homeowner
-  if (!user || !userProfile) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <h2 className="text-xl font-semibold mb-4">Homeowner access required</h2>
-          <Link href="/" className="btn-primary">Go to Home</Link>
-        </div>
-      </div>
-    )
-  }
-
   // Fetch conversations with real data
   useEffect(() => {
     const fetchConversations = async () => {
@@ -308,7 +280,8 @@ function MessagesContent() {
     }
   }
 
-  if (loading) {
+  // Show loading while auth is loading
+  if (authLoading || loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
@@ -318,6 +291,18 @@ function MessagesContent() {
           className="h-8 w-8 border-b-2 border-emerald-600 mx-auto mb-4 object-contain"
         />
           <p>Loading messages...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Redirect if not homeowner
+  if (!user || !userProfile) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <h2 className="text-xl font-semibold mb-4">Homeowner access required</h2>
+          <Link href="/" className="btn-primary">Go to Home</Link>
         </div>
       </div>
     )

@@ -234,7 +234,10 @@ export default function FindProMapbox({
         </div>
       `)
 
-      const marker = new mapboxgl.Marker(el)
+      const marker = new mapboxgl.Marker({
+        element: el,
+        anchor: 'center' // Center the marker exactly on coordinates
+      })
         .setLngLat([lng, lat])
         .setPopup(popup)
         .addTo(map)
