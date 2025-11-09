@@ -249,7 +249,7 @@ export default function EscrowManagementPage() {
                 : 'bg-gray-100 text-gray-700 dark:bg-slate-800 dark:text-slate-300 hover:bg-gray-200 dark:hover:bg-slate-700'
             }`}
           >
-            Stuck (>7 days)
+            Stuck (&gt;7 days)
           </button>
           <button
             onClick={() => setFilter('all')}

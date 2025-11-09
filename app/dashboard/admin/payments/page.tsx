@@ -338,7 +338,7 @@ export default function PaymentsOverviewPage() {
           <StatCard
             label="Stuck Payments"
             value={stats?.stuckPaymentsCount || 0}
-            hint=">7 days in escrow"
+            hint="&gt;7 days in escrow"
             icon={<AlertTriangle className="h-4 w-4" />}
             tone={stats && stats.stuckPaymentsCount > 0 ? 'rose' : 'blue'}
             href="/dashboard/admin/payments/escrow?filter=stuck"
