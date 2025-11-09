@@ -122,6 +122,9 @@ export default function UserDropdown() {
     return isContractor ? '/dashboard/contractor' : '/dashboard/homeowner'
   }
 
+  // Check if user is admin
+  const isAdmin = userProfile?.email === 'admin@userushr.com' || userProfile?.role === 'admin'
+
   const menuItems = [
     {
       icon: DashboardIcon,
@@ -139,6 +142,12 @@ export default function UserDropdown() {
       label: isContractor ? 'Account Settings' : 'Profile Settings',
       href: isContractor ? '/dashboard/contractor/settings' : '/profile/settings',
     },
+    // Admin panel link (only show for admins)
+    ...(isAdmin ? [{
+      icon: SettingsIcon, // You can change this to a Shield icon if you import it
+      label: '⚡ Admin Panel',
+      href: '/dashboard/admin',
+    }] : []),
   ]
 
   return (

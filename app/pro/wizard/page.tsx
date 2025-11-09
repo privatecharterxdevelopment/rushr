@@ -373,17 +373,42 @@ async function submitAll(e?: React.FormEvent) {
 
       if (!stripeData.success) {
         console.error('[WIZARD] Stripe account creation failed:', stripeData.error)
-        // Don't fail wizard - can complete Stripe setup later
+        // Don't fail wizard - can complete Stripe setup later from dashboard
       } else {
         console.log('[WIZARD] Stripe Connect account created:', stripeData.accountId)
+
+        // Get Stripe onboarding link to complete KYC and bank account setup
+        console.log('[WIZARD] Getting Stripe onboarding link...')
+        try {
+          const onboardingResponse = await fetch('/api/stripe/connect/onboarding-link', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ contractorId: session.user.id })
+          })
+
+          const onboardingData = await onboardingResponse.json()
+
+          if (onboardingData.success && onboardingData.url) {
+            clearDraft()
+            alert('Welcome to Rushr Pro! Redirecting you to complete your payment and bank account setup with Stripe...')
+            console.log('[WIZARD] Redirecting to Stripe onboarding:', onboardingData.url)
+            window.location.href = onboardingData.url
+            return // Exit here - Stripe will redirect back to dashboard
+          } else {
+            console.error('[WIZARD] Failed to get onboarding link:', onboardingData.error)
+          }
+        } catch (onboardingError) {
+          console.error('[WIZARD] Onboarding link error:', onboardingError)
+        }
       }
     } catch (stripeError) {
       console.error('[WIZARD] Stripe Connect error:', stripeError)
       // Don't fail wizard - can complete Stripe setup later
     }
 
+    // Fallback: If Stripe setup fails, still let them access dashboard
     clearDraft()
-    alert('Welcome to Rushr Pro! Your profile has been submitted. Please complete your payment setup to receive payments.')
+    alert('Welcome to Rushr Pro! Your profile has been submitted. Please complete your payment setup from the dashboard to receive payments.')
     console.log('[WIZARD] Redirecting to dashboard...')
     router.push('/dashboard/contractor')
   } catch (err: any) {

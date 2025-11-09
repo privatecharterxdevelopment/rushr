@@ -3,12 +3,18 @@
 import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '../../contexts/AuthContext'
+import { useProAuth } from '../../contexts/ProAuthContext'
 import Link from 'next/link'
 import LoadingSpinner from '../../components/LoadingSpinner'
 
 export default function DashboardChooser() {
-  const { user, userProfile, loading } = useAuth()
+  const { user: homeownerUser, userProfile, loading: homeownerLoading } = useAuth()
+  const { user: contractorUser, contractorProfile, loading: contractorLoading } = useProAuth()
   const router = useRouter()
+
+  // Consider loading if either context is still loading
+  const loading = homeownerLoading || contractorLoading
+  const user = homeownerUser || contractorUser
 
   useEffect(() => {
     if (!loading) {
@@ -17,17 +23,21 @@ export default function DashboardChooser() {
         return
       }
 
-      if (userProfile) {
-        // Auto-route based on role immediately
-        if (userProfile.role === 'pro' || userProfile.role === 'contractor' || userProfile.subscription_type === 'pro') {
-          router.replace('/dashboard/contractor')
-        } else {
-          // All homeowners go to homeowner dashboard
-          router.replace('/dashboard/homeowner')
-        }
+      // Check contractor profile first (pro_contractors table)
+      if (contractorProfile) {
+        router.replace('/dashboard/contractor')
+        return
       }
+
+      // Then check homeowner profile (user_profiles table)
+      if (userProfile) {
+        router.replace('/dashboard/homeowner')
+        return
+      }
+
+      // If no profile found in either table, show chooser
     }
-  }, [user, userProfile, loading, router])
+  }, [user, userProfile, contractorProfile, loading, router])
 
   if (loading) {
     return (

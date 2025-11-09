@@ -401,31 +401,33 @@ END;
 $$ language 'plpgsql';
 
 -- Function to automatically create user profile when user signs up
+-- IMPORTANT: Only creates user_profiles for homeowners, NOT contractors
+-- Contractors use pro_contractors table exclusively
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS trigger
 LANGUAGE plpgsql
 SECURITY definer SET search_path = public
 AS $$
 BEGIN
+    -- Skip contractors - they use pro_contractors table only
+    IF COALESCE(NEW.raw_user_meta_data->>'role', 'homeowner') = 'contractor' THEN
+        RETURN NEW;
+    END IF;
+
+    -- Only create user_profiles for homeowners
     INSERT INTO public.user_profiles (id, email, name, role, subscription_type)
     VALUES (
         NEW.id,
         NEW.email,
         COALESCE(NEW.raw_user_meta_data->>'name', ''),
-        COALESCE(NEW.raw_user_meta_data->>'role', 'homeowner'),
-        CASE
-            WHEN COALESCE(NEW.raw_user_meta_data->>'role', 'homeowner') = 'contractor' THEN 'pro'
-            ELSE 'free'
-        END
+        'homeowner',  -- Always homeowner if we got here
+        'free'  -- Default to free tier
     )
     ON CONFLICT (id) DO UPDATE SET
         email = EXCLUDED.email,
         name = COALESCE(EXCLUDED.name, user_profiles.name),
         role = COALESCE(EXCLUDED.role, user_profiles.role),
-        subscription_type = CASE
-            WHEN EXCLUDED.role = 'contractor' THEN 'pro'
-            ELSE COALESCE(EXCLUDED.subscription_type, user_profiles.subscription_type)
-        END,
+        subscription_type = COALESCE(EXCLUDED.subscription_type, user_profiles.subscription_type),
         updated_at = NOW();
     RETURN NEW;
 END;
