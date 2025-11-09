@@ -108,17 +108,22 @@ export async function POST(request: NextRequest) {
           break
       }
 
-      await supabase.from('notifications').insert({
-        user_id: offer.homeowner_id,
-        type: 'offer_response',
-        title: 'Offer Response',
-        message: notificationMessage,
-        data: {
-          offer_id: offer_id,
-          action: action,
-          counter_amount: counter_amount || null,
-        },
-      })
+      try {
+        await supabase.from('notifications').insert({
+          user_id: offer.homeowner_id,
+          type: 'offer_response',
+          title: 'Offer Response',
+          message: notificationMessage,
+          data: {
+            offer_id: offer_id,
+            action: action,
+            counter_amount: counter_amount || null,
+          },
+        })
+      } catch (notifError) {
+        console.error('Error creating notification:', notifError)
+        // Don't fail the request if notification fails
+      }
     }
 
     return NextResponse.json(

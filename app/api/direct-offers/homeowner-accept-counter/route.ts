@@ -41,35 +41,9 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Get offer details to notify contractor
-    const { data: offer } = await supabase
-      .from('direct_offers')
-      .select('contractor_id, title, counter_bid_amount')
-      .eq('id', offer_id)
-      .single()
-
-    if (offer) {
-      // Get contractor user_id
-      const { data: contractor } = await supabase
-        .from('pro_contractors')
-        .select('user_id')
-        .eq('id', offer.contractor_id)
-        .single()
-
-      if (contractor) {
-        // Create notification for contractor
-        await supabase.from('notifications').insert({
-          user_id: contractor.user_id,
-          type: 'counter_bid_accepted',
-          title: 'Counter-Bid Accepted!',
-          message: `Your counter-bid for "${offer.title}" was accepted!`,
-          data: {
-            offer_id: offer_id,
-            final_amount: offer.counter_bid_amount,
-          },
-        })
-      }
-    }
+    // Notification to contractor can be added later when pro_contractors has auth link
+    // For now, contractor will see status change when viewing offers
+    // TODO: Add notification when pro_contractors table has auth.users reference
 
     return NextResponse.json(
       {

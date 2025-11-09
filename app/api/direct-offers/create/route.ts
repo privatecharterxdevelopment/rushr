@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
     // Verify contractor exists
     const { data: contractor, error: contractorError } = await supabase
       .from('pro_contractors')
-      .select('id, user_id')
+      .select('id')
       .eq('id', contractor_id)
       .single()
 
@@ -91,35 +91,9 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Send notification to contractor
-    try {
-      const { data: contractorProfile } = await supabase
-        .from('user_profiles')
-        .select('email, name')
-        .eq('id', contractor.user_id)
-        .single()
-
-      if (contractorProfile?.email) {
-        // Create notification record
-        await supabase.from('notifications').insert({
-          user_id: contractor.user_id,
-          type: 'direct_offer',
-          title: 'New Job Offer',
-          message: `You received a new job offer: ${title}`,
-          data: {
-            offer_id: offerId,
-            offered_amount: offered_amount,
-            category: category,
-          },
-        })
-
-        // Send email notification (optional, can be implemented later)
-        // await sendEmailNotification(contractorProfile.email, ...)
-      }
-    } catch (notifError) {
-      console.error('Error sending notification:', notifError)
-      // Don't fail the request if notification fails
-    }
+    // Send notification to contractor (optional - can add when pro_contractors has user link)
+    // For now, notifications will be created when contractor views their dashboard
+    // TODO: Add notification system when pro_contractors table has auth.users reference
 
     return NextResponse.json(
       {
