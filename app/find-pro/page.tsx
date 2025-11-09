@@ -633,7 +633,15 @@ export default function FindProPage() {
           <div className="text-[12px] text-slate-600">
             Showing{' '}
             <span className="font-semibold text-slate-900">{filtered.length}</span>{' '}
+            {services.length > 0 && (
+              <span>
+                for <span className="font-semibold text-slate-900">{services.join(', ')}</span>{' '}
+              </span>
+            )}
             within <span className="font-semibold text-slate-900">{radius} mi</span>
+            <span className="ml-2 text-slate-500">
+              (from {allContractors.length} total)
+            </span>
             {filtered.length === 0 && (
               <span className="ml-2">
                 —{' '}
@@ -719,8 +727,40 @@ export default function FindProPage() {
               )
             })}
             {filtered.length === 0 && (
-              <div className="col-span-full rounded-xl border border-dashed border-slate-300 p-6 text-center text-slate-500">
-                No results. Widen the radius or clear filters.
+              <div className="col-span-full rounded-xl border border-dashed border-slate-300 p-8 text-center">
+                <div className="text-slate-600 mb-4">
+                  <p className="font-semibold text-slate-900 mb-2">No contractors found</p>
+                  {services.length > 0 && (
+                    <p className="text-sm mb-2">
+                      No contractors offering <strong>{services.join(', ')}</strong> within {radius} miles
+                    </p>
+                  )}
+                  {allContractors.length > 0 && (
+                    <p className="text-sm text-slate-500">
+                      {allContractors.length} contractors available in database
+                    </p>
+                  )}
+                </div>
+                <div className="flex flex-col sm:flex-row gap-3 justify-center items-center">
+                  <button
+                    onClick={() => {
+                      setServices([])
+                      setMinRating(0)
+                      setMinYears(0)
+                      setHoursTags([])
+                      setQuery('')
+                    }}
+                    className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-sm font-medium transition-colors"
+                  >
+                    Clear All Filters
+                  </button>
+                  <Link
+                    href="/get-help-now"
+                    className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-semibold transition-colors"
+                  >
+                    Post a Job Instead
+                  </Link>
+                </div>
               </div>
             )}
           </div>

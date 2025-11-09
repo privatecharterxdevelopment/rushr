@@ -3,6 +3,7 @@
 import React, { Suspense, useEffect } from 'react'
 import { AuthProvider } from '../contexts/AuthContext'
 import { ProAuthProvider } from '../contexts/ProAuthContext'
+import { AppProvider } from '../lib/state'
 import AuthModal, { openAuth as openAuthModal } from '../components/AuthModal'
 import { ToastProvider } from '../components/Toast'
 import { useSearchParams } from 'next/navigation'
@@ -22,11 +23,13 @@ export default function Providers({ children }: { children: React.ReactNode }) {
     <ToastProvider>
       <AuthProvider>
         <ProAuthProvider>
-          <Suspense fallback={null}>
-            <SP />
-          </Suspense>
-          {children}
-          <AuthModal />
+          <AppProvider>
+            <Suspense fallback={null}>
+              <SP />
+            </Suspense>
+            {children}
+            <AuthModal />
+          </AppProvider>
         </ProAuthProvider>
       </AuthProvider>
     </ToastProvider>
