@@ -80,6 +80,16 @@ export default function FindProPage() {
   // Check if user is logged in as homeowner
   const isLoggedInHomeowner = !authLoading && user && userProfile
 
+  // Debug logging
+  if (typeof window !== 'undefined') {
+    console.log('[FindPro] Auth State:', {
+      authLoading,
+      hasUser: !!user,
+      hasProfile: !!userProfile,
+      isLoggedInHomeowner
+    })
+  }
+
   // Top bar — line 1
   const [query, setQuery] = useState('')
   const [debouncedQuery, setDebouncedQuery] = useState('')
