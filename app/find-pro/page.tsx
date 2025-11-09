@@ -7,7 +7,9 @@ import React, { useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { useApp } from '../../lib/state'
+import { useAuth } from '../../contexts/AuthContext'
 import dynamic from 'next/dynamic'
+import OfferJobModal from '../../components/OfferJobModal'
 
 // Dynamically import the Mapbox component to avoid SSR issues
 const FindProMapbox = dynamic(() => import('../../components/FindProMapbox'), {
@@ -66,10 +68,14 @@ const ZIP_COORDS: Record<string, LatLng> = {
 
 export default function FindProPage() {
   const { state } = useApp()
+  const { user, userProfile } = useAuth()
   const searchParams = useSearchParams()
   const allContractors: any[] = Array.isArray((state as any)?.contractors)
     ? (state as any).contractors
     : []
+
+  // Offer modal state
+  const [offerModalContractor, setOfferModalContractor] = useState<any | null>(null)
 
   // Top bar — line 1
   const [query, setQuery] = useState('')
@@ -667,16 +673,24 @@ export default function FindProPage() {
                     ))}
                   </div>
 
-                  <div className="mt-2.5 flex gap-1.5">
+                  <div className="mt-2.5 flex gap-1.5 flex-wrap">
+                    {user && userProfile?.role === 'HOMEOWNER' && (
+                      <button
+                        onClick={() => setOfferModalContractor(c)}
+                        className="rounded-lg bg-emerald-600 hover:bg-emerald-700 px-2.5 py-1.5 text-[12px] font-semibold text-white transition-colors"
+                      >
+                        Offer Job
+                      </button>
+                    )}
                     <a
                       href={`/contractors/${encodeURIComponent(String(c?.id ?? ''))}`}
-                      className="rounded-lg bg-emerald-600 hover:bg-emerald-700 px-2.5 py-1.5 text-[12px] font-semibold text-white transition-colors"
+                      className="rounded-lg border border-emerald-600 text-emerald-600 hover:bg-emerald-50 px-2.5 py-1.5 text-[12px] font-semibold transition-colors"
                     >
                       View Pro
                     </a>
                     <a
                       href={`/messages?to=${encodeURIComponent(String(c?.id ?? ''))}`}
-                      className="rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-[12px] font-semibold text-slate-900"
+                      className="rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-[12px] font-semibold text-slate-900 hover:bg-slate-50 transition-colors"
                     >
                       Message
                     </a>
@@ -724,6 +738,18 @@ export default function FindProPage() {
           </div>
         </div>
       </section>
+
+      {/* Offer Job Modal */}
+      {offerModalContractor && (
+        <OfferJobModal
+          contractor={offerModalContractor}
+          onClose={() => setOfferModalContractor(null)}
+          onSuccess={() => {
+            // Show success message (you can add a toast here later)
+            alert('Offer sent successfully! The contractor will be notified.')
+          }}
+        />
+      )}
     </>
   )
 }
