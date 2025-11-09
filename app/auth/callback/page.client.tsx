@@ -54,7 +54,7 @@ export default function AuthCallbackClient() {
 
         // Redirect based on profile type
         if (contractorProfile) {
-          router.replace('/pro/dashboard')
+          router.replace('/dashboard/contractor')
         } else if (userProfile?.role === 'homeowner') {
           router.replace('/dashboard/homeowner')
         } else {
