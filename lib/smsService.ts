@@ -4,11 +4,32 @@ const accountSid = process.env.TWILIO_ACCOUNT_SID
 const authToken = process.env.TWILIO_AUTH_TOKEN
 const twilioPhoneNumber = process.env.TWILIO_PHONE_NUMBER
 
-if (!accountSid || !authToken || !twilioPhoneNumber) {
-  console.warn('⚠️ Twilio credentials not configured. SMS notifications will not be sent.')
-}
+// Lazy initialization to avoid build errors when credentials aren't set
+let client: ReturnType<typeof twilio> | null = null
 
-const client = accountSid && authToken ? twilio(accountSid, authToken) : null
+function getTwilioClient() {
+  if (!accountSid || !authToken) {
+    console.warn('⚠️ Twilio credentials not configured. SMS notifications will not be sent.')
+    return null
+  }
+
+  // Validate accountSid format (must start with AC, not SK which is an API key)
+  if (!accountSid.startsWith('AC')) {
+    console.warn('⚠️ Invalid Twilio Account SID format. Must start with AC, not SK (API key).')
+    return null
+  }
+
+  if (!client) {
+    try {
+      client = twilio(accountSid, authToken)
+    } catch (error) {
+      console.error('⚠️ Failed to initialize Twilio client:', error)
+      return null
+    }
+  }
+
+  return client
+}
 
 interface SendSMSParams {
   to: string
@@ -19,13 +40,15 @@ interface SendSMSParams {
  * Send an SMS message via Twilio
  */
 export async function sendSMS({ to, message }: SendSMSParams): Promise<{ success: boolean; error?: string }> {
-  if (!client || !twilioPhoneNumber) {
+  const twilioClient = getTwilioClient()
+
+  if (!twilioClient || !twilioPhoneNumber) {
     console.error('Twilio client not configured')
     return { success: false, error: 'SMS service not configured' }
   }
 
   try {
-    const result = await client.messages.create({
+    const result = await twilioClient.messages.create({
       body: message,
       from: twilioPhoneNumber,
       to: to,
