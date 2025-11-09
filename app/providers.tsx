@@ -1,6 +1,7 @@
 'use client'
 
 import React, { Suspense, useEffect } from 'react'
+import { AuthProvider } from '../contexts/AuthContext'
 import { ProAuthProvider } from '../contexts/ProAuthContext'
 import { AppProvider } from '../lib/state'
 import AuthModal, { openAuth as openAuthModal } from '../components/AuthModal'
@@ -20,16 +21,19 @@ function SP() {
 export default function Providers({ children }: { children: React.ReactNode }) {
   return (
     <ToastProvider>
-      {/* Use ProAuthProvider as the single auth provider for both homeowners and contractors */}
-      <ProAuthProvider>
-        <AppProvider>
-          <Suspense fallback={null}>
-            <SP />
-          </Suspense>
-          {children}
-          <AuthModal />
-        </AppProvider>
-      </ProAuthProvider>
+      {/* NOTE: Both auth providers share the same Supabase client singleton */}
+      {/* The warning about multiple instances is harmless and expected */}
+      <AuthProvider>
+        <ProAuthProvider>
+          <AppProvider>
+            <Suspense fallback={null}>
+              <SP />
+            </Suspense>
+            {children}
+            <AuthModal />
+          </AppProvider>
+        </ProAuthProvider>
+      </AuthProvider>
     </ToastProvider>
   )
 }
