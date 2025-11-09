@@ -1,10 +1,9 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { Bell, BellDot, X, MessageSquare, DollarSign, Briefcase, CheckCircle } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '../contexts/AuthContext'
-import { useProAuth } from '../contexts/ProAuthContext'
 import { WelcomeService, WelcomeNotification } from '../lib/welcomeService'
 import { supabase } from '../lib/supabaseClient'
 
@@ -14,7 +13,6 @@ interface NotificationBellProps {
 
 export default function NotificationBell({ className = '' }: NotificationBellProps) {
   const { user, userProfile } = useAuth()
-  const { contractorProfile } = useProAuth()
   const router = useRouter()
   const [notifications, setNotifications] = useState<WelcomeNotification[]>([])
   const [unreadCount, setUnreadCount] = useState(0)
@@ -103,8 +101,8 @@ export default function NotificationBell({ className = '' }: NotificationBellPro
       await markAsRead(notification.id)
     }
 
-    // Determine if user is contractor or homeowner based on profile
-    const isContractor = !!contractorProfile
+    // Determine if user is contractor or homeowner based on user profile role
+    const isContractor = userProfile?.role === 'contractor'
 
     // Navigate based on notification type
     if (notification.type === 'welcome') {
