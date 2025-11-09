@@ -294,8 +294,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // 4. Toast feedback (non-blocking)
       showGlobalToast('You have been logged out successfully.', 'success')
 
-      // 5. Use Next.js router instead of window.href for a clean transition
-      router.push('/')
+      // 5. Hard refresh to fully clear cached auth state
+      window.location.href = '/'
     } catch (err) {
       console.error('[HOMEOWNER-AUTH] Fatal logout error:', err)
       showGlobalToast('Logout failed. Please try again.', 'error')
