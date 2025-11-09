@@ -63,11 +63,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .single()
 
       if (error) {
-        console.error('Error fetching user profile:', error)
+        console.error('[AuthContext] Error fetching user profile:', error)
 
-        // If profile doesn't exist, create one for existing users
+        // If profile doesn't exist, check if user is a contractor
         if (error.code === 'PGRST116') {
-          console.log('No profile found, creating one for existing user')
+          console.log('[AuthContext] No homeowner profile found, checking if contractor...')
+
+          // Check if this user is a contractor
+          const { data: contractorCheck } = await supabase
+            .from('pro_contractors')
+            .select('id')
+            .eq('id', userId)
+            .maybeSingle()
+
+          if (contractorCheck) {
+            console.log('[AuthContext] User is a contractor, no homeowner profile needed')
+            setUserProfile(null)
+            return
+          }
+
+          // Not a contractor either, create homeowner profile
+          console.log('[AuthContext] Creating new homeowner profile for existing user')
 
           // Get user email from auth
           const { data: { user: authUser } } = await supabase.auth.getUser()
@@ -78,7 +94,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 id: userId,
                 email: authUser.email!,
                 name: authUser.user_metadata?.name || '',
-                role: authUser.user_metadata?.role || 'homeowner',
+                role: 'homeowner',
                 subscription_type: 'free',
                 created_at: new Date().toISOString()
               })
@@ -86,9 +102,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               .single()
 
             if (createError) {
-              console.error('Error creating profile:', createError)
+              console.error('[AuthContext] Error creating profile:', createError)
               setUserProfile(null)
             } else {
+              console.log('[AuthContext] Created new homeowner profile')
               setUserProfile(newProfile)
             }
           }
@@ -99,10 +116,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       if (data) {
+        console.log('[AuthContext] Homeowner profile loaded successfully')
         setUserProfile(data)
       }
     } catch (err) {
-      console.error('Failed to fetch user profile:', err)
+      console.error('[AuthContext] Failed to fetch user profile:', err)
       setUserProfile(null)
     }
   }
