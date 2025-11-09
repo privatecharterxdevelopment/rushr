@@ -1,7 +1,6 @@
 'use client'
 
 import React, { Suspense, useEffect } from 'react'
-import { AuthProvider } from '../contexts/AuthContext'
 import { ProAuthProvider } from '../contexts/ProAuthContext'
 import { AppProvider } from '../lib/state'
 import AuthModal, { openAuth as openAuthModal } from '../components/AuthModal'
@@ -21,17 +20,16 @@ function SP() {
 export default function Providers({ children }: { children: React.ReactNode }) {
   return (
     <ToastProvider>
-      <AuthProvider>
-        <ProAuthProvider>
-          <AppProvider>
-            <Suspense fallback={null}>
-              <SP />
-            </Suspense>
-            {children}
-            <AuthModal />
-          </AppProvider>
-        </ProAuthProvider>
-      </AuthProvider>
+      {/* Use ProAuthProvider as the single auth provider for both homeowners and contractors */}
+      <ProAuthProvider>
+        <AppProvider>
+          <Suspense fallback={null}>
+            <SP />
+          </Suspense>
+          {children}
+          <AuthModal />
+        </AppProvider>
+      </ProAuthProvider>
     </ToastProvider>
   )
 }
