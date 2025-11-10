@@ -607,6 +607,10 @@ export default function HomeownerDashboardPage() {
             <Receipt className="w-4 h-4" />
             Billing
           </Link>
+          <Link href="/dashboard/homeowner/transactions" className="btn whitespace-nowrap flex-shrink-0 flex items-center gap-1.5">
+            <DollarSign className="w-4 h-4" />
+            Transactions
+          </Link>
         </div>
       </div>
 

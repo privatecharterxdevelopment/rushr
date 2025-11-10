@@ -411,17 +411,17 @@ export default function Header() {
             </>
           ) : (
             <>
+              {/* Bid notifications */}
+              <BidNotificationSystem />
               {/* Get Help Now button for logged in homeowners only (not contractors) */}
               {isSignedInAsHomeowner && !isProRoute && !isSignedInAsContractor && (
                 <button
                   onClick={() => router.push('/post-job')}
-                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-medium shadow-sm text-sm whitespace-nowrap"
+                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-white border-2 border-emerald-600 text-emerald-600 hover:bg-emerald-50 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-medium shadow-sm text-sm whitespace-nowrap"
                 >
                   <span className="text-lg">+</span> Get Help Now
                 </button>
               )}
-              {/* Bid notifications */}
-              <BidNotificationSystem />
               {/* User dropdown when logged in */}
               <UserDropdown />
             </>

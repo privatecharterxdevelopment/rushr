@@ -2,10 +2,10 @@
 
 import React, { useEffect, useState, useRef, Suspense } from 'react'
 import Link from 'next/link'
-import { useSearchParams } from 'next/navigation'
+import { useSearchParams, useRouter } from 'next/navigation'
 import { useAuth } from '../../../../contexts/AuthContext'
 import { supabase } from '../../../../lib/supabaseClient'
-import { ArrowLeft, Send, MessageSquare } from 'lucide-react'
+import { ArrowLeft, Send, MessageSquare, Briefcase } from 'lucide-react'
 
 interface Conversation {
   id: string
@@ -38,6 +38,7 @@ interface TypingStatus {
 function MessagesContent() {
   const { user, userProfile, loading: authLoading } = useAuth()
   const searchParams = useSearchParams()
+  const router = useRouter()
   const conversationId = searchParams.get('id')
 
   const [conversations, setConversations] = useState<Conversation[]>([])
@@ -84,57 +85,94 @@ function MessagesContent() {
       }
 
       try {
+        // Optimized single query - get conversations with basic data first
         const { data: convos, error } = await supabase
           .from('conversations')
-          .select('id, homeowner_id, pro_id, job_id, status, last_message_at, homeowner_unread_count')
+          .select(`
+            id,
+            homeowner_id,
+            pro_id,
+            job_id,
+            status,
+            last_message_at,
+            homeowner_unread_count
+          `)
           .eq('homeowner_id', user.id)
           .order('last_message_at', { ascending: false, nullsFirst: false })
 
         if (error) {
           console.error('Error fetching conversations:', error)
-        } else {
-          // Get last message and related data for each conversation
-          const conversationsWithMessages = await Promise.all(
-            (convos || []).map(async (convo: any) => {
-              // Fetch last message
-              const { data: lastMsg } = await supabase
-                .from('messages')
-                .select('content')
-                .eq('conversation_id', convo.id)
-                .order('created_at', { ascending: false })
-                .limit(1)
-                .single()
-
-              // Fetch contractor details
-              const { data: contractor } = await supabase
-                .from('pro_contractors')
-                .select('id, business_name, name')
-                .eq('id', convo.pro_id)
-                .single()
-
-              // Fetch job details
-              const { data: job } = await supabase
-                .from('homeowner_jobs')
-                .select('id, title')
-                .eq('id', convo.job_id)
-                .single()
-
-              return {
-                id: convo.id,
-                contractor_id: convo.pro_id,
-                contractor_name: contractor?.business_name || contractor?.name || 'Contractor',
-                job_id: convo.job_id,
-                job_title: job?.title || 'Job',
-                last_message: lastMsg?.content || 'No messages yet',
-                last_message_at: convo.last_message_at,
-                unread_count: convo.homeowner_unread_count || 0,
-                status: convo.status
-              }
-            })
-          )
-
-          setConversations(conversationsWithMessages)
+          setLoading(false)
+          return
         }
+
+        if (!convos || convos.length === 0) {
+          setConversations([])
+          setLoading(false)
+          return
+        }
+
+        // Get all unique contractor and job IDs and conversation IDs
+        const contractorIds = [...new Set(convos.map((c: any) => c.pro_id))]
+        const jobIds = [...new Set(convos.map((c: any) => c.job_id))]
+        const conversationIds = convos.map((c: any) => c.id)
+
+        // Fetch all contractors, jobs, and last messages in parallel (only 3 queries total!)
+        const [contractorsResult, jobsResult, messagesResult] = await Promise.all([
+          supabase
+            .from('pro_contractors')
+            .select('id, business_name, name')
+            .in('id', contractorIds),
+          supabase
+            .from('homeowner_jobs')
+            .select('id, title')
+            .in('id', jobIds),
+          // Get the last message for each conversation efficiently
+          supabase
+            .from('messages')
+            .select('conversation_id, content, created_at')
+            .in('conversation_id', conversationIds)
+            .order('created_at', { ascending: false })
+        ])
+
+        // Create lookup maps for O(1) access
+        const contractorMap = new Map(
+          (contractorsResult.data || []).map((c: any) => [c.id, c])
+        )
+        const jobMap = new Map(
+          (jobsResult.data || []).map((j: any) => [j.id, j])
+        )
+
+        // Create map of last message per conversation
+        const lastMessageMap = new Map()
+        if (messagesResult.data) {
+          messagesResult.data.forEach((msg: any) => {
+            // Only keep the first (most recent) message per conversation
+            if (!lastMessageMap.has(msg.conversation_id)) {
+              lastMessageMap.set(msg.conversation_id, msg.content)
+            }
+          })
+        }
+
+        // Transform conversations with looked-up data
+        const conversationsWithMessages = convos.map((convo: any) => {
+          const contractor = contractorMap.get(convo.pro_id)
+          const job = jobMap.get(convo.job_id)
+
+          return {
+            id: convo.id,
+            contractor_id: convo.pro_id,
+            contractor_name: contractor?.business_name || contractor?.name || 'Contractor',
+            job_id: convo.job_id,
+            job_title: job?.title || 'Job',
+            last_message: lastMessageMap.get(convo.id) || 'No messages yet',
+            last_message_at: convo.last_message_at,
+            unread_count: convo.homeowner_unread_count || 0,
+            status: convo.status
+          }
+        })
+
+        setConversations(conversationsWithMessages)
       } catch (err) {
         console.error('Error:', err)
       } finally {
@@ -294,6 +332,14 @@ function MessagesContent() {
     } finally {
       setSending(false)
     }
+  }
+
+  // Handle "Hire Again" - Create direct job offer for contractor
+  const handleHireAgain = () => {
+    if (!selectedConversation) return
+
+    // Redirect to post-job page with contractor pre-selected as direct offer
+    router.push(`/post-job?direct_offer=true&contractor_id=${selectedConversation.contractor_id}&contractor_name=${encodeURIComponent(selectedConversation.contractor_name)}`)
   }
 
   // NOW SAFE TO HAVE CONDITIONAL RETURNS AFTER ALL HOOKS
@@ -479,8 +525,19 @@ function MessagesContent() {
             <>
               {/* Conversation Header */}
               <div className="bg-white border-b border-gray-200 px-6 py-4">
-                <h2 className="text-lg font-semibold text-gray-900">{selectedConversation.contractor_name}</h2>
-                <p className="text-sm text-gray-600">{selectedConversation.job_title}</p>
+                <div className="flex items-center justify-between">
+                  <div className="flex-1">
+                    <h2 className="text-lg font-semibold text-gray-900">{selectedConversation.contractor_name}</h2>
+                    <p className="text-sm text-gray-600">{selectedConversation.job_title}</p>
+                  </div>
+                  <button
+                    onClick={handleHireAgain}
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-medium shadow-sm text-sm whitespace-nowrap"
+                  >
+                    <Briefcase className="h-4 w-4" />
+                    Hire Again
+                  </button>
+                </div>
               </div>
 
               {/* Messages */}
