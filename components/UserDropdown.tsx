@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { useAuth } from '../contexts/AuthContext'
 import { useProAuth } from '../contexts/ProAuthContext'
 import { showGlobalToast } from './Toast'
+import { isAdminUser } from '../lib/adminConfig'
 
 function ChevronDown(props: any) {
   return (
@@ -123,7 +124,7 @@ export default function UserDropdown() {
   }
 
   // Check if user is admin
-  const isAdmin = userProfile?.email === 'admin@userushr.com' || userProfile?.role === 'admin'
+  const isAdmin = isAdminUser(userProfile?.email, userProfile?.role)
 
   const menuItems = [
     {

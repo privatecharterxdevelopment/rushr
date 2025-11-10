@@ -27,6 +27,7 @@ export default function AuthModal() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
+  const [showForgotPassword, setShowForgotPassword] = useState(false)
 
   const { signIn } = useAuth()
   const router = useRouter()
@@ -237,6 +238,16 @@ export default function AuthModal() {
               </div>
             )}
 
+            <div className="flex items-center justify-end mb-2">
+              <button
+                type="button"
+                onClick={() => setShowForgotPassword(true)}
+                className={`text-sm hover:underline ${isProRoute ? 'text-blue-600' : 'text-emerald-600'}`}
+              >
+                Forgot password?
+              </button>
+            </div>
+
             <button
               type="submit"
               disabled={loading}
@@ -253,6 +264,158 @@ export default function AuthModal() {
                 />
               )}
               {cta}
+            </button>
+          </form>
+        )}
+
+        {/* Forgot Password Modal */}
+        {showForgotPassword && <ForgotPasswordModal onClose={() => setShowForgotPassword(false)} />}
+      </div>
+    </div>,
+    document.body
+  )
+}
+
+// Forgot Password Modal Component
+function ForgotPasswordModal({ onClose }: { onClose: () => void }) {
+  const [email, setEmail] = useState("")
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [success, setSuccess] = useState(false)
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    if (loading) return
+    setError(null)
+    setLoading(true)
+
+    try {
+      const emailTrim = email.trim().toLowerCase()
+      if (!emailTrim) {
+        setError("Please enter your email address.")
+        setLoading(false)
+        return
+      }
+
+      const response = await fetch('/api/auth/forgot-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: emailTrim })
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        setError(data.error || 'Failed to send reset email')
+        setLoading(false)
+        return
+      }
+
+      setSuccess(true)
+      setLoading(false)
+    } catch (err: any) {
+      setError(err?.message || 'Something went wrong. Please try again.')
+      setLoading(false)
+    }
+  }
+
+  return createPortal(
+    <div className="fixed inset-0 z-[5001] flex items-center justify-center p-4">
+      {/* overlay */}
+      <button
+        aria-label="Close"
+        className="absolute inset-0 h-full w-full bg-black/40 backdrop-blur-[1px]"
+        onClick={onClose}
+      />
+      {/* modal */}
+      <div
+        className="relative w-full max-w-sm rounded-2xl border border-slate-200 bg-white p-5 shadow-xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="mb-3">
+          <div className="flex items-center justify-between mb-2">
+            <h2 className="text-lg font-semibold text-slate-900">
+              {success ? "Check your email" : "Reset your password"}
+            </h2>
+            <button
+              onClick={onClose}
+              className="rounded-lg p-1 text-slate-500 hover:bg-slate-100"
+              aria-label="Close"
+            >
+              ✕
+            </button>
+          </div>
+          {!success && (
+            <p className="text-sm text-slate-600">
+              Enter your email address and we'll send you a link to reset your password.
+            </p>
+          )}
+        </div>
+
+        {success ? (
+          <div className="text-center py-8">
+            <div className="inline-flex items-center justify-center w-16 h-16 bg-emerald-100 rounded-full mb-4">
+              <svg className="w-8 h-8 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+              </svg>
+            </div>
+            <h3 className="text-lg font-semibold text-slate-900 mb-2">
+              Email sent!
+            </h3>
+            <p className="text-sm text-slate-600">
+              If an account with <strong>{email}</strong> exists, you will receive password reset instructions. Please check your inbox and spam folder.
+            </p>
+            <div className="mt-4 inline-flex items-center text-sm text-emerald-600">
+              <img
+                src="https://jtrxdcccswdwlritgstp.supabase.co/storage/v1/object/public/contractor-logos/RushrLogoAnimation.gif"
+                alt="Loading..."
+                className="w-4 h-4 object-contain -ml-1 mr-2"
+              />
+              Check your inbox
+            </div>
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit} className="space-y-3">
+            <input
+              type="email"
+              required
+              placeholder="you@example.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="w-full rounded-xl border border-slate-200 px-3 py-2 text-[14px] outline-none focus:border-emerald-500"
+            />
+            <input
+              type="email"
+              disabled
+              placeholder=""
+              className="w-full rounded-xl border border-slate-200 px-3 py-2 text-[14px] outline-none opacity-0 pointer-events-none"
+              aria-hidden="true"
+            />
+            {error && (
+              <div className="text-sm text-rose-600">
+                <p>{error}</p>
+              </div>
+            )}
+
+            <div className="flex items-center justify-end mb-2 opacity-0 pointer-events-none" aria-hidden="true">
+              <button type="button" className="text-sm">
+                Forgot password?
+              </button>
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full rounded-xl px-3 py-2 text-[14px] font-semibold text-white disabled:opacity-60 flex items-center justify-center bg-emerald-600 hover:bg-emerald-700"
+            >
+              {loading && (
+                <img
+                  src="https://jtrxdcccswdwlritgstp.supabase.co/storage/v1/object/public/contractor-logos/RushrLogoAnimation.gif"
+                  alt="Loading..."
+                  className="w-4 h-4 object-contain -ml-1 mr-2"
+                />
+              )}
+              {loading ? "Sending..." : "Send reset link"}
             </button>
           </form>
         )}

@@ -78,11 +78,16 @@ function MessagesContent() {
 
   // Fetch conversations with real data
   useEffect(() => {
+    if (!user) {
+      setLoading(false)
+      return
+    }
+
+    let isMounted = true
+    let debounceTimer: NodeJS.Timeout | null = null
+
     const fetchConversations = async () => {
-      if (!user) {
-        setLoading(false)
-        return
-      }
+      if (!isMounted) return
 
       try {
         // Optimized single query - get conversations with basic data first
@@ -100,6 +105,8 @@ function MessagesContent() {
           .eq('homeowner_id', user.id)
           .order('last_message_at', { ascending: false, nullsFirst: false })
 
+        if (!isMounted) return
+
         if (error) {
           console.error('Error fetching conversations:', error)
           setLoading(false)
@@ -113,27 +120,36 @@ function MessagesContent() {
         }
 
         // Get all unique contractor and job IDs and conversation IDs
-        const contractorIds = [...new Set(convos.map((c: any) => c.pro_id))]
-        const jobIds = [...new Set(convos.map((c: any) => c.job_id))]
+        const contractorIds = [...new Set(convos.map((c: any) => c.pro_id).filter(Boolean))]
+        const jobIds = [...new Set(convos.map((c: any) => c.job_id).filter(Boolean))]
         const conversationIds = convos.map((c: any) => c.id)
 
         // Fetch all contractors, jobs, and last messages in parallel (only 3 queries total!)
         const [contractorsResult, jobsResult, messagesResult] = await Promise.all([
-          supabase
-            .from('pro_contractors')
-            .select('id, business_name, name')
-            .in('id', contractorIds),
-          supabase
-            .from('homeowner_jobs')
-            .select('id, title')
-            .in('id', jobIds),
+          contractorIds.length > 0
+            ? supabase
+                .from('pro_contractors')
+                .select('id, business_name, name')
+                .in('id', contractorIds)
+            : { data: [], error: null },
+          jobIds.length > 0
+            ? supabase
+                .from('homeowner_jobs')
+                .select('id, title')
+                .in('id', jobIds)
+            : { data: [], error: null },
           // Get the last message for each conversation efficiently
-          supabase
-            .from('messages')
-            .select('conversation_id, content, created_at')
-            .in('conversation_id', conversationIds)
-            .order('created_at', { ascending: false })
+          conversationIds.length > 0
+            ? supabase
+                .from('messages')
+                .select('conversation_id, content, created_at')
+                .in('conversation_id', conversationIds)
+                .order('created_at', { ascending: false })
+                .limit(100)
+            : { data: [], error: null }
         ])
+
+        if (!isMounted) return
 
         // Create lookup maps for O(1) access
         const contractorMap = new Map(
@@ -172,33 +188,50 @@ function MessagesContent() {
           }
         })
 
-        setConversations(conversationsWithMessages)
+        if (isMounted) {
+          setConversations(conversationsWithMessages)
+        }
       } catch (err) {
         console.error('Error:', err)
       } finally {
-        setLoading(false)
+        if (isMounted) {
+          setLoading(false)
+        }
       }
     }
 
+    // Debounced refresh to prevent excessive calls
+    const debouncedRefresh = () => {
+      if (debounceTimer) clearTimeout(debounceTimer)
+      debounceTimer = setTimeout(() => {
+        if (isMounted) {
+          fetchConversations()
+        }
+      }, 1000) // 1 second debounce
+    }
+
+    // Initial fetch
     fetchConversations()
 
-    // Subscribe to conversation updates
+    // Subscribe to conversation updates with debouncing
     const conversationSubscription = supabase
-      .channel('homeowner_conversations')
+      .channel(`homeowner_conversations_${user.id}`)
       .on('postgres_changes', {
         event: '*',
         schema: 'public',
         table: 'conversations',
         filter: `homeowner_id=eq.${user.id}`
       }, () => {
-        fetchConversations()
+        debouncedRefresh()
       })
       .subscribe()
 
     return () => {
+      isMounted = false
+      if (debounceTimer) clearTimeout(debounceTimer)
       conversationSubscription.unsubscribe()
     }
-  }, [user])
+  }, [user?.id])
 
   // Fetch messages for selected conversation
   useEffect(() => {

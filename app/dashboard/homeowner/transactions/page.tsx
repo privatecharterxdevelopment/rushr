@@ -40,6 +40,7 @@ export default function TransactionsPage() {
           .from('homeowner_jobs')
           .select(`
             id,
+            job_number,
             title,
             final_cost,
             status,

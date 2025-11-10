@@ -4,6 +4,7 @@ import React, { useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useAuth } from '../../../contexts/AuthContext'
+import { isAdminUser } from '../../../lib/adminConfig'
 import {
   Users,
   UserCheck,
@@ -24,7 +25,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   // Check if user is admin
-  const isAdmin = userProfile?.email === 'admin@userushr.com' || userProfile?.role === 'admin'
+  const isAdmin = isAdminUser(userProfile?.email, userProfile?.role)
 
   if (!isAdmin) {
     return (
