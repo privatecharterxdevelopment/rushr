@@ -91,6 +91,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       badge: 'new',
     },
     {
+      name: 'Contact Submissions',
+      href: '/dashboard/admin/contact-submissions',
+      icon: MessageSquare,
+    },
+    {
       name: 'Settings',
       href: '/dashboard/admin/settings',
       icon: Settings,
