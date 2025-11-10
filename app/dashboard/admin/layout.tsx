@@ -75,6 +75,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       icon: Users,
     },
     {
+      name: 'KYC Verification',
+      href: '/dashboard/admin/kyc',
+      icon: Shield,
+    },
+    {
       name: 'Payments & Escrow',
       href: '/dashboard/admin/payments',
       icon: DollarSign,

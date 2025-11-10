@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useAuth } from '../../../contexts/AuthContext'
 import { useRouter } from 'next/navigation'
@@ -25,10 +25,13 @@ interface KYCDocument {
   file: File | null
   uploaded: boolean
   verified: boolean
+  status?: 'pending' | 'under_review' | 'verified' | 'rejected'
+  documentUrl?: string
+  rejectionReason?: string
 }
 
 export default function KYCVerificationPage() {
-  const { user, userProfile } = useAuth()
+  const { user, userProfile, refreshProfile } = useAuth()
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -41,6 +44,13 @@ export default function KYCVerificationPage() {
     { type: 'bank_statement', file: null, uploaded: false, verified: false },
   ])
   const [showKYCForm, setShowKYCForm] = useState(false)
+
+  // Fetch existing KYC documents on mount
+  useEffect(() => {
+    if (user) {
+      fetchExistingDocuments()
+    }
+  }, [user])
 
   if (!user || !userProfile) {
     return (
@@ -117,6 +127,51 @@ export default function KYCVerificationPage() {
     }
   }
 
+  const fetchExistingDocuments = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('kyc_documents')
+        .select('*')
+        .eq('user_id', user!.id)
+
+      if (error) throw error
+
+      if (data && data.length > 0) {
+        setDocuments(prev => prev.map(doc => {
+          const existingDoc = data.find(d => d.document_type === doc.type)
+          if (existingDoc) {
+            return {
+              ...doc,
+              uploaded: true,
+              verified: existingDoc.status === 'verified',
+              status: existingDoc.status,
+              documentUrl: existingDoc.document_url,
+              rejectionReason: existingDoc.rejection_reason
+            }
+          }
+          return doc
+        }))
+
+        // Check if all documents are verified - update user profile
+        const allVerified = data.every(d => d.status === 'verified')
+        const hasAtLeastTwo = data.filter(d => d.status === 'verified').length >= 2
+
+        if (hasAtLeastTwo && !userProfile?.kyc_verified) {
+          // Update user profile to mark KYC as verified
+          await supabase
+            .from('user_profiles')
+            .update({ kyc_verified: true })
+            .eq('id', user!.id)
+
+          // Refresh profile to update UI
+          if (refreshProfile) await refreshProfile()
+        }
+      }
+    } catch (err: any) {
+      console.error('Error fetching KYC documents:', err)
+    }
+  }
+
   const handleFileSelect = (type: DocumentType, file: File) => {
     setDocuments(prev => prev.map(doc =>
       doc.type === type ? { ...doc, file } : doc
@@ -134,6 +189,7 @@ export default function KYCVerificationPage() {
       const fileExt = doc.file.name.split('.').pop()
       const fileName = `${user.id}/${type}_${Date.now()}.${fileExt}`
 
+      // Upload to storage
       const { error: uploadError } = await supabase.storage
         .from('kyc-documents')
         .upload(fileName, doc.file)
@@ -142,12 +198,39 @@ export default function KYCVerificationPage() {
         throw uploadError
       }
 
-      // Update document status
+      // Get public URL
+      const { data: urlData } = supabase.storage
+        .from('kyc-documents')
+        .getPublicUrl(fileName)
+
+      // Save to database
+      const { error: dbError } = await supabase
+        .from('kyc_documents')
+        .insert({
+          user_id: user.id,
+          document_type: type,
+          document_url: urlData.publicUrl,
+          status: 'pending'
+        })
+
+      if (dbError) {
+        throw dbError
+      }
+
+      // Update local state
       setDocuments(prev => prev.map(d =>
-        d.type === type ? { ...d, uploaded: true } : d
+        d.type === type ? {
+          ...d,
+          uploaded: true,
+          status: 'pending',
+          documentUrl: urlData.publicUrl
+        } : d
       ))
 
-      setSuccess(`${getDocumentLabel(type)} uploaded successfully!`)
+      setSuccess(`${getDocumentLabel(type)} uploaded successfully! Pending admin review.`)
+
+      // Refresh documents to get latest status
+      await fetchExistingDocuments()
     } catch (err: any) {
       setError(err.message || 'Failed to upload document')
     } finally {
@@ -246,11 +329,23 @@ export default function KYCVerificationPage() {
         {/* Document Upload Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {documents.map((doc) => (
-            <div key={doc.type} className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-6">
+            <div key={doc.type} className={`bg-white dark:bg-slate-800 rounded-xl p-6 ${
+              doc.status === 'verified'
+                ? 'border-2 border-green-500 dark:border-green-600'
+                : 'border border-slate-200 dark:border-slate-700'
+            }`}>
               <div className="flex items-center gap-3 mb-4">
-                <div className={`p-2 rounded-lg ${doc.uploaded ? 'bg-green-100 dark:bg-green-900' : 'bg-slate-100 dark:bg-slate-700'}`}>
-                  {doc.uploaded ? (
+                <div className={`p-2 rounded-lg ${
+                  doc.status === 'verified'
+                    ? 'bg-green-100 dark:bg-green-900'
+                    : doc.uploaded
+                      ? 'bg-yellow-100 dark:bg-yellow-900'
+                      : 'bg-slate-100 dark:bg-slate-700'
+                }`}>
+                  {doc.status === 'verified' ? (
                     <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400" />
+                  ) : doc.uploaded ? (
+                    <AlertCircle className="h-5 w-5 text-yellow-600 dark:text-yellow-400" />
                   ) : (
                     getDocumentIcon(doc.type)
                   )}
@@ -258,20 +353,61 @@ export default function KYCVerificationPage() {
                 <div>
                   <h3 className="font-semibold text-slate-900 dark:text-slate-100">{getDocumentLabel(doc.type)}</h3>
                   <p className="text-xs text-slate-500 dark:text-slate-400">
-                    {doc.uploaded ? 'Uploaded' : 'Required for verification'}
+                    {doc.status === 'verified'
+                      ? '✓ Verified & Approved'
+                      : doc.uploaded
+                        ? 'Pending Review'
+                        : 'Required for verification'
+                    }
                   </p>
                 </div>
               </div>
 
               {doc.uploaded ? (
-                <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
-                  <div className="flex items-center gap-2 text-green-700 dark:text-green-300">
-                    <CheckCircle2 className="h-4 w-4" />
-                    <span className="text-sm font-medium">Document uploaded successfully</span>
-                  </div>
-                  <p className="text-xs text-green-600 dark:text-green-400 mt-1">
-                    Under review - you'll be notified once verified
-                  </p>
+                <div>
+                  {/* Verified Status - Green */}
+                  {doc.status === 'verified' && (
+                    <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border-2 border-green-500 dark:border-green-600">
+                      <div className="flex items-center gap-2 text-green-700 dark:text-green-300">
+                        <CheckCircle2 className="h-5 w-5 text-green-600" />
+                        <span className="text-sm font-bold">✓ VERIFIED & APPROVED</span>
+                      </div>
+                      <p className="text-xs text-green-600 dark:text-green-400 mt-1">
+                        This document has been verified by our admin team
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Pending/Under Review Status - Yellow */}
+                  {(doc.status === 'pending' || doc.status === 'under_review') && (
+                    <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800">
+                      <div className="flex items-center gap-2 text-yellow-700 dark:text-yellow-300">
+                        <AlertCircle className="h-4 w-4" />
+                        <span className="text-sm font-medium">Document uploaded - pending review</span>
+                      </div>
+                      <p className="text-xs text-yellow-600 dark:text-yellow-400 mt-1">
+                        Under review - you'll be notified once verified (1-2 business days)
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Rejected Status - Red */}
+                  {doc.status === 'rejected' && (
+                    <div className="p-4 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
+                      <div className="flex items-center gap-2 text-red-700 dark:text-red-300">
+                        <AlertCircle className="h-4 w-4" />
+                        <span className="text-sm font-medium">Document rejected</span>
+                      </div>
+                      {doc.rejectionReason && (
+                        <p className="text-xs text-red-600 dark:text-red-400 mt-1">
+                          Reason: {doc.rejectionReason}
+                        </p>
+                      )}
+                      <p className="text-xs text-red-600 dark:text-red-400 mt-1">
+                        Please upload a new document
+                      </p>
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div className="space-y-4">
