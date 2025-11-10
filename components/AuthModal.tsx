@@ -107,19 +107,17 @@ export default function AuthModal() {
       if (result.success) {
         setSuccess(true)
         setLoading(false)
-        // Show success for 1.5 seconds then close
+
+        // Immediate redirect on success
+        const target = callbackRef.current || "/dashboard/homeowner"
+
+        // Show success briefly, then hard redirect
         setTimeout(() => {
           setOpen(false)
-          setSuccess(false)
           cleanUrl()
-          // Clear form
-          setEmail("")
-          setPassword("")
-          setError(null)
-          const target = callbackRef.current || "/dashboard/homeowner"
-          router.push(target)
-          // Let AuthContext handle routing via auth state change
-        }, 1500)
+          // Hard redirect to avoid AuthContext race condition
+          window.location.href = target
+        }, 800)
       }
     } catch (err: any) {
       setError(err?.message || "Something went wrong. Please try again.")

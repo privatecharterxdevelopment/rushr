@@ -48,9 +48,23 @@ function MessagesContent() {
   const [sending, setSending] = useState(false)
   const [isTyping, setIsTyping] = useState(false)
   const [contractorTyping, setContractorTyping] = useState(false)
+  const [showWelcomeMessage, setShowWelcomeMessage] = useState(false)
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+
+  // Hardcoded welcome message for homeowners
+  const welcomeNotification = {
+    id: 'welcome-homeowner',
+    user_id: user?.id || '',
+    type: 'welcome',
+    title: 'Welcome to Rushr! 🎉',
+    message: 'Welcome to your messaging center! This is where you\'ll communicate with contractors about your projects.\n\nHere\'s what you can do:\n• View all your conversations in one place\n• Chat with contractors in real-time\n• Keep track of project discussions\n• Get updates when contractors respond\n\nTo get started, post a job and contractors will reach out to discuss your project. Happy building!',
+    read: true,
+    created_at: new Date().toISOString(),
+    conversation_id: null,
+    job_id: null
+  }
 
   // Scroll to bottom of messages
   const scrollToBottom = () => {
@@ -61,37 +75,13 @@ function MessagesContent() {
     scrollToBottom()
   }, [messages])
 
-  // Early return if not authenticated - BEFORE any data fetching
-  if (authLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <img
-          src="https://jtrxdcccswdwlritgstp.supabase.co/storage/v1/object/public/contractor-logos/RushrLogoAnimation.gif"
-          alt="Loading..."
-          className="h-8 w-8 border-b-2 border-emerald-600 mx-auto mb-4 object-contain"
-        />
-          <p>Loading...</p>
-        </div>
-      </div>
-    )
-  }
-
-  if (!user || !userProfile) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <h2 className="text-xl font-semibold mb-4">Homeowner access required</h2>
-          <Link href="/" className="btn-primary">Go to Home</Link>
-        </div>
-      </div>
-    )
-  }
-
   // Fetch conversations with real data
   useEffect(() => {
     const fetchConversations = async () => {
-      if (!user) return
+      if (!user) {
+        setLoading(false)
+        return
+      }
 
       try {
         const { data: convos, error } = await supabase
@@ -306,6 +296,35 @@ function MessagesContent() {
     }
   }
 
+  // NOW SAFE TO HAVE CONDITIONAL RETURNS AFTER ALL HOOKS
+  // Early return if auth is still loading
+  if (authLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <img
+          src="https://jtrxdcccswdwlritgstp.supabase.co/storage/v1/object/public/contractor-logos/RushrLogoAnimation.gif"
+          alt="Loading..."
+          className="h-8 w-8 border-b-2 border-emerald-600 mx-auto mb-4 object-contain"
+        />
+          <p>Loading...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Check authentication
+  if (!user || !userProfile) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <h2 className="text-xl font-semibold mb-4">Homeowner access required</h2>
+          <Link href="/" className="btn-primary">Go to Home</Link>
+        </div>
+      </div>
+    )
+  }
+
   // Show loading while fetching data
   if (loading) {
     return (
@@ -343,51 +362,120 @@ function MessagesContent() {
         <div className="w-80 bg-white border-r border-gray-200 overflow-y-auto">
           <div className="p-4">
             <h2 className="text-lg font-semibold text-gray-900 mb-4">Conversations</h2>
-            {conversations.length === 0 ? (
-              <div className="text-center py-8">
-                <MessageSquare className="h-12 w-12 text-gray-400 mx-auto mb-3" />
-                <p className="text-gray-600">No conversations yet</p>
-                <p className="text-sm text-gray-500 mt-2">
-                  Messages will appear here when contractors accept your jobs
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {conversations.map((conv) => (
-                  <Link
-                    key={conv.id}
-                    href={`/dashboard/homeowner/messages?id=${conv.id}`}
-                    className={`block p-4 rounded-lg border transition-colors ${
-                      conversationId === conv.id
-                        ? 'bg-emerald-50 border-emerald-200'
-                        : 'bg-white border-gray-200 hover:bg-gray-50'
-                    }`}
-                  >
-                    <div className="flex items-start justify-between mb-2">
-                      <h3 className="font-semibold text-gray-900">{conv.contractor_name}</h3>
-                      {conv.unread_count > 0 && (
-                        <span className="bg-emerald-600 text-white text-xs rounded-full px-2 py-1 font-medium">
-                          {conv.unread_count}
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-sm text-gray-600 mb-1 font-medium">{conv.job_title}</p>
-                    <p className="text-sm text-gray-500 truncate">{conv.last_message}</p>
-                    {conv.last_message_at && (
+
+            <div className="space-y-2">
+              {/* Welcome Message - Always shown at top */}
+              {welcomeNotification && (
+                <button
+                  onClick={() => {
+                    setShowWelcomeMessage(true)
+                    setSelectedConversation(null)
+                  }}
+                  className={`block w-full p-4 rounded-lg border transition-colors text-left ${
+                    showWelcomeMessage
+                      ? 'bg-emerald-50 border-emerald-200'
+                      : 'bg-gradient-to-r from-emerald-50 to-blue-50 border-emerald-200 hover:from-emerald-100 hover:to-blue-100'
+                  }`}
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="text-2xl">🎉</div>
+                    <div className="flex-1">
+                      <div className="flex items-center justify-between mb-1">
+                        <h3 className="font-semibold text-gray-900">{welcomeNotification.title}</h3>
+                      </div>
+                      <p className="text-sm text-gray-600 line-clamp-2">{welcomeNotification.message}</p>
                       <p className="text-xs text-gray-400 mt-1">
-                        {new Date(conv.last_message_at).toLocaleString()}
+                        {new Date(welcomeNotification.created_at).toLocaleDateString()}
                       </p>
-                    )}
-                  </Link>
-                ))}
-              </div>
-            )}
+                    </div>
+                  </div>
+                </button>
+              )}
+
+              {/* Regular Conversations */}
+              {conversations.length === 0 && !welcomeNotification ? (
+                <div className="text-center py-8">
+                  <MessageSquare className="h-12 w-12 text-gray-400 mx-auto mb-3" />
+                  <p className="text-gray-600">No conversations yet</p>
+                  <p className="text-sm text-gray-500 mt-2">
+                    Messages will appear here when contractors accept your jobs
+                  </p>
+                </div>
+              ) : (
+                <>
+                  {conversations.map((conv) => (
+                    <Link
+                      key={conv.id}
+                      href={`/dashboard/homeowner/messages?id=${conv.id}`}
+                      className={`block p-4 rounded-lg border transition-colors ${
+                        conversationId === conv.id
+                          ? 'bg-emerald-50 border-emerald-200'
+                          : 'bg-white border-gray-200 hover:bg-gray-50'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between mb-2">
+                        <h3 className="font-semibold text-gray-900">{conv.contractor_name}</h3>
+                        {conv.unread_count > 0 && (
+                          <span className="bg-emerald-600 text-white text-xs rounded-full px-2 py-1 font-medium">
+                            {conv.unread_count}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-sm text-gray-600 mb-1 font-medium">{conv.job_title}</p>
+                      <p className="text-sm text-gray-500 truncate">{conv.last_message}</p>
+                      {conv.last_message_at && (
+                        <p className="text-xs text-gray-400 mt-1">
+                          {new Date(conv.last_message_at).toLocaleString()}
+                        </p>
+                      )}
+                    </Link>
+                  ))}
+                </>
+              )}
+            </div>
           </div>
         </div>
 
         {/* Messages Area */}
         <div className="flex-1 flex flex-col">
-          {conversationId && selectedConversation ? (
+          {showWelcomeMessage && welcomeNotification ? (
+            <>
+              {/* Welcome Message Header */}
+              <div className="bg-gradient-to-r from-emerald-50 to-blue-50 border-b border-emerald-200 px-6 py-4">
+                <div className="flex items-center gap-3">
+                  <div className="text-3xl">🎉</div>
+                  <div>
+                    <h2 className="text-lg font-semibold text-gray-900">{welcomeNotification.title}</h2>
+                    <p className="text-sm text-gray-600">
+                      {new Date(welcomeNotification.created_at).toLocaleDateString()}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Welcome Message Content */}
+              <div className="flex-1 overflow-y-auto p-6 bg-gray-50">
+                <div className="max-w-2xl mx-auto">
+                  <div className="bg-white rounded-lg shadow-sm border border-emerald-200 p-8">
+                    <div className="text-center mb-6">
+                      <div className="text-6xl mb-4">🎉</div>
+                      <h3 className="text-2xl font-bold text-gray-900 mb-2">{welcomeNotification.title}</h3>
+                    </div>
+                    <div className="prose prose-emerald max-w-none">
+                      <p className="text-gray-700 text-lg leading-relaxed whitespace-pre-wrap">
+                        {welcomeNotification.message}
+                      </p>
+                    </div>
+                    <div className="mt-8 pt-6 border-t border-gray-200">
+                      <p className="text-sm text-gray-500 text-center">
+                        This welcome message will always be available in your conversations list
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </>
+          ) : conversationId && selectedConversation ? (
             <>
               {/* Conversation Header */}
               <div className="bg-white border-b border-gray-200 px-6 py-4">

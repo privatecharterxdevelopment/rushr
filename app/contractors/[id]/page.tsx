@@ -4,6 +4,9 @@ import React, { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '../../../lib/supabaseClient'
+import { useAuth } from '../../../contexts/AuthContext'
+import OfferJobModal from '../../../components/OfferJobModal'
+import { openAuth } from '../../../components/AuthModal'
 import {
   MapPin,
   Star,
@@ -48,10 +51,12 @@ export default function ContractorProfilePage() {
   const params = useParams()
   const router = useRouter()
   const contractorId = params.id as string
+  const { user, userProfile, loading: authLoading } = useAuth()
 
   const [contractor, setContractor] = useState<ContractorProfile | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [showOfferModal, setShowOfferModal] = useState(false)
 
   useEffect(() => {
     const loadContractorProfile = async () => {
@@ -253,13 +258,19 @@ export default function ContractorProfilePage() {
 
           {/* Action Buttons */}
           <div className="flex gap-3 mt-6">
-            <Link
-              href={`/post-job?contractor=${contractor.id}`}
+            <button
+              onClick={() => {
+                if (!user || !userProfile) {
+                  openAuth('signin')
+                } else {
+                  setShowOfferModal(true)
+                }
+              }}
               className="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition-colors font-medium flex items-center gap-2"
             >
               <MessageSquare className="h-4 w-4" />
               Request Quote
-            </Link>
+            </button>
             {contractor.phone && (
               <a
                 href={`tel:${contractor.phone}`}
@@ -327,6 +338,23 @@ export default function ContractorProfilePage() {
           </div>
         )}
       </div>
+
+      {/* Offer Job Modal */}
+      {showOfferModal && contractor && (
+        <OfferJobModal
+          contractor={{
+            id: contractor.id,
+            name: contractor.business_name || contractor.name,
+            services: contractor.specialties || [],
+          }}
+          onClose={() => setShowOfferModal(false)}
+          onSuccess={() => {
+            setShowOfferModal(false)
+            // Navigate to dashboard offers page
+            router.push('/dashboard/homeowner/offers')
+          }}
+        />
+      )}
     </div>
   )
 }

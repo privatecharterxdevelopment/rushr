@@ -1027,12 +1027,24 @@ export default function PostJobInner({ userId }: Props) {
                   📍 Use My Current Location
                 </button>
               </div>
+            ) : loadingContractors ? (
+              <div className="card p-8 text-center bg-slate-50">
+                <img
+                  src="https://jtrxdcccswdwlritgstp.supabase.co/storage/v1/object/public/contractor-logos/RushrLogoAnimation.gif"
+                  alt="Loading..."
+                  className="w-16 h-16 object-contain mx-auto mb-4"
+                />
+                <h3 className="text-lg font-medium text-slate-900 mb-2">Finding Emergency Professionals</h3>
+                <p className="text-slate-600">
+                  Searching for available contractors in your area...
+                </p>
+              </div>
             ) : filteredNearby.length === 0 ? (
               <div className="card p-8 text-center bg-slate-50">
                 <Users className="h-12 w-12 text-slate-400 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-slate-900 mb-2">Loading Contractors...</h3>
+                <h3 className="text-lg font-medium text-slate-900 mb-2">No Contractors Available</h3>
                 <p className="text-slate-600">
-                  Searching for emergency professionals in your area.
+                  No emergency professionals found in your area at this time.
                 </p>
               </div>
             ) : (

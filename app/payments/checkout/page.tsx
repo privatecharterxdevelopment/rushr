@@ -56,17 +56,12 @@ function CheckoutContent() {
         return
       }
 
-      // Redirect to Stripe Checkout
-      const stripe = await stripePromise
-      if (stripe && data.sessionId) {
-        const { error: stripeError } = await stripe.redirectToCheckout({
-          sessionId: data.sessionId
-        })
-
-        if (stripeError) {
-          setError(stripeError.message || 'Stripe error')
-          setLoading(false)
-        }
+      // Redirect to Stripe Checkout using the URL
+      if (data.url) {
+        window.location.href = data.url
+      } else {
+        setError('No checkout URL received')
+        setLoading(false)
       }
     } catch (err: any) {
       console.error('Checkout error:', err)

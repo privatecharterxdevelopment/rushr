@@ -38,6 +38,8 @@ import {
   Building2,
   Plus,
   Settings,
+  Send,
+  DollarSign,
 } from 'lucide-react'
 
 /* ----------------------------- tiny helpers ----------------------------- */
@@ -156,6 +158,10 @@ export default function HomeownerDashboardPage() {
   const [saveSuccess, setSaveSuccess] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
+
+  // Direct Offers state
+  const [directOffers, setDirectOffers] = useState<any[]>([])
+  const [offersLoading, setOffersLoading] = useState(true)
 
   // Payment method state
   const [hasPaymentMethod, setHasPaymentMethod] = useState(false)
@@ -469,6 +475,50 @@ export default function HomeownerDashboardPage() {
   useEffect(() => {
     if (user) {
       fetchSavedAddresses()
+    }
+  }, [user])
+
+  // Fetch direct offers
+  const fetchDirectOffers = async () => {
+    if (!user) return
+    try {
+      const { data: offersData, error } = await supabase
+        .from('direct_offers')
+        .select('*')
+        .eq('homeowner_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(5)
+
+      if (error) throw error
+
+      // Enrich with contractor details
+      const enrichedOffers = await Promise.all(
+        (offersData || []).map(async (offer) => {
+          const { data: contractorData } = await supabase
+            .from('pro_contractors')
+            .select('name, business_name')
+            .eq('id', offer.contractor_id)
+            .single()
+
+          return {
+            ...offer,
+            contractor_name: contractorData?.name || 'Unknown',
+            contractor_business: contractorData?.business_name || null
+          }
+        })
+      )
+
+      setDirectOffers(enrichedOffers)
+    } catch (error) {
+      console.error('Failed to fetch direct offers:', error)
+    } finally {
+      setOffersLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    if (user) {
+      fetchDirectOffers()
     }
   }, [user])
 
@@ -804,6 +854,132 @@ export default function HomeownerDashboardPage() {
                 {f.done ? <CheckCircle2 className="h-5 w-5 text-emerald-600"/> : <Circle className="h-5 w-5 text-slate-400"/>}
               </Link>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Direct Job Offers Section */}
+      <section className="mb-6">
+        <div className="rounded-2xl border border-purple-200 bg-white dark:bg-slate-900 shadow-sm">
+          <div className="border-b border-purple-200 dark:border-purple-700 bg-gradient-to-r from-purple-50 to-indigo-50 dark:bg-gradient-to-r dark:from-purple-900/20 dark:to-indigo-900/20 px-6 py-4 rounded-t-2xl flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 bg-purple-100 dark:bg-purple-900 rounded-full flex items-center justify-center">
+                <Send className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+              </div>
+              <div>
+                <h3 className="font-bold text-purple-900 dark:text-white">Direct Job Offers</h3>
+                <p className="text-sm text-purple-700 dark:text-purple-300">
+                  {directOffers.length > 0
+                    ? `${directOffers.length} custom ${directOffers.length === 1 ? 'offer' : 'offers'} sent to contractors`
+                    : 'No offers sent yet'
+                  }
+                </p>
+              </div>
+            </div>
+            <Link
+              href="/dashboard/homeowner/offers"
+              className="flex items-center gap-1 text-sm text-purple-600 hover:text-purple-700 dark:text-purple-400 dark:hover:text-purple-300 font-medium"
+            >
+              View All
+              <ChevronRight className="h-4 w-4" />
+            </Link>
+          </div>
+
+          <div className="p-6">
+            {offersLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <LoadingSpinner size="sm" />
+              </div>
+            ) : directOffers.length > 0 ? (
+              <div className="space-y-3">
+                {directOffers.map((offer) => {
+                  const displayName = offer.contractor_business || offer.contractor_name
+                  const getStatusColor = (status: string, contractorResponse: string | null) => {
+                    if (contractorResponse === 'counter_bid') {
+                      return 'bg-purple-100 text-purple-700 border-purple-200'
+                    }
+                    switch (status) {
+                      case 'pending': return 'bg-yellow-100 text-yellow-700 border-yellow-200'
+                      case 'accepted':
+                      case 'agreement_reached': return 'bg-green-100 text-green-700 border-green-200'
+                      case 'rejected': return 'bg-red-100 text-red-700 border-red-200'
+                      case 'cancelled': return 'bg-gray-100 text-gray-700 border-gray-200'
+                      default: return 'bg-blue-100 text-blue-700 border-blue-200'
+                    }
+                  }
+
+                  const getStatusLabel = (status: string, contractorResponse: string | null) => {
+                    if (contractorResponse === 'counter_bid') return 'Counter Bid'
+                    if (contractorResponse === 'accepted') return 'Accepted'
+                    if (contractorResponse === 'rejected') return 'Rejected'
+
+                    switch (status) {
+                      case 'pending': return 'Pending'
+                      case 'accepted': return 'Accepted'
+                      case 'agreement_reached': return 'Agreed'
+                      case 'rejected': return 'Rejected'
+                      case 'cancelled': return 'Cancelled'
+                      default: return status.charAt(0).toUpperCase() + status.slice(1)
+                    }
+                  }
+
+                  return (
+                    <div key={offer.id} className="border border-purple-200 dark:border-purple-700 rounded-lg p-4 hover:shadow-sm transition-shadow">
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex-1">
+                          <div className="flex items-start gap-3">
+                            <Send className="h-5 w-5 text-purple-600 dark:text-purple-400 flex-shrink-0 mt-0.5" />
+                            <div className="flex-1 min-w-0">
+                              <h4 className="font-semibold text-slate-900 dark:text-white mb-1">{offer.title}</h4>
+                              <div className="flex flex-wrap items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
+                                <span className="flex items-center gap-1">
+                                  Sent to: <span className="font-medium">{displayName}</span>
+                                </span>
+                                <span className="text-slate-400">•</span>
+                                <span className="flex items-center gap-1">
+                                  <DollarSign className="h-3 w-3" />
+                                  <span className="font-medium">${offer.offered_amount?.toFixed(2)}</span>
+                                </span>
+                                <span className="text-slate-400">•</span>
+                                <span>{timeAgo(offer.created_at)}</span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3 flex-shrink-0">
+                          <span className={`px-3 py-1 rounded-full text-xs font-medium border ${getStatusColor(offer.status, offer.contractor_response)}`}>
+                            {getStatusLabel(offer.status, offer.contractor_response)}
+                          </span>
+                          <Link
+                            href="/dashboard/homeowner/offers"
+                            className="btn btn-outline text-sm"
+                          >
+                            View
+                          </Link>
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <div className="w-16 h-16 bg-purple-100 dark:bg-purple-900/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Send className="h-8 w-8 text-purple-400" />
+                </div>
+                <h4 className="text-lg font-medium text-slate-900 dark:text-white mb-2">No Direct Offers Yet</h4>
+                <p className="text-slate-600 dark:text-slate-400 mb-4">
+                  Send custom offers to contractors from their profile pages
+                </p>
+                <Link
+                  href="/find-pro"
+                  className="inline-flex items-center gap-2 px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition-colors"
+                >
+                  <Send className="h-4 w-4" />
+                  Find Contractors
+                </Link>
+              </div>
+            )}
           </div>
         </div>
       </section>

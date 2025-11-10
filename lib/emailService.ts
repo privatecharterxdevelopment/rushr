@@ -702,3 +702,53 @@ export async function sendWelcomeEmailContractor(params: {
     text: `Welcome to Rushr Pro! Start bidding on jobs and growing your business. Visit ${process.env.NEXT_PUBLIC_SITE_URL}/dashboard/contractor`
   })
 }
+
+/**
+ * Notify contractor when homeowner sends them a custom job offer
+ */
+export async function notifyCustomOffer(params: {
+  contractorEmail: string
+  contractorName: string
+  homeownerName: string
+  jobTitle: string
+  offeredAmount: number
+  jobDescription: string
+  category: string
+}) {
+  const { contractorEmail, contractorName, homeownerName, jobTitle, offeredAmount, jobDescription, category } = params
+
+  const subject = `New Direct Job Offer: ${jobTitle}`
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+      <h2 style="color: #10B981;">New Direct Job Offer!</h2>
+      <p>Hi ${contractorName},</p>
+      <p><strong>${homeownerName}</strong> has sent you a direct job offer:</p>
+
+      <div style="background: #F0FDF4; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #10B981;">
+        <p style="margin: 5px 0;"><strong>Job:</strong> ${jobTitle}</p>
+        <p style="margin: 5px 0;"><strong>Category:</strong> ${category}</p>
+        <p style="margin: 5px 0;"><strong>Offered Amount:</strong> $${offeredAmount.toFixed(2)}</p>
+        <p style="margin: 5px 0;"><strong>Description:</strong></p>
+        <p style="margin: 5px 0; color: #6B7280;">${jobDescription}</p>
+      </div>
+
+      <p>
+        <a href="${process.env.NEXT_PUBLIC_SITE_URL}/dashboard/contractor/offers"
+           style="background: #10B981; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
+          View Offer & Respond
+        </a>
+      </p>
+
+      <p style="color: #6B7280; font-size: 14px; margin-top: 30px;">
+        Rushr Pro - Get More Jobs
+      </p>
+    </div>
+  `
+
+  return sendEmail({
+    to: contractorEmail,
+    subject,
+    html,
+    text: `Hi ${contractorName}, ${homeownerName} sent you a direct job offer for "${jobTitle}" - $${offeredAmount.toFixed(2)}. ${jobDescription}. View at ${process.env.NEXT_PUBLIC_SITE_URL}/dashboard/contractor/offers`
+  })
+}

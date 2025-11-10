@@ -4,3 +4,5 @@ node_modules
 .env.local
 .env
 package-lock.json
+.env.production
+VERCEL_ENV_VARIABLES.txt

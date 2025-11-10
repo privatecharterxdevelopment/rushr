@@ -8,7 +8,7 @@ const supabase = createClient(
 )
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2024-11-20.acacia'
+  apiVersion: '2025-09-30.clover'
 })
 
 /**
@@ -52,16 +52,18 @@ export async function POST(request: NextRequest) {
       }
     })
 
-    // Save to database
+    // Save to database (use upsert to handle race conditions)
     const { error: dbError } = await supabase
       .from('stripe_customers')
-      .insert({
+      .upsert({
         user_id: userId,
         stripe_customer_id: customer.id,
         email: email,
         name: name,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
+      }, {
+        onConflict: 'user_id'
       })
 
     if (dbError) {

@@ -1,23 +1,43 @@
 // app/api/direct-offers/create/route.ts
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { notifyCustomOffer } from '../../../../lib/emailService'
 
 export async function POST(request: NextRequest) {
   try {
+    // Get session from cookies
+    const authHeader = request.headers.get('authorization')
+    const token = authHeader?.split(' ')[1] || request.cookies.get('rushr-auth-token')?.value
+
+    console.log('[DirectOffer] Auth header present:', !!authHeader)
+    console.log('[DirectOffer] Token present:', !!token)
+
+    if (!token) {
+      return NextResponse.json({ error: 'Unauthorized - No token provided' }, { status: 401 })
+    }
+
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        global: {
+          headers: { Authorization: `Bearer ${token}` }
+        }
+      }
     )
 
-    // Get authenticated user
+    // Get authenticated user from session
     const {
       data: { user },
       error: authError,
     } = await supabase.auth.getUser()
 
     if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      console.error('[DirectOffer] Auth error:', authError)
+      return NextResponse.json({ error: 'Unauthorized - Invalid token' }, { status: 401 })
     }
+
+    console.log('[DirectOffer] Authenticated user:', user.id)
 
     // Parse request body
     const body = await request.json()
@@ -96,6 +116,42 @@ export async function POST(request: NextRequest) {
 
     // Notification is automatically created by database trigger
     // (see notify_contractor_new_offer trigger)
+
+    // Send email notification to contractor (non-blocking)
+    try {
+      const serviceSupabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!
+      )
+
+      const { data: contractorAuth } = await serviceSupabase.auth.admin.getUserById(contractor_id)
+      const { data: contractorProfile } = await serviceSupabase
+        .from('pro_contractors')
+        .select('name, business_name')
+        .eq('id', contractor_id)
+        .single()
+
+      const { data: homeowner } = await serviceSupabase
+        .from('user_profiles')
+        .select('name')
+        .eq('id', user.id)
+        .single()
+
+      if (contractorAuth?.user?.email && contractorProfile && homeowner) {
+        await notifyCustomOffer({
+          contractorEmail: contractorAuth.user.email,
+          contractorName: contractorProfile.business_name || contractorProfile.name || 'Professional',
+          homeownerName: homeowner.name,
+          jobTitle: title,
+          offeredAmount: parseFloat(offered_amount),
+          jobDescription: description,
+          category: category
+        })
+      }
+    } catch (emailError) {
+      console.error('Failed to send custom offer email:', emailError)
+      // Don't fail the request if email fails
+    }
 
     return NextResponse.json(
       {

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { notifyPaymentCompleted } from '../../../../lib/emailService'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -136,6 +137,44 @@ export async function POST(request: NextRequest) {
         .from('homeowner_jobs')
         .update({ status: 'completed' })
         .eq('id', paymentHold.job_id)
+
+      // 6. Send payment completed email to both parties (non-blocking)
+      try {
+        const { data: job } = await supabase
+          .from('homeowner_jobs')
+          .select('title, homeowner_id')
+          .eq('id', paymentHold.job_id)
+          .single()
+
+        const { data: homeownerAuth } = await supabase.auth.admin.getUserById(paymentHold.homeowner_id)
+        const { data: contractorAuth } = await supabase.auth.admin.getUserById(paymentHold.contractor_id)
+
+        const { data: homeowner } = await supabase
+          .from('user_profiles')
+          .select('name')
+          .eq('id', paymentHold.homeowner_id)
+          .single()
+
+        const { data: contractor } = await supabase
+          .from('pro_contractors')
+          .select('name, business_name')
+          .eq('id', paymentHold.contractor_id)
+          .single()
+
+        if (homeownerAuth?.user?.email && contractorAuth?.user?.email && job && homeowner && contractor) {
+          await notifyPaymentCompleted({
+            homeownerEmail: homeownerAuth.user.email,
+            homeownerName: homeowner.name,
+            contractorEmail: contractorAuth.user.email,
+            contractorName: contractor.business_name || contractor.name || 'Contractor',
+            jobTitle: job.title,
+            amount: parseFloat(updated.contractor_payout)
+          })
+        }
+      } catch (emailError) {
+        console.error('Failed to send payment completion email:', emailError)
+        // Don't fail the request if email fails
+      }
     }
 
     return NextResponse.json({

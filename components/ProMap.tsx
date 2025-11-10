@@ -16,6 +16,7 @@ const ProMapInner = dynamic(() => import('./ProMapInner'), { ssr: false })
 export default function ProMap(props: Props){
   const [contractors, setContractors] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [mapKey, setMapKey] = useState(0) // Force map re-render when location changes
 
   useEffect(() => {
     async function fetchContractors() {
@@ -74,7 +75,15 @@ export default function ProMap(props: Props){
     fetchContractors()
   }, [])
 
-  console.log('ProMap render:', { loading, contractorsCount: contractors.length, props })
+  // Force map re-render when searchCenter changes
+  useEffect(() => {
+    if (props.searchCenter) {
+      console.log('ProMap: searchCenter changed, forcing map re-render:', props.searchCenter)
+      setMapKey(prev => prev + 1)
+    }
+  }, [props.searchCenter])
+
+  console.log('ProMap render:', { loading, contractorsCount: contractors.length, props, mapKey })
 
   if (loading) {
     return (
@@ -93,7 +102,7 @@ export default function ProMap(props: Props){
 
   console.log('ProMap: Rendering ProMapInner with', contractors.length, 'contractors')
   return (
-    <div className="h-[360px] w-full">
+    <div className="h-[360px] w-full" key={mapKey}>
       <ProMapInner {...props} items={contractors} hideSidebar={true} />
     </div>
   )
