@@ -95,11 +95,23 @@ export default function AvatarUploadPage() {
       const base64Promise = new Promise<string>((resolve, reject) => {
         reader.onload = () => {
           const result = reader.result as string
+          if (!result) {
+            reject(new Error('Failed to read file'))
+            return
+          }
           resolve(result)
         }
-        reader.onerror = reject
-        reader.readAsDataURL(selectedFile)
+        reader.onerror = (error) => {
+          console.error('FileReader error:', error)
+          reject(new Error('Failed to load image file. Please try again.'))
+        }
+        reader.onabort = () => {
+          reject(new Error('File reading was aborted'))
+        }
       })
+
+      // Start reading the file
+      reader.readAsDataURL(selectedFile)
 
       const base64Data = await base64Promise
 
@@ -140,11 +152,21 @@ export default function AvatarUploadPage() {
       }
 
       if (updateError) {
-        console.error('Upload error details:', updateError)
+        console.error('Upload error details:', {
+          message: updateError.message,
+          code: updateError.code,
+          details: updateError.details,
+          hint: updateError.hint
+        })
+
         if (updateError.message.includes('row-level security')) {
           throw new Error('Permission denied - RLS policy blocking. Check console for details.')
         } else if (updateError.message.includes('column') && updateError.message.includes('avatar_url')) {
           throw new Error('Database schema issue - avatar_url column may not exist')
+        } else if (updateError.code === 'PGRST301') {
+          throw new Error('Database connection failed. Please check your internet connection.')
+        } else if (updateError.message.includes('JWT') || updateError.message.includes('token')) {
+          throw new Error('Authentication expired. Please sign out and sign back in.')
         } else {
           throw new Error(`Upload failed: ${updateError.message}. Check console for details.`)
         }
@@ -170,6 +192,11 @@ export default function AvatarUploadPage() {
       }, 2000)
 
     } catch (err: any) {
+      console.error('Avatar upload error:', {
+        name: err.name,
+        message: err.message,
+        stack: err.stack
+      })
       setError(err.message || 'Failed to upload avatar')
     } finally {
       setLoading(false)
