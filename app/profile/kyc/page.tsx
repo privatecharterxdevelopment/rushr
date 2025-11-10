@@ -45,6 +45,57 @@ export default function KYCVerificationPage() {
   ])
   const [showKYCForm, setShowKYCForm] = useState(false)
 
+  // Define fetchExistingDocuments before useEffect
+  const fetchExistingDocuments = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('kyc_documents')
+        .select('*')
+        .eq('user_id', user!.id)
+
+      if (error) {
+        // Silently fail if table doesn't exist yet (migration not run)
+        console.log('KYC documents table not accessible:', error.message)
+        return
+      }
+
+      if (data && data.length > 0) {
+        setDocuments(prev => prev.map(doc => {
+          const existingDoc = data.find(d => d.document_type === doc.type)
+          if (existingDoc) {
+            return {
+              ...doc,
+              uploaded: true,
+              verified: existingDoc.status === 'verified',
+              status: existingDoc.status,
+              documentUrl: existingDoc.document_url,
+              rejectionReason: existingDoc.rejection_reason
+            }
+          }
+          return doc
+        }))
+
+        // Check if all documents are verified - update user profile
+        const allVerified = data.every(d => d.status === 'verified')
+        const hasAtLeastTwo = data.filter(d => d.status === 'verified').length >= 2
+
+        if (hasAtLeastTwo && !userProfile?.kyc_verified) {
+          // Update user profile to mark KYC as verified
+          await supabase
+            .from('user_profiles')
+            .update({ kyc_verified: true })
+            .eq('id', user!.id)
+
+          // Refresh profile to update UI
+          if (refreshProfile) await refreshProfile()
+        }
+      }
+    } catch (err: any) {
+      // Silently fail - KYC documents are optional
+      console.log('KYC documents fetch failed:', err?.message || 'Unknown error')
+    }
+  }
+
   // Fetch existing KYC documents on mount
   useEffect(() => {
     if (user) {
@@ -124,51 +175,6 @@ export default function KYCVerificationPage() {
       case 'passport': return <FileText className="h-5 w-5" />
       case 'utility_bill': return <Home className="h-5 w-5" />
       case 'bank_statement': return <FileText className="h-5 w-5" />
-    }
-  }
-
-  const fetchExistingDocuments = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('kyc_documents')
-        .select('*')
-        .eq('user_id', user!.id)
-
-      if (error) throw error
-
-      if (data && data.length > 0) {
-        setDocuments(prev => prev.map(doc => {
-          const existingDoc = data.find(d => d.document_type === doc.type)
-          if (existingDoc) {
-            return {
-              ...doc,
-              uploaded: true,
-              verified: existingDoc.status === 'verified',
-              status: existingDoc.status,
-              documentUrl: existingDoc.document_url,
-              rejectionReason: existingDoc.rejection_reason
-            }
-          }
-          return doc
-        }))
-
-        // Check if all documents are verified - update user profile
-        const allVerified = data.every(d => d.status === 'verified')
-        const hasAtLeastTwo = data.filter(d => d.status === 'verified').length >= 2
-
-        if (hasAtLeastTwo && !userProfile?.kyc_verified) {
-          // Update user profile to mark KYC as verified
-          await supabase
-            .from('user_profiles')
-            .update({ kyc_verified: true })
-            .eq('id', user!.id)
-
-          // Refresh profile to update UI
-          if (refreshProfile) await refreshProfile()
-        }
-      }
-    } catch (err: any) {
-      console.error('Error fetching KYC documents:', err)
     }
   }
 
