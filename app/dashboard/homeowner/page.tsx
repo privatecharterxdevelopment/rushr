@@ -190,7 +190,8 @@ export default function HomeownerDashboardPage() {
   const displayJobs = useMemo(() => {
     // Only use real jobs from database - no mock data
     const jobs = realJobs.map(job => ({
-      id: job.id,
+      id: job.job_number || job.id, // Use job_number for cleaner URLs, fallback to UUID
+      uuid: job.id, // Keep UUID for internal operations
       title: job.title,
       status: job.status === 'pending' ? 'Pending' :
               job.status === 'confirmed' ? 'Confirmed' :

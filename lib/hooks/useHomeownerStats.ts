@@ -14,6 +14,7 @@ export interface HomeownerStats {
 
 export interface HomeownerJob {
   id: string
+  job_number?: number
   title: string
   description: string
   category: string

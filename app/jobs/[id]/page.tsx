@@ -19,11 +19,14 @@ export default function JobDetail() {
       if (!id) return
 
       try {
+        // Check if ID is a number (job_number) or UUID (backward compatibility)
+        const isJobNumber = /^\d+$/.test(id)
+
         // Try to fetch from contractor_available_jobs first
         let { data, error } = await supabase
           .from('contractor_available_jobs')
           .select('*')
-          .eq('job_id', id)
+          .eq(isJobNumber ? 'job_number' : 'job_id', id)
           .single()
 
         // If not found, try homeowner_jobs
@@ -31,7 +34,7 @@ export default function JobDetail() {
           const { data: homeownerJob, error: homeownerError } = await supabase
             .from('homeowner_jobs')
             .select('*')
-            .eq('id', id)
+            .eq(isJobNumber ? 'job_number' : 'id', id)
             .single()
 
           if (homeownerError || !homeownerJob) {
@@ -43,6 +46,7 @@ export default function JobDetail() {
           // Convert homeowner job to display format
           data = {
             job_id: homeownerJob.id,
+            job_number: homeownerJob.job_number,
             title: homeownerJob.title,
             description: homeownerJob.description,
             category: homeownerJob.category,
@@ -79,6 +83,7 @@ export default function JobDetail() {
 
   const isContractor = user && userProfile?.role === 'contractor'
   const jobId = job.job_id || job.id
+  const jobNumber = job.job_number
   const rehireURL = `/post-job?title=${encodeURIComponent(job.title)}&cat=${encodeURIComponent(job.category)}`
 
   // Convert priority to urgency score
@@ -102,7 +107,7 @@ export default function JobDetail() {
               </button>
             ) : (
               <>
-                <Link href={`/jobs/${jobId}/compare`} className="btn btn-outline">Compare bids</Link>
+                <Link href={`/jobs/${jobNumber || jobId}/compare`} className="btn btn-outline">Compare bids</Link>
                 <Link href={rehireURL} className="btn btn-outline">Rehire (prefill)</Link>
               </>
             )}

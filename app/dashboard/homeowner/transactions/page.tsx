@@ -35,6 +35,7 @@ export default function TransactionsPage() {
 
       try {
         // Fetch completed jobs first (much faster than Stripe API)
+        // Note: job_number will be null until migration is run
         const { data: jobs, error: jobsError } = await supabase
           .from('homeowner_jobs')
           .select(`
@@ -73,13 +74,13 @@ export default function TransactionsPage() {
         )
 
         // Create transactions from completed jobs
-        const enrichedTransactions = (jobs || []).map((job) => {
+        const enrichedTransactions = (jobs || []).map((job: any) => {
           const contractor = job.contractor_id ? contractorMap.get(job.contractor_id) : null
           const contractorName = contractor?.business_name || contractor?.name || 'Contractor'
 
           return {
             id: job.id,
-            job_id: job.id,
+            job_id: job.job_number || job.id, // Use job_number for cleaner URLs (will be UUID until migration runs)
             job_title: job.title,
             contractor_name: contractorName,
             amount: job.final_cost || 0,
