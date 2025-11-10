@@ -39,11 +39,24 @@ type Props = {
 }
 
 const CAT_EMOJI: Record<string, string> = {
+  // Home emergencies
+  Plumbing: '🚿',
   Electrical: '⚡',
   HVAC: '❄️',
   Roofing: '🏠',
-  Plumbing: '🚿',
-  Carpentry: '🪚',
+  'Water Damage': '💧',
+  Locksmith: '🔒',
+  'Appliance Repair': '🔧',
+  Handyman: '🔨',
+  // Auto emergencies
+  'Auto Battery': '🔋',
+  'Auto Tire': '🔧',
+  'Auto Lockout': '🗝️',
+  Tow: '🚗',
+  'Fuel Delivery': '⛽',
+  'Mobile Mechanic': '⚙️',
+  // Other
+  Carpentry: '🔨',
   Landscaping: '🌿',
 }
 
@@ -429,32 +442,6 @@ export default function ProMapInner({
 
     console.log('Refreshing markers for items:', items.length)
 
-    // Add pulsing animation CSS if not already added
-    if (!document.getElementById('contractor-marker-pulse-animation')) {
-      const style = document.createElement('style')
-      style.id = 'contractor-marker-pulse-animation'
-      style.textContent = `
-        @keyframes contractor-pulse {
-          0% {
-            transform: scale(1);
-            opacity: 1;
-          }
-          50% {
-            transform: scale(1.5);
-            opacity: 0.5;
-          }
-          100% {
-            transform: scale(1);
-            opacity: 1;
-          }
-        }
-        .contractor-marker-pulse {
-          animation: contractor-pulse 2s ease-in-out infinite;
-        }
-      `
-      document.head.appendChild(style)
-    }
-
     items.forEach((c: any) => {
       const lat = Number(c?.loc?.lat)
       const lng = Number(c?.loc?.lng)
@@ -464,81 +451,46 @@ export default function ProMapInner({
       const svc = selectedCategory && svcs.includes(selectedCategory) ? selectedCategory : svcs[0]
       const emoji = CAT_EMOJI[svc as keyof typeof CAT_EMOJI] ?? '🔧'
 
-      // Create custom blue pulsing marker element
+      // Create marker element matching FindProMapbox style
       const el = document.createElement('div')
       el.className = 'custom-marker'
-      el.style.cssText = `
-        position: relative;
-        width: 40px;
-        height: 40px;
-        cursor: pointer;
+      el.innerHTML = `
+        <div style="
+          background: #d1fae5;
+          border: 2px solid #10b981;
+          width: 32px;
+          height: 32px;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 16px;
+          cursor: pointer;
+          box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        ">
+          ${emoji}
+        </div>
       `
-
-      // Inner blue dot
-      const dot = document.createElement('div')
-      dot.style.cssText = `
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        width: 16px;
-        height: 16px;
-        background-color: #3B82F6;
-        border: 3px solid white;
-        border-radius: 50%;
-        box-shadow: 0 2px 8px rgba(59, 130, 246, 0.6);
-        z-index: 2;
-      `
-      el.appendChild(dot)
-
-      // Pulsing ring
-      const pulse = document.createElement('div')
-      pulse.className = 'contractor-marker-pulse'
-      pulse.style.cssText = `
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        width: 32px;
-        height: 32px;
-        background-color: rgba(59, 130, 246, 0.3);
-        border-radius: 50%;
-        z-index: 1;
-      `
-      el.appendChild(pulse)
 
       // Import mapboxgl dynamically for Marker class
       ;(async () => {
         const mapboxgl = (await import('mapbox-gl')).default
 
-        // Build services list
-        const servicesList = svcs.slice(0, 3).map(s => {
-          const serviceEmoji = CAT_EMOJI[s as keyof typeof CAT_EMOJI] || '🔧'
-          return `<span style="display: inline-block; background: #f1f5f9; padding: 2px 8px; border-radius: 12px; margin: 2px; font-size: 11px;">${serviceEmoji} ${s}</span>`
-        }).join('')
+        // Create popup matching FindProMapbox style
+        const popup = new mapboxgl.Popup({ offset: 25 }).setHTML(`
+          <div style="padding: 8px;">
+            <h3 style="font-weight: 600; margin: 0 0 4px 0;">${c?.name || 'Contractor'}</h3>
+            <p style="margin: 0; font-size: 12px; color: #666;">${c?.city || ''}</p>
+            ${c?.rating ? `<p style="margin: 4px 0 0 0; font-size: 12px;">⭐ ${Number(c.rating).toFixed(1)}</p>` : ''}
+          </div>
+        `)
 
-        const moreServices = svcs.length > 3 ? `<span style="font-size: 11px; color: #64748b;">+${svcs.length - 3} more</span>` : ''
-
-        const marker = new mapboxgl.Marker(el)
+        const marker = new mapboxgl.Marker({
+          element: el,
+          anchor: 'center' // Center the marker exactly on coordinates
+        })
           .setLngLat([lng, lat])
-          .setPopup(
-            new mapboxgl.Popup({ offset: 25, className: 'contractor-popup' })
-              .setHTML(`
-                <div style="padding: 12px; min-width: 200px;">
-                  <strong style="font-size: 14px; color: #1e293b;">${escapeHtml(String(c?.name ?? 'Contractor'))}</strong><br/>
-                  <span style="font-size: 12px; color: #64748b;">${escapeHtml(String(c?.city ?? ''))}</span>
-                  ${c?.rating ? `<div style="margin: 8px 0; font-size: 12px;"><span style="color: #eab308;">★</span> ${Number(c.rating).toFixed(1)}</div>` : ''}
-                  <div style="margin-top: 8px;">
-                    ${servicesList}
-                    ${moreServices}
-                  </div>
-                  <div style="margin-top: 12px; display: flex; gap: 8px;">
-                    <a href="/contractor/${c?.id}" style="flex: 1; text-align: center; padding: 6px 12px; background: #2563eb; color: white; border-radius: 6px; text-decoration: none; font-size: 12px; font-weight: 500;">View Profile</a>
-                    <a href="/messages?to=${c?.id}" style="flex: 1; text-align: center; padding: 6px 12px; border: 1px solid #2563eb; color: #2563eb; border-radius: 6px; text-decoration: none; font-size: 12px; font-weight: 500;">Contact</a>
-                  </div>
-                </div>
-              `)
-          )
+          .setPopup(popup)
           .addTo(map)
 
         markersRef.current.push(marker)

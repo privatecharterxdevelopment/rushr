@@ -9,6 +9,7 @@ type Props = {
   radiusMiles: number
   searchCenter?: [number, number]
   onSearchHere?: (center:[number,number]) => void
+  contractors?: any[] // Optional: use provided contractors instead of fetching
 }
 
 const ProMapInner = dynamic(() => import('./ProMapInner'), { ssr: false })
@@ -18,7 +19,31 @@ export default function ProMap(props: Props){
   const [loading, setLoading] = useState(true)
   const [mapKey, setMapKey] = useState(0) // Force map re-render when location changes
 
+  // If contractors are provided as props, use them instead of fetching
   useEffect(() => {
+    if (props.contractors) {
+      console.log('ProMap: Using provided contractors:', props.contractors.length)
+
+      // Transform contractors to map format
+      const contractorsForMap = props.contractors.map(contractor => {
+        const lat = contractor.latitude || contractor.lat
+        const lng = contractor.longitude || contractor.lng || contractor.lon
+
+        return {
+          ...contractor,
+          loc: lat && lng ? { lat: Number(lat), lng: Number(lng) } : null,
+          services: contractor.categories || contractor.trades || [],
+          rating: contractor.rating || 0,
+          city: contractor.city || 'Unknown'
+        }
+      }).filter(c => c.loc !== null)
+
+      setContractors(contractorsForMap)
+      setLoading(false)
+      return
+    }
+
+    // Otherwise fetch contractors from database
     async function fetchContractors() {
       try {
         setLoading(true)
@@ -27,8 +52,6 @@ export default function ProMap(props: Props){
         const { data, error } = await supabase
           .from('pro_contractors')
           .select('*')
-          // Removed kyc_status filter to show all contractors
-          // .eq('kyc_status', 'completed')
 
         if (error) {
           console.error('ProMap: Error fetching contractors:', error)
@@ -47,7 +70,6 @@ export default function ProMap(props: Props){
                 lng: Number(contractor.longitude)
               }
             }
-            // DO NOT use ZIP codes as fallback - they are too inaccurate
 
             return {
               ...contractor,
@@ -73,7 +95,7 @@ export default function ProMap(props: Props){
     }
 
     fetchContractors()
-  }, [])
+  }, [props.contractors])
 
   // Force map re-render when searchCenter changes
   useEffect(() => {

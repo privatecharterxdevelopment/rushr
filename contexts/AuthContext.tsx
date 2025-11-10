@@ -69,8 +69,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       if (data) {
-        console.log('[AuthContext] Homeowner profile loaded successfully')
-        setUserProfile(data)
+        // Only set profile if user is a homeowner
+        if (data.role === 'homeowner') {
+          console.log('[AuthContext] Homeowner profile loaded successfully')
+          setUserProfile(data)
+        } else {
+          console.log('[AuthContext] User is not a homeowner, skipping profile')
+          setUserProfile(null)
+        }
       }
     } catch (err) {
       console.error('[AuthContext] Failed to fetch user profile:', err)
@@ -142,20 +148,41 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (!mounted) return
 
         console.log('[HOMEOWNER-AUTH] Event:', event, 'User:', session?.user?.id?.substring(0, 8))
-        setSession(session)
-        setUser(session?.user ?? null)
 
-        // Handle SIGNED_OUT event
+        // Handle SIGNED_OUT event immediately
         if (event === 'SIGNED_OUT') {
+          setSession(null)
+          setUser(null)
           setUserProfile(null)
           setLoading(false)
           return
         }
 
+        setSession(session)
+        setUser(session?.user ?? null)
+
         if (session?.user) {
-          await fetchUserProfile(session.user.id)
+          // Fetch profile and check if it's a homeowner
+          const { data: profile, error: profileError } = await supabase
+            .from('user_profiles')
+            .select('*')
+            .eq('id', session.user.id)
+            .single()
+
+          if (!profileError && profile) {
+            // Only set profile if user is a homeowner
+            if (profile.role === 'homeowner') {
+              setUserProfile(profile)
+              console.log('[AuthContext] Homeowner profile loaded')
+            } else {
+              // This is a contractor, don't set homeowner profile
+              setUserProfile(null)
+              console.log('[AuthContext] Contractor detected, skipping homeowner profile')
+            }
+          } else {
+            setUserProfile(null)
+          }
           setLoading(false)
-          // NO AUTO-REDIRECT - let pages handle routing
         } else {
           setUserProfile(null)
           setLoading(false)

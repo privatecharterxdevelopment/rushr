@@ -620,7 +620,7 @@ export default function OfferJobModal({ contractor, onClose, onSuccess }: OfferJ
           </div>
         </form>
         </>
-        )}
+      )}
       </div>
     </div>
   )

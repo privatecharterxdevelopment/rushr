@@ -225,13 +225,36 @@ export function ProAuthProvider({ children }: { children: React.ReactNode }) {
       async (event, session) => {
         try {
           console.log('[PRO-AUTH] Event:', event, 'User:', session?.user?.id?.substring(0, 8))
+
+          // Handle SIGNED_OUT immediately
+          if (event === 'SIGNED_OUT') {
+            setSession(null)
+            setUser(null)
+            setContractorProfile(null)
+            setLoading(false)
+            return
+          }
+
           setSession(session)
           setUser(session?.user ?? null)
 
-          if (session?.user && session.user.user_metadata?.role === 'contractor') {
-            // Check if user exists in pro_contractors table
-            await fetchContractorProfile(session.user.id)
-            // NO AUTO-REDIRECT - let pages handle routing
+          if (session?.user) {
+            // Check if this user is actually a contractor by checking pro_contractors table
+            const { data: profile, error: profileError } = await supabase
+              .from('pro_contractors')
+              .select('*')
+              .eq('id', session.user.id)
+              .single()
+
+            if (!profileError && profile) {
+              // This is a contractor
+              setContractorProfile(profile)
+              console.log('[PRO-AUTH] Contractor profile loaded')
+            } else {
+              // Not a contractor, don't set profile
+              setContractorProfile(null)
+              console.log('[PRO-AUTH] Not a contractor, skipping profile')
+            }
           } else {
             setContractorProfile(null)
           }

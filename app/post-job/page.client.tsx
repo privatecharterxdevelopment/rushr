@@ -512,18 +512,33 @@ export default function PostJobInner({ userId }: Props) {
   const [onlyActive, setOnlyActive] = useState(true)
   const [sortBy, setSortBy] = useState<'eta' | 'distance' | 'rating'>('eta')
   const [nearbyContractors, setNearbyContractors] = useState<Contractor[]>([])
+  const [nearbyContractorsWithLocation, setNearbyContractorsWithLocation] = useState<any[]>([]) // Store contractors with lat/lng for map
   const [loadingContractors, setLoadingContractors] = useState(false)
+  const [showCount, setShowCount] = useState(5) // Show 5 contractors initially
 
-  // Fetch nearby contractors - Filter by ZIP and category
+  // Helper function to calculate distance using Haversine formula
+  function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
+    const R = 3959 // Earth's radius in miles
+    const dLat = (lat2 - lat1) * Math.PI / 180
+    const dLon = (lon2 - lon1) * Math.PI / 180
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+      Math.sin(dLon / 2) * Math.sin(dLon / 2)
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+    return R * c
+  }
+
+  // Fetch nearby contractors - Filter by radius and category
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     async function fetchNearbyContractors() {
-      // Extract ZIP from address
+      // Need either userLocation or address with ZIP
       const zipMatch = address.match(/\b\d{5}\b/)
       const homeownerZip = zipMatch ? zipMatch[0] : null
 
-      if (!homeownerZip) {
-        console.log('[POST-JOB] No ZIP code yet, waiting for address')
+      if (!userLocation && !homeownerZip) {
+        console.log('[POST-JOB] No location yet, waiting for address or geolocation')
         setNearbyContractors([])
         return
       }
@@ -531,49 +546,111 @@ export default function PostJobInner({ userId }: Props) {
       setLoadingContractors(true)
 
       try {
-        // Get ALL contractors and filter client-side by ZIP
+        // Get ALL contractors with available fields
         let query = supabase
           .from('pro_contractors')
-          .select('id, name, business_name, categories, base_zip, service_area_zips, phone, status')
-          .eq('status', 'approved')
+          .select('*')
 
         // Filter by emergency category if selected
         if (emergencyType) {
           query = query.contains('categories', [emergencyType])
         }
 
-        const { data: contractors, error } = await query.limit(100)
+        const { data: contractors, error } = await query.limit(200)
 
         if (error) {
           console.error('[POST-JOB] Database error:', error)
+          console.error('[POST-JOB] Error details:', JSON.stringify(error, null, 2))
           setNearbyContractors([])
           return
         }
 
         if (contractors && contractors.length > 0) {
-          // Filter contractors by ZIP - check if homeowner ZIP is in their service area
-          const matchingContractors = contractors.filter(c => {
-            const serviceZips = c.service_area_zips || []
-            const baseZip = c.base_zip
-            return serviceZips.includes(homeownerZip) || baseZip === homeownerZip
+          console.log('[POST-JOB] Fetched contractors:', contractors.length)
+          console.log('[POST-JOB] Sample contractor:', contractors[0])
+
+          const DEFAULT_RADIUS_MILES = 15
+
+          // Filter contractors by radius if we have userLocation
+          let matchingContractors = contractors
+
+          if (userLocation) {
+            console.log('[POST-JOB] Filtering by userLocation:', userLocation)
+            // Filter by distance using lat/lng
+            matchingContractors = contractors.filter(c => {
+              // Check if contractor has lat/lng (support both field name formats)
+              const lat = c.latitude || c.lat
+              const lng = c.longitude || c.lng || c.lon
+
+              if (!lat || !lng) {
+                console.log(`[POST-JOB] Contractor ${c.id} missing location data`)
+                return false
+              }
+
+              const distance = calculateDistance(
+                userLocation[0],
+                userLocation[1],
+                Number(lat),
+                Number(lng)
+              )
+              console.log(`[POST-JOB] Contractor ${c.business_name || c.name}: ${distance.toFixed(2)} miles`)
+              return distance <= DEFAULT_RADIUS_MILES
+            })
+            console.log(`[POST-JOB] After radius filter: ${matchingContractors.length} contractors`)
+          } else if (homeownerZip) {
+            console.log('[POST-JOB] Filtering by ZIP:', homeownerZip)
+            // Fallback to ZIP matching if no userLocation
+            matchingContractors = contractors.filter(c => {
+              const serviceZips = c.service_area_zips || []
+              const baseZip = c.base_zip
+              return serviceZips.includes(homeownerZip) || baseZip === homeownerZip
+            })
+            console.log(`[POST-JOB] After ZIP filter: ${matchingContractors.length} contractors`)
+          }
+
+          // Map database contractors to UI Contractor type with actual distances
+          const mappedContractors: Contractor[] = matchingContractors.map((c) => {
+            let distanceKm = 0
+            const lat = c.latitude || c.lat
+            const lng = c.longitude || c.lng || c.lon
+
+            if (userLocation && lat && lng) {
+              const distanceMiles = calculateDistance(
+                userLocation[0],
+                userLocation[1],
+                Number(lat),
+                Number(lng)
+              )
+              distanceKm = distanceMiles * 1.60934 // Convert miles to km
+            }
+
+            return {
+              id: c.id,
+              name: c.business_name || c.name || 'Contractor',
+              rating: c.rating || (4.5 + (Math.random() * 0.5)),
+              jobs: Math.floor(Math.random() * 500),
+              distanceKm,
+              etaMin: Math.ceil(distanceKm * 2) + 5, // Estimate ETA based on distance
+              trades: c.categories || [],
+              insured: true,
+              backgroundChecked: true,
+              activeNow: true,
+            }
           })
 
-          // Map database contractors to UI Contractor type
-          const mappedContractors: Contractor[] = matchingContractors.map((c, index) => ({
-            id: c.id,
-            name: c.business_name || c.name || 'Contractor',
-            rating: 4.5 + (Math.random() * 0.5),
-            jobs: Math.floor(Math.random() * 500),
-            distanceKm: (index + 1) * 1.5,
-            etaMin: (index + 1) * 10 + 5,
-            trades: c.categories || [],
-            insured: true,
-            backgroundChecked: true,
-            activeNow: true,
+          // Sort by distance
+          mappedContractors.sort((a, b) => a.distanceKm - b.distanceKm)
+
+          // Also store contractors with full location data for the map
+          const contractorsWithLocation = matchingContractors.map(c => ({
+            ...c,
+            latitude: c.latitude || c.lat,
+            longitude: c.longitude || c.lng || c.lon,
           }))
 
-          console.log(`[POST-JOB] Found ${mappedContractors.length} contractors for ZIP ${homeownerZip}, category: ${emergencyType || 'ALL'}`)
+          console.log(`[POST-JOB] Found ${mappedContractors.length} contractors, category: ${emergencyType || 'ALL'}`)
           setNearbyContractors(mappedContractors)
+          setNearbyContractorsWithLocation(contractorsWithLocation)
         } else {
           console.log(`[POST-JOB] No contractors found for category: ${emergencyType || 'ALL'}`)
           setNearbyContractors([])
@@ -587,7 +664,7 @@ export default function PostJobInner({ userId }: Props) {
     }
 
     fetchNearbyContractors()
-  }, [emergencyType, address])
+  }, [emergencyType, address, userLocation])
 
   const filteredNearby = useMemo(() => {
     // Only show contractors if we have a location (userLocation OR valid ZIP in address)
@@ -647,6 +724,33 @@ export default function PostJobInner({ userId }: Props) {
   }
 
   function submit() {
+    // Mark all fields as touched to show validation errors
+    setTouched({
+      address: true,
+      phone: true,
+      category: true,
+      emergencyType: true,
+      issueTitle: true,
+    })
+
+    // Validate all mandatory fields
+    const isValid = validateForm()
+
+    if (!isValid) {
+      // Scroll to the first error
+      const firstError = document.querySelector('[aria-invalid="true"]')
+      if (firstError) {
+        firstError.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      }
+      return
+    }
+
+    // If selecting specific contractor, ensure one is picked
+    if (!sendAll && !picked) {
+      alert('Please select a contractor or choose "Alert All Nearby" option.')
+      return
+    }
+
     setConfirmOpen(true)
   }
 
@@ -676,6 +780,9 @@ export default function PostJobInner({ userId }: Props) {
         phone: phone,
         homeowner_id: userId, // Current user ID
         created_at: new Date().toISOString(),
+        // Include contractor info if specific contractor was selected
+        requested_contractor_id: !sendAll && picked ? picked : null,
+        requested_contractor_name: !sendAll && selectedContractor ? selectedContractor.name : null,
       }
 
       console.log('Job data:', jobData)
@@ -958,8 +1065,9 @@ export default function PostJobInner({ userId }: Props) {
               <ProMap
                 centerZip={address.match(/\d{5}/)?.[0] || '10001'}
                 category={category}
-                radiusMiles={10}
+                radiusMiles={15}
                 searchCenter={userLocation || undefined}
+                contractors={nearbyContractorsWithLocation}
               />
 
               {/* Overlay prompt when no location */}
@@ -1049,7 +1157,8 @@ export default function PostJobInner({ userId }: Props) {
               </div>
             ) : (
               <div className="space-y-4">
-                {filteredNearby.map((c) => (
+                {/* Show only first 'showCount' contractors */}
+                {filteredNearby.slice(0, showCount).map((c) => (
                   <ContractorCard
                     key={c.id}
                     c={c}
@@ -1057,6 +1166,34 @@ export default function PostJobInner({ userId }: Props) {
                     onPick={() => setPicked(c.id)}
                   />
                 ))}
+
+                {/* Show More / See All buttons */}
+                {filteredNearby.length > showCount && (
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => setShowCount(prev => prev + 5)}
+                      className="flex-1 px-4 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium rounded-lg transition-colors"
+                    >
+                      Show More ({filteredNearby.length - showCount} remaining)
+                    </button>
+                    <button
+                      onClick={() => window.location.href = `/find-pro?near=${address.match(/\d{5}/)?.[0] || ''}&category=${emergencyType || ''}`}
+                      className="flex-1 px-4 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-lg transition-colors"
+                    >
+                      See All Pros
+                    </button>
+                  </div>
+                )}
+
+                {/* See All button when all are shown */}
+                {filteredNearby.length > 5 && showCount >= filteredNearby.length && (
+                  <button
+                    onClick={() => window.location.href = `/find-pro?near=${address.match(/\d{5}/)?.[0] || ''}&category=${emergencyType || ''}`}
+                    className="w-full px-4 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-lg transition-colors"
+                  >
+                    See All Pros
+                  </button>
+                )}
               </div>
             )}
 
