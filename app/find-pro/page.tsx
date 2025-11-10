@@ -224,18 +224,27 @@ export default function FindProPage() {
         const rating = Number(c?.rating) || 0
         const years = Number(c?.years) || 0
 
-        // multi-service include (match ANY selected)
-        if (services.length && !svc.some((s) => services.includes(s))) return false
-
+        // TEXT SEARCH FIRST (searches name, city, AND services)
+        // This allows city search to work independently of category filter
         if (q) {
           const hay = `${name} ${city} ${svc.join(' ')}`.toLowerCase()
           if (!hay.includes(q)) return false
         }
+
+        // CATEGORY FILTER (only if categories are selected)
+        // If search query matched above, now check if category matches (if any selected)
+        if (services.length && !svc.some((s) => services.includes(s))) return false
+
+        // RATING FILTER
         if (minRating > 0 && rating < minRating) return false
+
+        // YEARS FILTER
         if (minYears > 0 && years < minYears) return false
 
+        // HOURS FILTER
         if (!matchesHours(c)) return false
 
+        // LOCATION FILTER (radius)
         const lat = Number(c?.loc?.lat)
         const lng = Number(c?.loc?.lng)
         if (!isFinite(lat) || !isFinite(lng)) return false
