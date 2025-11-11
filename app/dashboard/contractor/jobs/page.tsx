@@ -260,7 +260,7 @@ export default function ContractorJobsPage() {
           contractor_id: user.id,
           homeowner_id: job.homeowner_id,
           bid_amount: parseFloat(amount),
-          description: message || '',
+          message: message || '',
           status: 'pending'
         }])
 

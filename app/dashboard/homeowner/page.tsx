@@ -207,7 +207,9 @@ export default function HomeownerDashboardPage() {
       endTime: job.completed_date,
       hourlyRate: 0, // TODO: Get from contractor
       estimatedDuration: '1-2 hours', // TODO: Calculate
-      created_at: job.created_at
+      created_at: job.created_at,
+      requested_contractor_id: job.requested_contractor_id || null, // Direct offer field
+      requested_contractor_name: job.requested_contractor_name || null // Direct offer contractor name
     }))
 
     // Sort jobs: Emergency jobs first, then by creation date (newest first)
@@ -689,7 +691,7 @@ export default function HomeownerDashboardPage() {
                           <div className="w-2 h-2 bg-red-500 rounded-full mt-2 flex-shrink-0"></div>
                           <div className="flex-1 min-w-0">
                             <h4 className="font-semibold text-gray-900 mb-1">{job.title}</h4>
-                            <div className="flex items-center gap-2 mb-2">
+                            <div className="flex items-center gap-2 mb-2 flex-wrap">
                               {job.priority === 'Emergency' && (
                                 <span className="bg-red-100 text-red-800 text-xs font-semibold px-2 py-1 rounded-full">
                                   🚨 EMERGENCY
@@ -703,10 +705,20 @@ export default function HomeownerDashboardPage() {
                               }`}>
                                 {job.status}
                               </span>
+                              {job.requested_contractor_id && (
+                                <span className="bg-blue-100 text-blue-800 text-xs font-semibold px-2 py-1 rounded-full">
+                                  ⭐ DIRECT OFFER
+                                </span>
+                              )}
                             </div>
                             <p className="text-sm text-gray-600 mb-1">
                               Category: <span className="font-medium">{job.category}</span>
                             </p>
+                            {job.requested_contractor_name && (
+                              <p className="text-sm text-gray-600 mb-1">
+                                Requested Contractor: <span className="font-medium">{job.requested_contractor_name}</span>
+                              </p>
+                            )}
                             {job.proName && (
                               <p className="text-sm text-gray-600">
                                 Contractor: <span className="font-medium">{job.proName}</span>
