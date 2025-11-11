@@ -166,6 +166,9 @@ export default function HomeownerDashboardPage() {
   // Payment method state
   const [hasPaymentMethod, setHasPaymentMethod] = useState(false)
 
+  // Bids state - Track bids for each job
+  const [jobBids, setJobBids] = useState<Record<string, any[]>>({})
+
   // Move all useMemo hooks to the top to avoid React hooks error
   const completeness: CompletenessField[] = useMemo(() => {
     if (!user || !userProfile) return []
@@ -338,6 +341,55 @@ export default function HomeownerDashboardPage() {
     }
   }, [displayJobs, completeness])
 
+
+  // Fetch bids for all jobs
+  useEffect(() => {
+    if (!user || !realJobs || realJobs.length === 0) return
+
+    const fetchBidsForJobs = async () => {
+      try {
+        const jobIds = realJobs.map(j => j.id)
+
+        // Fetch all bids for this homeowner's jobs
+        const { data: bids, error } = await supabase
+          .from('job_bids')
+          .select(`
+            *,
+            contractor:pro_contractors!contractor_id (
+              id,
+              name,
+              business_name,
+              email,
+              phone,
+              categories
+            )
+          `)
+          .in('job_id', jobIds)
+          .order('created_at', { ascending: false })
+
+        if (error) {
+          console.error('[HOMEOWNER] Error fetching bids:', error)
+          return
+        }
+
+        // Group bids by job_id
+        const bidsByJob: Record<string, any[]> = {}
+        bids?.forEach(bid => {
+          if (!bidsByJob[bid.job_id]) {
+            bidsByJob[bid.job_id] = []
+          }
+          bidsByJob[bid.job_id].push(bid)
+        })
+
+        console.log('[HOMEOWNER] Fetched bids:', bidsByJob)
+        setJobBids(bidsByJob)
+      } catch (err) {
+        console.error('[HOMEOWNER] Error fetching bids:', err)
+      }
+    }
+
+    fetchBidsForJobs()
+  }, [user, realJobs])
 
   // Check if user has payment methods
   useEffect(() => {
@@ -723,6 +775,49 @@ export default function HomeownerDashboardPage() {
                               <p className="text-sm text-gray-600">
                                 Contractor: <span className="font-medium">{job.proName}</span>
                               </p>
+                            )}
+
+                            {/* Show bids for this job */}
+                            {jobBids[job.uuid] && jobBids[job.uuid].length > 0 && (
+                              <div className="mt-3 pt-3 border-t border-red-200">
+                                <p className="text-sm font-semibold text-gray-900 mb-2">
+                                  📬 {jobBids[job.uuid].length} Bid{jobBids[job.uuid].length > 1 ? 's' : ''} Received
+                                </p>
+                                <div className="space-y-2">
+                                  {jobBids[job.uuid].slice(0, 3).map((bid: any) => (
+                                    <div key={bid.id} className="bg-white rounded-lg p-3 border border-red-100">
+                                      <div className="flex items-start justify-between gap-2">
+                                        <div className="flex-1 min-w-0">
+                                          <p className="text-sm font-medium text-gray-900">
+                                            {bid.contractor?.business_name || bid.contractor?.name || 'Contractor'}
+                                          </p>
+                                          <p className="text-xs text-gray-500 mt-0.5">
+                                            {bid.contractor?.categories?.slice(0, 2).join(', ')}
+                                          </p>
+                                          {bid.message && (
+                                            <p className="text-xs text-gray-600 mt-1 line-clamp-2">{bid.message}</p>
+                                          )}
+                                        </div>
+                                        <div className="text-right flex-shrink-0">
+                                          <p className="text-lg font-bold text-blue-600">${bid.bid_amount?.toFixed(2)}</p>
+                                          <span className={`text-xs px-2 py-0.5 rounded-full ${
+                                            bid.status === 'pending' ? 'bg-amber-100 text-amber-700' :
+                                            bid.status === 'accepted' ? 'bg-green-100 text-green-700' :
+                                            'bg-gray-100 text-gray-700'
+                                          }`}>
+                                            {bid.status}
+                                          </span>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  ))}
+                                  {jobBids[job.uuid].length > 3 && (
+                                    <p className="text-xs text-center text-gray-500">
+                                      + {jobBids[job.uuid].length - 3} more bids
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
                             )}
                           </div>
                         </div>

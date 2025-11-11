@@ -253,7 +253,16 @@ export default function ContractorJobsPage() {
     setBidding(job.id)
 
     try {
-      const { error } = await supabase
+      console.log('[BID] Submitting bid:', {
+        job_id: job.id,
+        contractor_id: user.id,
+        homeowner_id: job.homeowner_id,
+        bid_amount: parseFloat(amount),
+        message: message || '',
+        status: 'pending'
+      })
+
+      const { data, error } = await supabase
         .from('job_bids')
         .insert([{
           job_id: job.id,
@@ -263,10 +272,12 @@ export default function ContractorJobsPage() {
           message: message || '',
           status: 'pending'
         }])
+        .select()
 
       if (error) {
-        console.error('Error submitting bid:', error)
-        setSuccessMessage('Failed to submit bid. Please try again.')
+        console.error('[BID] Error submitting bid:', error)
+        console.error('[BID] Error details:', JSON.stringify(error, null, 2))
+        setSuccessMessage(`Failed to submit bid: ${error.message}`)
         setShowSuccessModal(true)
       } else {
         setSuccessMessage(`Bid of $${parseFloat(amount).toFixed(2)} submitted successfully! The homeowner will be notified.`)
