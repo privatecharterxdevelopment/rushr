@@ -96,14 +96,15 @@ export async function middleware(req: NextRequest) {
 
   console.log(`[MIDDLEWARE] User ${user.id.substring(0, 8)}: isContractor=${isContractor}, isHomeowner=${isHomeowner}, needsHomeownerCheck=${needsHomeownerCheck}, needsContractorCheck=${needsContractorCheck}`)
 
-  // BLOCK contractors from homeowner-only routes
+  // PRIORITY: Contractors take precedence over homeowners if user has both profiles
+  // This handles cases where a homeowner signs up as a contractor
   if (isContractor && needsHomeownerCheck) {
     console.log(`[MIDDLEWARE] 🚫🚫🚫 BLOCKING CONTRACTOR from ${pathname} -> redirecting to /dashboard/contractor`)
     return NextResponse.redirect(new URL('/dashboard/contractor', req.url))
   }
 
-  // BLOCK homeowners from contractor-only routes
-  if (isHomeowner && needsContractorCheck) {
+  // BLOCK homeowners from contractor-only routes (only if NOT a contractor)
+  if (isHomeowner && !isContractor && needsContractorCheck) {
     console.log(`[MIDDLEWARE] 🚫🚫🚫 BLOCKING HOMEOWNER from ${pathname} -> redirecting to /dashboard/homeowner`)
     return NextResponse.redirect(new URL('/dashboard/homeowner', req.url))
   }
