@@ -159,12 +159,8 @@ export default function ContractorDashboardPage() {
           if (contractor) {
             setContractorData(contractor)
             setContractorZips(contractor.service_area_zips || [contractor.base_zip || ''].filter(Boolean))
-            // Set initial availability based on status (default to offline for new contractors)
-            if (contractor.status === 'approved' || contractor.status === 'online') {
-              setAvailability('online')
-            } else {
-              setAvailability('offline')
-            }
+            // Set initial availability from the availability field (not status field)
+            setAvailability(contractor.availability || 'offline')
           }
 
           if (myBids) {
@@ -309,26 +305,16 @@ export default function ContractorDashboardPage() {
 
     setAvailability(newStatus)
 
-    // Update database - set both status and availability
+    // Update database - ONLY update availability, NOT status
+    // status field should ONLY be managed by: wizard (pending_approval) and admin (approved)
+    // availability field tracks online/busy/offline state
     try {
-      const updateData: any = {
-        updated_at: new Date().toISOString()
-      }
-
-      // Update status field for compatibility (online/approved)
-      if (newStatus === 'online') {
-        updateData.status = 'online'
-      } else if (contractorData?.status === 'online') {
-        // If currently online and going busy/offline, revert to approved
-        updateData.status = 'approved'
-      }
-
-      // Add availability field to track online/busy/offline state
-      updateData.availability = newStatus
-
       await supabase
         .from('pro_contractors')
-        .update(updateData)
+        .update({
+          availability: newStatus,
+          updated_at: new Date().toISOString()
+        })
         .eq('id', user?.id)
     } catch (error) {
       console.error('Error updating availability:', error)
@@ -582,7 +568,7 @@ export default function ContractorDashboardPage() {
       )}
 
       {/* 5. ONLINE - Receiving jobs */}
-      {contractorData && contractorData.status === 'online' && (
+      {contractorData && contractorData.availability === 'online' && (
         <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-6">
           <div className="flex items-center">
             <div className="flex-shrink-0">

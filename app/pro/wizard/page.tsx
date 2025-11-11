@@ -453,6 +453,7 @@ async function submitAll(e?: React.FormEvent) {
 
     // Fallback: If Stripe setup fails, still let them access dashboard
     clearDraft()
+    setBusy(false) // IMPORTANT: Clear busy state BEFORE alert/redirect
     alert('Welcome to Rushr Pro! Your profile has been submitted. Please complete your payment setup from the dashboard to receive payments.')
 
     console.log('[WIZARD] ========================================')
@@ -479,7 +480,6 @@ async function submitAll(e?: React.FormEvent) {
   } catch (err: any) {
     console.error('[WIZARD] Submit error:', err)
     alert(`Error: ${err?.message || 'Could not submit right now. Check console for details.'}`)
-  } finally {
     setBusy(false)
   }
 }

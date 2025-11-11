@@ -563,7 +563,7 @@ export default function HomeownerDashboardPage() {
   }
 
   return (
-    <div className="space-y-8 pt-8">
+    <div className="space-y-8 px-4 sm:px-6 lg:px-8 pt-8 max-w-7xl mx-auto">
       {/* header */}
       <div className="mb-2 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex items-center gap-4">
@@ -598,7 +598,7 @@ export default function HomeownerDashboardPage() {
         </div>
 
         {/* Action buttons - horizontal scroll on mobile, flex on desktop */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-2 lg:pb-0 -mx-4 px-4 lg:mx-0 lg:px-0">
+        <div className="flex items-center gap-2 overflow-x-auto pb-2 lg:pb-0">
           <Link href="/post-job?urgent=1" className="btn-primary whitespace-nowrap flex-shrink-0">Emergency Help</Link>
           <Link href="/profile/settings" className="btn whitespace-nowrap flex-shrink-0 flex items-center gap-1.5">
             <UserRound className="w-4 h-4" />
