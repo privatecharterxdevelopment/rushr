@@ -790,37 +790,44 @@ export default function PostJobInner({ userId }: Props) {
   }
 
   async function actuallySend() {
+    console.log('[POST-JOB] ========== STARTING JOB SUBMISSION ==========')
+    console.log('[POST-JOB] userId:', userId)
+    console.log('[POST-JOB] All form data:', { address, phone, category, emergencyType, issueTitle, details, sendAll, picked })
+
+    if (!userId) {
+      console.error('[POST-JOB] ❌ ERROR: No userId - user not logged in!')
+      alert('You must be logged in to submit a job')
+      return
+    }
+
     setConfirmOpen(false)
     setSending(true)
 
     try {
-      console.log('Submitting emergency job to database...')
-
-      // Import supabase
+      console.log('[POST-JOB] Importing supabase client...')
       const { supabase } = await import('../../lib/supabaseClient')
-
-      console.log({ supabase })
+      console.log('[POST-JOB] ✅ Supabase client imported')
 
       // Prepare job data
       const jobData = {
         title: issueTitle,
         description: details || issueTitle,
         category: emergencyType || category,
-        priority: 'emergency', // All post-job submissions are emergency
-        status: 'pending', // Waiting for contractors to accept
+        priority: 'emergency',
+        status: 'pending',
         address: address,
         latitude: userLocation ? userLocation[0] : null,
         longitude: userLocation ? userLocation[1] : null,
         zip_code: address.match(/\d{5}/)?.[0] || null,
         phone: phone,
-        homeowner_id: userId, // Current user ID
+        homeowner_id: userId,
         created_at: new Date().toISOString(),
-        // Include contractor info if specific contractor was selected
         requested_contractor_id: !sendAll && picked ? picked : null,
         requested_contractor_name: !sendAll && selectedContractor ? selectedContractor.name : null,
       }
 
-      console.log('Job data:', jobData)
+      console.log('[POST-JOB] Job data to insert:', JSON.stringify(jobData, null, 2))
+      console.log('[POST-JOB] Attempting database insert...')
 
       // Insert job into database
       const { data: insertedJob, error } = await supabase
@@ -828,15 +835,19 @@ export default function PostJobInner({ userId }: Props) {
         .insert([jobData])
         .select()
         .single()
-      
+
       if (error) {
-        console.error('Error creating job:', error)
-        alert('Failed to submit emergency request. Please try again.')
+        console.error('[POST-JOB] ❌ DATABASE ERROR')
+        console.error('[POST-JOB] Error code:', error.code)
+        console.error('[POST-JOB] Error message:', error.message)
+        console.error('[POST-JOB] Full error:', JSON.stringify(error, null, 2))
+        alert(`Failed to submit job: ${error.message}`)
         setSending(false)
         return
       }
 
-      console.log('Job created successfully:', insertedJob)
+      console.log('[POST-JOB] ✅ SUCCESS! Job inserted:', insertedJob)
+      console.log('[POST-JOB] Job ID:', insertedJob?.id)
 
       // Redirect to homeowner dashboard
       setSending(false)
