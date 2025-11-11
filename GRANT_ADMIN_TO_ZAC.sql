@@ -1,11 +1,15 @@
--- Fix RLS policies to allow admin users to update pro_contractors
+-- =============================================================================
+-- GRANT ADMIN RIGHTS TO zac@spgroup.com
+-- Run this in Supabase SQL Editor to grant admin permissions
+-- =============================================================================
 
--- Drop existing restrictive policies if any
-DROP POLICY IF EXISTS "Admins can update all contractors" ON pro_contractors;
+-- 1. DROP AND RECREATE ADMIN POLICIES
+-- -----------------------------------------------------------------------------
 DROP POLICY IF EXISTS "Admins can view all contractors" ON pro_contractors;
+DROP POLICY IF EXISTS "Admins can update all contractors" ON pro_contractors;
 
--- Create admin policies
--- Allow admins to view all contractors
+-- 2. CREATE ADMIN VIEW POLICY (INCLUDING zac@spgroup.com)
+-- -----------------------------------------------------------------------------
 CREATE POLICY "Admins can view all contractors" ON pro_contractors
   FOR SELECT
   USING (
@@ -26,7 +30,8 @@ CREATE POLICY "Admins can view all contractors" ON pro_contractors
     )
   );
 
--- Allow admins to update all contractors
+-- 3. CREATE ADMIN UPDATE POLICY (INCLUDING zac@spgroup.com)
+-- -----------------------------------------------------------------------------
 CREATE POLICY "Admins can update all contractors" ON pro_contractors
   FOR UPDATE
   USING (
@@ -46,3 +51,19 @@ CREATE POLICY "Admins can update all contractors" ON pro_contractors
       (SELECT role FROM user_profiles WHERE id = auth.uid()) = 'admin'
     )
   );
+
+-- 4. VERIFY SETUP
+-- -----------------------------------------------------------------------------
+SELECT 'Admin permissions updated! zac@spgroup.com now has admin rights.' as status;
+
+-- Show all admin policies
+SELECT
+  schemaname,
+  tablename,
+  policyname,
+  permissive,
+  roles,
+  cmd
+FROM pg_policies
+WHERE tablename = 'pro_contractors'
+  AND policyname LIKE '%Admin%';
