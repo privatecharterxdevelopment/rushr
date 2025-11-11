@@ -170,35 +170,35 @@ export default function SignUpPage() {
         {!success && (
           <>
             <p className="mt-6 text-sm text-gray-600 text-center">
-          Already have an account?{' '}
-          <button
-            onClick={() => {
-              const callbackUrl = searchParams.get('callback')
-              if (callbackUrl) {
-                openAuth(callbackUrl)
-              } else {
-                window.location.href = '/?auth=signin'
-              }
-            }}
-            className="text-green-600 hover:text-green-500 font-medium transition-colors"
-          >
-            Sign in
-          </button>
-        </p>
+              Already have an account?{' '}
+              <button
+                onClick={() => {
+                  const callbackUrl = searchParams.get('callback')
+                  if (callbackUrl) {
+                    openAuth(callbackUrl)
+                  } else {
+                    window.location.href = '/?auth=signin'
+                  }
+                }}
+                className="text-green-600 hover:text-green-500 font-medium transition-colors"
+              >
+                Sign in
+              </button>
+            </p>
 
-        <div className="mt-6 pt-6 border-t border-gray-200">
-          <p className="text-xs text-gray-500 text-center">
-            By creating an account you agree to our{' '}
-            <Link href="/terms" className="text-green-600 hover:text-green-500 underline">
-              Terms
-            </Link>{' '}
-            and{' '}
-            <Link href="/privacy" className="text-green-600 hover:text-green-500 underline">
-              Privacy Policy
-            </Link>
-            .
-          </p>
-        </div>
+            <div className="mt-6 pt-6 border-t border-gray-200">
+              <p className="text-xs text-gray-500 text-center">
+                By creating an account you agree to our{' '}
+                <Link href="/terms" className="text-green-600 hover:text-green-500 underline">
+                  Terms
+                </Link>{' '}
+                and{' '}
+                <Link href="/privacy" className="text-green-600 hover:text-green-500 underline">
+                  Privacy Policy
+                </Link>
+                .
+              </p>
+            </div>
           </>
         )}
 
