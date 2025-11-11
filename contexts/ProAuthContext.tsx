@@ -239,8 +239,6 @@ export function ProAuthProvider({ children }: { children: React.ReactNode }) {
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        if (!mounted) return
-
         try {
           console.log('[PRO-AUTH] Event:', event, 'User:', session?.user?.id?.substring(0, 8))
 
