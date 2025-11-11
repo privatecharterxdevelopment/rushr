@@ -62,10 +62,21 @@ export default function SupportTicketsPage() {
 
       const { data, error } = await query
 
-      if (error) throw error
+      if (error) {
+        // Only log if it's not a "table doesn't exist" error
+        if (error.code !== '42P01' && error.code !== 'PGRST116') {
+          console.error('Error fetching tickets:', error)
+        }
+        setTickets([])
+        return
+      }
       setTickets(data || [])
-    } catch (error) {
-      console.error('Error fetching tickets:', error)
+    } catch (error: any) {
+      // Only log actual errors
+      if (error?.code !== '42P01' && error?.code !== 'PGRST116') {
+        console.error('Error fetching tickets:', error)
+      }
+      setTickets([])
     } finally {
       setLoading(false)
     }

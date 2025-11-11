@@ -40,12 +40,24 @@ type PendingContractor = {
   bio: string | null
 }
 
+type KYCDocument = {
+  id: string
+  document_type: string
+  document_url: string
+  status: string
+  created_at: string
+  rejection_reason?: string
+  signed_url?: string
+}
+
 export default function ContractorApprovalsPage() {
   const [contractors, setContractors] = useState<PendingContractor[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedContractor, setSelectedContractor] = useState<PendingContractor | null>(null)
   const [actionLoading, setActionLoading] = useState<string | null>(null)
   const [filter, setFilter] = useState<'pending_approval' | 'all'>('pending_approval')
+  const [kycDocuments, setKycDocuments] = useState<KYCDocument[]>([])
+  const [loadingDocs, setLoadingDocs] = useState(false)
 
   const fetchContractors = async () => {
     try {
@@ -67,6 +79,57 @@ export default function ContractorApprovalsPage() {
       console.error('Error fetching contractors:', error)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const fetchKYCDocuments = async (contractorId: string) => {
+    setLoadingDocs(true)
+    try {
+      // Fetch KYC documents from database
+      const { data, error } = await supabase
+        .from('kyc_documents')
+        .select('*')
+        .eq('user_id', contractorId)
+        .order('created_at', { ascending: false })
+
+      if (error) {
+        console.error('Error fetching KYC documents:', error)
+        setKycDocuments([])
+        return
+      }
+
+      // Fetch signed URLs for each document
+      const documentsWithUrls = await Promise.all(
+        (data || []).map(async (doc) => {
+          try {
+            // Extract file path from document_url
+            // Format is typically: kyc-documents/user-id/filename
+            const filePath = doc.document_url.split('/kyc-documents/')[1]
+
+            if (filePath) {
+              const { data: signedUrlData } = await supabase.storage
+                .from('kyc-documents')
+                .createSignedUrl(filePath, 3600) // 1 hour expiry
+
+              return {
+                ...doc,
+                signed_url: signedUrlData?.signedUrl || doc.document_url
+              }
+            }
+            return doc
+          } catch (err) {
+            console.error('Error fetching signed URL for document:', err)
+            return doc
+          }
+        })
+      )
+
+      setKycDocuments(documentsWithUrls as KYCDocument[])
+    } catch (error) {
+      console.error('Error in fetchKYCDocuments:', error)
+      setKycDocuments([])
+    } finally {
+      setLoadingDocs(false)
     }
   }
 
@@ -93,6 +156,15 @@ export default function ContractorApprovalsPage() {
       subscription.unsubscribe()
     }
   }, [filter])
+
+  // Fetch KYC documents when contractor is selected
+  useEffect(() => {
+    if (selectedContractor) {
+      fetchKYCDocuments(selectedContractor.id)
+    } else {
+      setKycDocuments([])
+    }
+  }, [selectedContractor])
 
   const handleApprove = async (contractorId: string) => {
     setActionLoading(contractorId)
@@ -471,6 +543,76 @@ export default function ContractorApprovalsPage() {
                     </>
                   )}
                 </div>
+              </div>
+
+              {/* KYC Documents */}
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">
+                  KYC Documents
+                </h3>
+                {loadingDocs ? (
+                  <div className="flex items-center justify-center py-8">
+                    <LoadingSpinner size="sm" />
+                    <span className="ml-2 text-sm text-gray-600 dark:text-slate-400">Loading documents...</span>
+                  </div>
+                ) : kycDocuments.length > 0 ? (
+                  <div className="space-y-3">
+                    {kycDocuments.map((doc) => (
+                      <div
+                        key={doc.id}
+                        className="border border-gray-200 dark:border-slate-700 rounded-lg p-4"
+                      >
+                        <div className="flex items-start justify-between mb-2">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-1">
+                              <FileText className="h-4 w-4 text-gray-600 dark:text-slate-400" />
+                              <span className="text-sm font-medium text-gray-900 dark:text-white capitalize">
+                                {doc.document_type.replace('_', ' ')}
+                              </span>
+                            </div>
+                            <span
+                              className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                                doc.status === 'verified'
+                                  ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
+                                  : doc.status === 'rejected'
+                                  ? 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300'
+                                  : doc.status === 'under_review'
+                                  ? 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300'
+                                  : 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'
+                              }`}
+                            >
+                              {doc.status}
+                            </span>
+                          </div>
+                          {doc.signed_url && (
+                            <a
+                              href={doc.signed_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="px-3 py-1 bg-blue-100 hover:bg-blue-200 dark:bg-blue-950 dark:hover:bg-blue-900 text-blue-700 dark:text-blue-300 rounded-md text-sm font-medium transition-colors flex items-center gap-1"
+                            >
+                              <ExternalLink className="h-3 w-3" />
+                              View
+                            </a>
+                          )}
+                        </div>
+                        {doc.rejection_reason && (
+                          <p className="text-xs text-rose-600 dark:text-rose-400 mt-2">
+                            Rejection reason: {doc.rejection_reason}
+                          </p>
+                        )}
+                        <p className="text-xs text-gray-500 dark:text-slate-500 mt-1">
+                          Uploaded: {new Date(doc.created_at).toLocaleDateString()}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 bg-gray-50 dark:bg-slate-800 rounded-lg">
+                    <FileText className="h-8 w-8 text-gray-400 dark:text-slate-600 mx-auto mb-2" />
+                    <p className="text-sm text-gray-600 dark:text-slate-400">No KYC documents uploaded yet</p>
+                  </div>
+                )}
               </div>
 
               {/* Actions */}

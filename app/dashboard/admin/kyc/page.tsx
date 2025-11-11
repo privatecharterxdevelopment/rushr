@@ -63,11 +63,22 @@ export default function AdminKYCPage() {
 
       const { data, error } = await query
 
-      if (error) throw error
+      if (error) {
+        // Only log if it's not a "table doesn't exist" or "no rows" error
+        if (error.code !== '42P01' && error.code !== 'PGRST116') {
+          console.error('Error fetching KYC documents:', error)
+        }
+        setDocuments([])
+        return
+      }
 
       setDocuments(data || [])
-    } catch (error) {
-      console.error('Error fetching KYC documents:', error)
+    } catch (error: any) {
+      // Only log actual errors
+      if (error?.code !== '42P01' && error?.code !== 'PGRST116') {
+        console.error('Error fetching KYC documents:', error)
+      }
+      setDocuments([])
     } finally {
       setLoading(false)
     }
