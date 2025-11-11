@@ -17,6 +17,7 @@ export default function SignUpPage() {
   const role = 'homeowner' as const // HOMEOWNER ONLY registration page
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [success, setSuccess] = useState(false)
   const [showModal, setShowModal] = useState(false)
 
   // No auto-redirect - let users stay on the page if they want
@@ -63,19 +64,26 @@ export default function SignUpPage() {
       return
     }
 
-    const { error } = await signUp(email, password, name, role)
+    const result = await signUp(email, password, name, role)
 
-    if (error) {
-      setError(error)
+    if (result.error) {
+      setError(result.error)
+      setLoading(false)
+    } else if (result.needsConfirmation) {
+      // Email confirmation required - show success message
+      setError(result.message || 'Please check your email to confirm your account.')
       setLoading(false)
     } else {
-      // Success - check for callback URL, otherwise go to dashboard
+      // Success - show success state then redirect
+      setSuccess(true)
+      setLoading(false)
       const callbackUrl = searchParams.get('callback')
-      if (callbackUrl) {
-        window.location.href = callbackUrl
-      } else {
-        window.location.href = '/dashboard/homeowner'
-      }
+      const target = callbackUrl || '/dashboard/homeowner'
+
+      // Show success message for 1.5 seconds then redirect
+      setTimeout(() => {
+        router.push(target)
+      }, 1500)
     }
   }
 
@@ -93,8 +101,30 @@ export default function SignUpPage() {
       <div className="absolute inset-0 bg-gradient-to-br from-blue-50/20 to-transparent -z-10"></div>
 
       <div className="max-w-md w-full bg-white/95 backdrop-blur-sm rounded-lg shadow-md p-8 border border-gray-200/50">
-        <h1 className="text-2xl font-semibold mb-6 text-center text-gray-800">Create Account</h1>
-        <form onSubmit={onSubmit} className="space-y-4">
+        <h1 className="text-2xl font-semibold mb-6 text-center text-gray-800">
+          {success ? '✅ Account Created!' : 'Create Account'}
+        </h1>
+
+        {success ? (
+          <div className="text-center py-8">
+            <div className="inline-flex items-center justify-center w-16 h-16 bg-emerald-100 rounded-full mb-4">
+              <svg className="w-8 h-8 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+            <h3 className="text-lg font-semibold text-slate-900 mb-2">
+              Welcome to Rushr!
+            </h3>
+            <p className="text-sm text-slate-600">
+              Redirecting to your dashboard...
+            </p>
+            <div className="mt-4 inline-flex items-center text-sm text-emerald-600">
+              <LoadingSpinner size="sm" />
+              <span className="ml-2">Loading dashboard...</span>
+            </div>
+          </div>
+        ) : (
+          <form onSubmit={onSubmit} className="space-y-4">
           <input
             type="text"
             placeholder="Full Name"
@@ -135,8 +165,11 @@ export default function SignUpPage() {
             {loading ? 'Creating Account…' : 'Create Account'}
           </button>
         </form>
+        )}
 
-        <p className="mt-6 text-sm text-gray-600 text-center">
+        {!success && (
+          <>
+            <p className="mt-6 text-sm text-gray-600 text-center">
           Already have an account?{' '}
           <button
             onClick={() => {
@@ -166,6 +199,8 @@ export default function SignUpPage() {
             .
           </p>
         </div>
+          </>
+        )}
 
         {/* Error Modal */}
         {showModal && error && (
