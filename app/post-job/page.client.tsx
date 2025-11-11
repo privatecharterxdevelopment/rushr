@@ -425,16 +425,13 @@ export default function PostJobInner({ userId }: Props) {
   // Form validation functions
   const validateField = (field: string, value: string) => {
     const newErrors = { ...errors }
-    let isValid = true
 
     switch (field) {
       case 'address':
         if (!value.trim()) {
           newErrors.address = 'Address is required'
-          isValid = false
         } else if (value.trim().length < 5) {
           newErrors.address = 'Please enter a complete address'
-          isValid = false
         } else {
           delete newErrors.address
         }
@@ -444,10 +441,8 @@ export default function PostJobInner({ userId }: Props) {
         const phoneRegex = /^\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}$/
         if (!value.trim()) {
           newErrors.phone = 'Phone number is required'
-          isValid = false
         } else if (!phoneRegex.test(value.trim())) {
           newErrors.phone = 'Please enter a valid phone number'
-          isValid = false
         } else {
           delete newErrors.phone
         }
@@ -456,7 +451,6 @@ export default function PostJobInner({ userId }: Props) {
       case 'category':
         if (!value) {
           newErrors.category = 'Please select an emergency category'
-          isValid = false
         } else {
           delete newErrors.category
         }
@@ -465,7 +459,6 @@ export default function PostJobInner({ userId }: Props) {
       case 'emergencyType':
         if (!value) {
           newErrors.emergencyType = 'Please select the type of emergency'
-          isValid = false
         } else {
           delete newErrors.emergencyType
         }
@@ -474,10 +467,8 @@ export default function PostJobInner({ userId }: Props) {
       case 'issueTitle':
         if (!value.trim()) {
           newErrors.issueTitle = 'Please describe your emergency'
-          isValid = false
         } else if (value.trim().length < 10) {
           newErrors.issueTitle = 'Please provide more details (at least 10 characters)'
-          isValid = false
         } else {
           delete newErrors.issueTitle
         }
@@ -485,7 +476,7 @@ export default function PostJobInner({ userId }: Props) {
     }
 
     setErrors(newErrors)
-    return isValid
+    return Object.keys(newErrors).length === 0
   }
 
   const validateForm = () => {
@@ -557,13 +548,17 @@ export default function PostJobInner({ userId }: Props) {
       setLoadingContractors(true)
 
       try {
-        console.log('[POST-JOB] Filtering by emergencyType:', emergencyType)
-
-        // Get ALL contractors first (no filter)
-        const { data: allContractors, error } = await supabase
+        // Get ALL contractors with available fields
+        let query = supabase
           .from('pro_contractors')
           .select('*')
-          .limit(200)
+
+        // Filter by emergency category if selected
+        if (emergencyType) {
+          query = query.contains('categories', [emergencyType])
+        }
+
+        const { data: contractors, error } = await query.limit(200)
 
         if (error) {
           console.error('[POST-JOB] Database error:', error)
@@ -572,46 +567,9 @@ export default function PostJobInner({ userId }: Props) {
           return
         }
 
-        console.log('[POST-JOB] Fetched ALL contractors:', allContractors?.length)
-        if (allContractors && allContractors.length > 0) {
-          console.log('[POST-JOB] Sample contractor categories:', allContractors[0].categories)
-        }
-
-        // Client-side filter by emergency category if selected
-        let contractors = allContractors || []
-        if (emergencyType && contractors.length > 0) {
-          // Map emergency type keys to actual contractor category values
-          const emergencyTypeToCategory: Record<string, string | null> = {
-            'plumbing': 'Plumbing',
-            'electrical': 'Electrical',
-            'hvac': 'HVAC',
-            'roofing': 'Roofing',
-            'water-damage': 'Plumbing', // Water damage handled by plumbers
-            'locksmith': 'Locksmith',
-            'appliance': 'Appliance Repair',
-            'other': null, // Show all for 'other'
-          }
-
-          const targetCategory = emergencyTypeToCategory[emergencyType]
-          console.log('[POST-JOB] Emergency type:', emergencyType, '→ Target category:', targetCategory)
-
-          contractors = contractors.filter(c => {
-            const cats = c.categories || []
-            console.log('[POST-JOB] Contractor categories:', cats, 'Looking for:', targetCategory)
-
-            // If 'other' or no mapping, show all contractors
-            if (!targetCategory) return true
-
-            // Check if categories array includes the target category (case-insensitive)
-            return Array.isArray(cats) && cats.some((cat: string) =>
-              cat.toLowerCase() === targetCategory.toLowerCase()
-            )
-          })
-          console.log('[POST-JOB] After category filter:', contractors.length, 'contractors match', emergencyType)
-        }
-
         if (contractors && contractors.length > 0) {
-          console.log('[POST-JOB] Final contractors count:', contractors.length)
+          console.log('[POST-JOB] Fetched contractors:', contractors.length)
+          console.log('[POST-JOB] Sample contractor:', contractors[0])
 
           const DEFAULT_RADIUS_MILES = 15
 
@@ -768,9 +726,6 @@ export default function PostJobInner({ userId }: Props) {
   }
 
   function submit() {
-    console.log('[SUBMIT] ========== BUTTON CLICKED ==========')
-    console.log('[SUBMIT] Form values:', { address, phone, category, emergencyType, issueTitle, details, sendAll, picked })
-
     // Mark all fields as touched to show validation errors
     setTouched({
       address: true,
@@ -782,15 +737,11 @@ export default function PostJobInner({ userId }: Props) {
 
     // Validate all mandatory fields
     const isValid = validateForm()
-    console.log('[SUBMIT] Validation result:', isValid)
-    console.log('[SUBMIT] Current errors:', errors)
 
     if (!isValid) {
-      console.error('[SUBMIT] ❌ VALIDATION FAILED - Form has errors:', errors)
       // Scroll to the first error
       const firstError = document.querySelector('[aria-invalid="true"]')
       if (firstError) {
-        console.log('[SUBMIT] Scrolling to first error field')
         firstError.scrollIntoView({ behavior: 'smooth', block: 'center' })
       }
       return
@@ -798,54 +749,45 @@ export default function PostJobInner({ userId }: Props) {
 
     // If selecting specific contractor, ensure one is picked
     if (!sendAll && !picked) {
-      console.error('[SUBMIT] ❌ No contractor selected and sendAll is false')
       alert('Please select a contractor or choose "Alert All Nearby" option.')
       return
     }
 
-    console.log('[SUBMIT] ✅ Validation passed! Opening confirmation modal...')
     setConfirmOpen(true)
   }
 
   async function actuallySend() {
-    console.log('[POST-JOB] ========== STARTING JOB SUBMISSION ==========')
-    console.log('[POST-JOB] userId:', userId)
-    console.log('[POST-JOB] All form data:', { address, phone, category, emergencyType, issueTitle, details, sendAll, picked })
-
-    if (!userId) {
-      console.error('[POST-JOB] ❌ ERROR: No userId - user not logged in!')
-      alert('You must be logged in to submit a job')
-      return
-    }
-
     setConfirmOpen(false)
     setSending(true)
 
     try {
-      console.log('[POST-JOB] Importing supabase client...')
+      console.log('Submitting emergency job to database...')
+
+      // Import supabase
       const { supabase } = await import('../../lib/supabaseClient')
-      console.log('[POST-JOB] ✅ Supabase client imported')
+
+      console.log({ supabase })
 
       // Prepare job data
       const jobData = {
         title: issueTitle,
         description: details || issueTitle,
         category: emergencyType || category,
-        priority: 'emergency',
-        status: 'pending',
+        priority: 'emergency', // All post-job submissions are emergency
+        status: 'pending', // Waiting for contractors to accept
         address: address,
         latitude: userLocation ? userLocation[0] : null,
         longitude: userLocation ? userLocation[1] : null,
         zip_code: address.match(/\d{5}/)?.[0] || null,
         phone: phone,
-        homeowner_id: userId,
+        homeowner_id: userId, // Current user ID
         created_at: new Date().toISOString(),
+        // Include contractor info if specific contractor was selected
         requested_contractor_id: !sendAll && picked ? picked : null,
         requested_contractor_name: !sendAll && selectedContractor ? selectedContractor.name : null,
       }
 
-      console.log('[POST-JOB] Job data to insert:', JSON.stringify(jobData, null, 2))
-      console.log('[POST-JOB] Attempting database insert...')
+      console.log('Job data:', jobData)
 
       // Insert job into database
       const { data: insertedJob, error } = await supabase
@@ -853,19 +795,15 @@ export default function PostJobInner({ userId }: Props) {
         .insert([jobData])
         .select()
         .single()
-
+      
       if (error) {
-        console.error('[POST-JOB] ❌ DATABASE ERROR')
-        console.error('[POST-JOB] Error code:', error.code)
-        console.error('[POST-JOB] Error message:', error.message)
-        console.error('[POST-JOB] Full error:', JSON.stringify(error, null, 2))
-        alert(`Failed to submit job: ${error.message}`)
+        console.error('Error creating job:', error)
+        alert('Failed to submit emergency request. Please try again.')
         setSending(false)
         return
       }
 
-      console.log('[POST-JOB] ✅ SUCCESS! Job inserted:', insertedJob)
-      console.log('[POST-JOB] Job ID:', insertedJob?.id)
+      console.log('Job created successfully:', insertedJob)
 
       // Redirect to homeowner dashboard
       setSending(false)
