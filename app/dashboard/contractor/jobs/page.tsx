@@ -90,11 +90,17 @@ export default function ContractorJobsPage() {
       const appliedJobIds = appliedJobs?.map(b => b.job_id) || [];
 
       // Get all available jobs except those already bid on
-      const { data: availableJobs, error: jobsError } = await supabase
+      let query = supabase
         .from('homeowner_jobs')
         .select('*')
         .eq('status', 'pending')
-        .not('id', 'in', `(${appliedJobIds.join(',') || 'none'})`)
+
+      // Only apply the filter if there are applied jobs
+      if (appliedJobIds.length > 0) {
+        query = query.not('id', 'in', `(${appliedJobIds.join(',')})`)
+      }
+
+      const { data: availableJobs, error: jobsError } = await query
         .order('created_at', { ascending: false });
 
       if (jobsError) {
