@@ -186,6 +186,12 @@ export function ProAuthProvider({ children }: { children: React.ReactNode }) {
 
 
   useEffect(() => {
+    // Safety timeout: force loading to false after 3 seconds to prevent infinite loading
+    const loadingTimeout = setTimeout(() => {
+      console.log('[PRO-AUTH] Loading timeout - forcing loading to false')
+      setLoading(false)
+    }, 3000)
+
     // Get initial session state
     const getInitialSession = async () => {
       try {
@@ -214,6 +220,7 @@ export function ProAuthProvider({ children }: { children: React.ReactNode }) {
         setUser(null)
         setContractorProfile(null)
       } finally {
+        clearTimeout(loadingTimeout)
         setLoading(false)
       }
     }
