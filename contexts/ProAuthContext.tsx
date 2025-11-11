@@ -439,34 +439,31 @@ export function ProAuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const signOut = async () => {
-    console.log('[PRO-AUTH] Signing out contractor - clearing everything')
+    console.log('[PRO-AUTH] Signing out contractor')
 
     try {
-      // 1️⃣ Supabase global sign-out (clears access + refresh tokens)
-      const { error } = await supabase.auth.signOut()
-      if (error) {
-        console.error('[PRO-AUTH] Supabase signOut error:', error.message)
-        // Optional: show toast or alert here
-        return
-      }
-
-      // 2️⃣ Clear all client-side caches *after* Supabase is done
-      localStorage.clear()
-      sessionStorage.clear()
-
-      // 3️⃣ Reset React state in a single batch (minimize re-renders)
+      // 1️⃣ Reset React state FIRST (prevent UI flicker)
       setUser(null)
       setContractorProfile(null)
       setSession(null)
 
-      // 4️⃣ Optional user feedback (toast, snackbar, etc.)
-      // showGlobalToast('You have been logged out successfully.', 'success')
+      // 2️⃣ Supabase sign-out (clears auth tokens only)
+      const { error } = await supabase.auth.signOut()
+      if (error) {
+        console.error('[PRO-AUTH] Supabase signOut error:', error.message)
+        return
+      }
 
-      // 5️⃣ Redirect cleanly using Next.js router
+      // 3️⃣ Clear ONLY auth-related storage (preserve other app data)
+      const authKeys = Object.keys(localStorage).filter(key =>
+        key.includes('supabase') || key.includes('auth') || key.includes('rushr-auth')
+      )
+      authKeys.forEach(key => localStorage.removeItem(key))
+
+      // 4️⃣ Redirect cleanly using Next.js router
       router.push('/pro')
     } catch (err) {
       console.error('[PRO-AUTH] Fatal logout error:', err)
-      // showGlobalToast('Logout failed. Please try again.', 'error')
     }
   }
 

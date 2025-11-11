@@ -296,10 +296,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const signOut = async () => {
-    console.log('[HOMEOWNER-AUTH] Signing out user - clearing everything')
+    console.log('[HOMEOWNER-AUTH] Signing out user')
 
     try {
-      // 1. Sign out fully (Supabase clears tokens)
+      // 1. Reset in-memory state FIRST (prevent UI flicker)
+      setUser(null)
+      setUserProfile(null)
+      setSession(null)
+
+      // 2. Sign out from Supabase (clears auth tokens only)
       const { error } = await supabase.auth.signOut()
       if (error) {
         console.error('[HOMEOWNER-AUTH] Supabase signOut error:', error.message)
@@ -307,19 +312,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return
       }
 
-      // 2. Clear app caches AFTER Supabase completes
-      localStorage.clear()
-      sessionStorage.clear()
+      // 3. Clear ONLY auth-related storage (don't clear everything!)
+      // Remove only Supabase auth keys, preserve other app data
+      const authKeys = Object.keys(localStorage).filter(key =>
+        key.includes('supabase') || key.includes('auth') || key.includes('rushr-auth')
+      )
+      authKeys.forEach(key => localStorage.removeItem(key))
 
-      // 3. Reset in-memory state
-      setUser(null)
-      setUserProfile(null)
-      setSession(null)
-
-      // 4. Toast feedback (non-blocking)
+      // 4. Toast feedback
       showGlobalToast('You have been logged out successfully.', 'success')
 
-      // 5. Redirect cleanly using Next.js router (smooth client-side navigation)
+      // 5. Redirect cleanly using Next.js router
       router.push('/')
     } catch (err) {
       console.error('[HOMEOWNER-AUTH] Fatal logout error:', err)

@@ -28,6 +28,8 @@ export interface HomeownerJob {
   address: string | null
   created_at: string
   updated_at: string
+  requested_contractor_id?: string | null
+  requested_contractor_name?: string | null
 }
 
 export interface HomeownerMessage {
