@@ -14,6 +14,7 @@ export default function ProSignInPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [showModal, setShowModal] = useState(false)
+  const [showSuccess, setShowSuccess] = useState(false)
 
   // No auto-redirect - let users stay on the page if they want
 
@@ -59,8 +60,13 @@ export default function ProSignInPage() {
     if (error) {
       setError(error)
     } else {
-      // Success - redirect to contractor dashboard with success message
-      window.location.href = '/dashboard/contractor?login=success'
+      // Show success animation
+      setShowSuccess(true)
+
+      // Redirect after 1.5 seconds
+      setTimeout(() => {
+        window.location.href = '/dashboard/contractor?login=success'
+      }, 1500)
     }
   }
 
@@ -156,6 +162,31 @@ export default function ProSignInPage() {
                 >
                   OK
                 </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Success Modal */}
+        {showSuccess && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
+            <div className="bg-white rounded-lg max-w-md w-full p-8 shadow-xl relative border border-gray-200 animate-in zoom-in-95 duration-300">
+              <div className="text-center">
+                {/* Success checkmark animation */}
+                <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-blue-100 mb-4">
+                  <svg className="h-10 w-10 text-blue-600 animate-in zoom-in-50 duration-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
+                <h3 className="text-xl font-semibold text-gray-900 mb-2">Sign In Successful!</h3>
+                <p className="text-sm text-gray-600">Redirecting to your dashboard...</p>
+                <div className="mt-4">
+                  <img
+                    src="https://jtrxdcccswdwlritgstp.supabase.co/storage/v1/object/public/contractor-logos/RushrLogoAnimation.gif"
+                    alt="Loading..."
+                    className="w-8 h-8 mx-auto object-contain"
+                  />
+                </div>
               </div>
             </div>
           </div>
