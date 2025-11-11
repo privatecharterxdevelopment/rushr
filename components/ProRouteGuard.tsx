@@ -17,11 +17,9 @@ export default function ProRouteGuard({ children }: { children: React.ReactNode 
       return
     }
 
-    // If not loading and no contractor user, redirect to pro sign-in
-    if (!contractorLoading && !contractorUser) {
-      router.push('/pro/sign-in')
-    }
-  }, [homeownerProfile, contractorProfile, contractorUser, contractorLoading, router])
+    // Don't auto-redirect to sign-in - let the page handle it
+    // This prevents annoying redirects when users are already on /pro pages
+  }, [homeownerProfile?.role, contractorProfile, router])
 
   // Show loading while checking auth - BLUE for contractor
   if (contractorLoading) {

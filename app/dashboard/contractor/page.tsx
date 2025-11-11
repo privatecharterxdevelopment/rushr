@@ -2,7 +2,7 @@
 
 import React, { useMemo, useState, useEffect } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useProAuth } from '../../../contexts/ProAuthContext'
 import { supabase } from '../../../lib/supabaseClient'
 import dynamic from 'next/dynamic'
@@ -90,6 +90,7 @@ type CompletenessField = { key:string; label:string; weight:number; done:boolean
 
 export default function ContractorDashboardPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const { user, contractorProfile, loading } = useProAuth()
   const [availability, setAvailability] = useState<Availability>('online')
   const [contractorData, setContractorData] = useState<any>(null)
@@ -105,6 +106,19 @@ export default function ContractorDashboardPage() {
     availableJobs: 0
   })
   const [contractorZips, setContractorZips] = useState<string[]>([])
+  const [showSuccessToast, setShowSuccessToast] = useState(false)
+
+  // Show success toast if login=success in URL
+  useEffect(() => {
+    if (searchParams.get('login') === 'success') {
+      setShowSuccessToast(true)
+      // Remove the query param from URL
+      const newUrl = window.location.pathname
+      window.history.replaceState({}, '', newUrl)
+      // Auto-hide after 5 seconds
+      setTimeout(() => setShowSuccessToast(false), 5000)
+    }
+  }, [searchParams])
 
   // Load contractor data from database
   useEffect(() => {
@@ -212,21 +226,15 @@ export default function ContractorDashboardPage() {
   // Load available jobs in contractor's ZIP areas
   useEffect(() => {
     const loadNearbyJobs = async () => {
-      if (contractorZips.length > 0) {
+      // Only load jobs if contractor is verified (approved + KYC completed)
+      const contractorVerified = contractorData?.status === 'approved' && contractorData?.kyc_status === 'completed'
+      if (contractorZips.length > 0 && contractorVerified) {
         try {
           const { data: jobs } = await supabase
-            .from('jobs')
-            .select(`
-              *,
-              user_profiles!jobs_user_id_fkey (
-                name,
-                city,
-                state,
-                zip_code
-              )
-            `)
+            .from('homeowner_jobs')
+            .select('*')
             .in('zip_code', contractorZips)
-            .eq('status', 'open')
+            .eq('status', 'pending')
             .order('created_at', { ascending: false })
             .limit(10)
 
@@ -234,15 +242,15 @@ export default function ContractorDashboardPage() {
             const formattedJobs: EmergencyJob[] = jobs.map(job => ({
               id: job.id,
               title: job.title || 'Service Request',
-              location: `${job.city || 'Unknown'}, ${job.state || 'Unknown'}`,
+              location: `${job.address || job.zip_code || 'Unknown location'}`,
               priority: (job.priority || 'Standard') as 'Emergency' | 'Urgent' | 'Standard',
-              hourlyRate: job.budget || 100,
-              estimatedDuration: job.estimated_duration || '1-2 hours',
+              hourlyRate: 100, // Default rate, could be calculated from budget
+              estimatedDuration: '1-2 hours',
               distance: Math.round(Math.random() * 10), // Mock distance for now
               requestedMins: Math.floor((new Date().getTime() - new Date(job.created_at).getTime()) / (1000 * 60)),
               status: 'Available' as const,
-              customerName: job.user_profiles?.name || 'Customer',
-              category: (job.category || 'General') as any
+              customerName: 'Homeowner',
+              category: (job.category || 'Plumbing') as any
             }))
 
             setRealJobs(formattedJobs)
@@ -251,11 +259,14 @@ export default function ContractorDashboardPage() {
         } catch (error) {
           console.error('Error loading nearby jobs:', error)
         }
+      } else {
+        // Clear jobs if not verified
+        setRealJobs([])
       }
     }
 
     loadNearbyJobs()
-  }, [contractorZips])
+  }, [contractorZips, contractorData?.status, contractorData?.kyc_status])
 
   const handleStartKYC = () => {
     // Navigate to the comprehensive onboarding wizard
@@ -298,14 +309,26 @@ export default function ContractorDashboardPage() {
 
     setAvailability(newStatus)
 
-    // Update database
+    // Update database - set both status and availability
     try {
+      const updateData: any = {
+        updated_at: new Date().toISOString()
+      }
+
+      // Update status field for compatibility (online/approved)
+      if (newStatus === 'online') {
+        updateData.status = 'online'
+      } else if (contractorData?.status === 'online') {
+        // If currently online and going busy/offline, revert to approved
+        updateData.status = 'approved'
+      }
+
+      // Add availability field to track online/busy/offline state
+      updateData.availability = newStatus
+
       await supabase
         .from('pro_contractors')
-        .update({
-          status: newStatus === 'online' ? 'online' : 'approved',
-          updated_at: new Date().toISOString()
-        })
+        .update(updateData)
         .eq('id', user?.id)
     } catch (error) {
       console.error('Error updating availability:', error)
@@ -324,7 +347,7 @@ export default function ContractorDashboardPage() {
     { key:'license', label:'Upload license', weight:25, done:!!contractorData?.license_number && contractorData?.license_number !== 'pending',  href:'/dashboard/contractor/settings', icon:<BadgeCheck className="h-4 w-4" /> },
     { key:'insurance', label:'Verify insurance', weight:25, done:!!contractorData?.insurance_carrier && contractorData?.insurance_carrier !== 'pending', href:'/dashboard/contractor/settings', icon:<ShieldIcon /> },
     { key:'coverage', label:'Emergency service area', weight:20, done:contractorZips.length > 0, href:'/dashboard/contractor/settings', icon:<MapPin className="h-4 w-4" /> },
-    { key:'hours', label:'Emergency availability', weight:15, done:!!contractorData?.emergency_available, href:'/dashboard/contractor/settings', icon:<Clock className="h-4 w-4" /> },
+    { key:'hours', label:'Emergency availability', weight:15, done:!!contractorData?.emergency_services, href:'/dashboard/contractor/settings', icon:<Clock className="h-4 w-4" /> },
     { key:'rates', label:'Set hourly rates', weight:15, done:!!contractorData?.hourly_rate, href:'/dashboard/contractor/settings', icon:<DollarSign className="h-4 w-4" /> },
   ]
 
@@ -349,12 +372,12 @@ export default function ContractorDashboardPage() {
   } : nextJob ? {
     title: 'Emergency job available',
     desc: `${nextJob.title} • $${nextJob.hourlyRate}/hr • ${nextJob.distance}mi away`,
-    href: `/jobs/${nextJob.id}`,
+    href: `/dashboard/contractor/jobs/${nextJob.id}`,
     urgent: nextJob.priority === 'Emergency',
   } : {
     title: 'Ready for emergency calls',
-    desc: 'You&apos;re online and available. Emergency jobs will appear here.',
-    href: '/jobs',
+    desc: 'You are online and available. Emergency jobs will appear here.',
+    href: '/dashboard/contractor/jobs',
     urgent: false,
   }
 
@@ -376,6 +399,9 @@ export default function ContractorDashboardPage() {
 
   // Show overlay if KYC is required but not started
   const showKYCOverlay = contractorData && !contractorData.kyc_status
+
+  // Check if contractor is verified (approved and KYC completed) - for navigation
+  const isVerified = contractorData?.status === 'approved' && contractorData?.kyc_status === 'completed'
 
   // Show loading while checking auth
   if (loading) {
@@ -423,6 +449,29 @@ export default function ContractorDashboardPage() {
 
   return (
     <div className={`space-y-8 ${showKYCOverlay ? 'relative' : ''}`}>
+      {/* Success Toast */}
+      {showSuccessToast && (
+        <div className="fixed top-4 right-4 z-50 animate-in slide-in-from-top-2 duration-300">
+          <div className="bg-emerald-50 border-2 border-emerald-500 rounded-lg shadow-lg p-4 flex items-center gap-3 max-w-md">
+            <div className="flex-shrink-0">
+              <CheckCircle2 className="h-6 w-6 text-emerald-600" />
+            </div>
+            <div className="flex-1">
+              <p className="text-sm font-semibold text-emerald-900">Successfully logged in!</p>
+              <p className="text-xs text-emerald-700 mt-0.5">Welcome back to Rushr Pro</p>
+            </div>
+            <button
+              onClick={() => setShowSuccessToast(false)}
+              className="flex-shrink-0 text-emerald-600 hover:text-emerald-800 transition-colors"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* KYC Status Banners */}
 
       {/* 1. NOT STARTED - Need to complete wizard */}
@@ -573,9 +622,7 @@ export default function ContractorDashboardPage() {
           <select
             value={availability}
             onChange={(e) => handleAvailabilityChange(e.target.value as Availability)}
-            disabled={!canGoOnline && availability !== 'online'}
-            className={`px-3 py-1 rounded-full text-sm font-medium border ${getAvailabilityColor(availability)} ${!canGoOnline && availability !== 'online' ? 'opacity-50 cursor-not-allowed' : ''}`}
-            title={!canGoOnline ? 'Complete payment setup to go online' : ''}
+            className={`px-3 py-1 rounded-full text-sm font-medium border ${getAvailabilityColor(availability)}`}
           >
             <option value="online" disabled={!canGoOnline}>Online</option>
             <option value="busy">Busy</option>
@@ -591,24 +638,54 @@ export default function ContractorDashboardPage() {
             <select
               value={availability}
               onChange={(e) => handleAvailabilityChange(e.target.value as Availability)}
-              disabled={!canGoOnline && availability !== 'online'}
-              className={`px-3 py-1 rounded-full text-sm font-medium border ${getAvailabilityColor(availability)} ${!canGoOnline && availability !== 'online' ? 'opacity-50 cursor-not-allowed' : ''}`}
-              title={!canGoOnline ? 'Complete payment setup to go online' : ''}
+              className={`px-3 py-1 rounded-full text-sm font-medium border ${getAvailabilityColor(availability)}`}
             >
               <option value="online" disabled={!canGoOnline}>Online</option>
               <option value="busy">Busy</option>
               <option value="offline">Offline</option>
             </select>
           </div>
-          <Link href="/jobs" className="btn-primary whitespace-nowrap flex-shrink-0">Browse Jobs</Link>
-          <Link href="/dashboard/contractor/jobs" className="btn whitespace-nowrap flex-shrink-0">My Jobs</Link>
-          <Link href="/dashboard/contractor/calendar" className="btn whitespace-nowrap flex-shrink-0">Calendar</Link>
-          <Link href="/dashboard/contractor/messages" className="btn whitespace-nowrap flex-shrink-0">Messages</Link>
-          <Link href="/dashboard/contractor/billing" className="btn whitespace-nowrap flex-shrink-0 flex items-center gap-1.5">
+          <Link
+            href="/dashboard/contractor/jobs"
+            className="btn-primary whitespace-nowrap flex-shrink-0"
+          >
+            Browse Jobs
+          </Link>
+          <Link
+            href={isVerified ? "/dashboard/contractor/jobs?tab=my-jobs" : "#"}
+            className={`btn whitespace-nowrap flex-shrink-0 ${!isVerified ? 'opacity-50 cursor-not-allowed pointer-events-none' : ''}`}
+            onClick={(e) => !isVerified && e.preventDefault()}
+          >
+            My Jobs
+          </Link>
+          <Link
+            href={isVerified ? "/dashboard/contractor/calendar" : "#"}
+            className={`btn whitespace-nowrap flex-shrink-0 ${!isVerified ? 'opacity-50 cursor-not-allowed pointer-events-none' : ''}`}
+            onClick={(e) => !isVerified && e.preventDefault()}
+          >
+            Calendar
+          </Link>
+          <Link
+            href={isVerified ? "/dashboard/contractor/messages" : "#"}
+            className={`btn whitespace-nowrap flex-shrink-0 ${!isVerified ? 'opacity-50 cursor-not-allowed pointer-events-none' : ''}`}
+            onClick={(e) => !isVerified && e.preventDefault()}
+          >
+            Messages
+          </Link>
+          <Link
+            href={isVerified ? "/dashboard/contractor/billing" : "#"}
+            className={`btn whitespace-nowrap flex-shrink-0 flex items-center gap-1.5 ${!isVerified ? 'opacity-50 cursor-not-allowed pointer-events-none' : ''}`}
+            onClick={(e) => !isVerified && e.preventDefault()}
+          >
             <DollarSign className="w-4 h-4" />
             Billing
           </Link>
-          <Link href="/dashboard/contractor/settings" className="btn whitespace-nowrap flex-shrink-0">Settings</Link>
+          <Link
+            href="/dashboard/contractor/settings"
+            className="btn whitespace-nowrap flex-shrink-0"
+          >
+            Settings
+          </Link>
         </div>
       </div>
 
@@ -667,30 +744,39 @@ export default function ContractorDashboardPage() {
 
         {/* Emergency job alerts */}
         <div className="rounded-2xl border border-slate-200 p-4">
-          <SectionTitle action={<Link href="/jobs" className="text-brand underline text-sm">See all</Link>}>
+          <SectionTitle action={(contractorData?.status === 'approved' && contractorData?.kyc_status === 'completed') ? <Link href="/dashboard/contractor/jobs" className="text-brand underline text-sm">See all</Link> : null}>
             Emergency jobs nearby
           </SectionTitle>
-          <ul className="space-y-2">
-            {availableJobs.slice(0,3).map(job=>(
-              <li key={job.id} className="flex items-center justify-between rounded-lg border bg-white p-3">
-                <div>
-                  <div className="font-medium text-ink dark:text-white flex items-center gap-2">
-                    {job.title}
-                    {job.priority === 'Emergency' && <span className="text-red-500 text-xs">🚨</span>}
+          {!(contractorData?.status === 'approved' && contractorData?.kyc_status === 'completed') ? (
+            <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-center">
+              <AlertTriangle className="h-8 w-8 text-amber-500 mx-auto mb-2" />
+              <p className="text-sm font-medium text-amber-900 mb-1">Verification Required</p>
+              <p className="text-xs text-amber-700">Complete your profile verification to receive emergency job alerts</p>
+            </div>
+          ) : availableJobs.length > 0 ? (
+            <ul className="space-y-2 max-h-[300px] overflow-y-auto">
+              {availableJobs.slice(0,3).map(job=>(
+                <li key={job.id} className="flex items-center justify-between rounded-lg border bg-white p-3">
+                  <div>
+                    <div className="font-medium text-ink dark:text-white flex items-center gap-2">
+                      {job.title}
+                      {job.priority === 'Emergency' && <span className="text-red-500 text-xs">🚨</span>}
+                    </div>
+                    <div className="text-xs text-slate-600 flex items-center gap-2">
+                      <span>{job.location} • ${job.hourlyRate}/hr • {job.distance}mi</span>
+                      <span className="text-slate-400">•</span>
+                      <span className="flex items-center gap-1"><Clock className="h-3.5 w-3.5" /> {job.requestedMins}m ago</span>
+                    </div>
                   </div>
-                  <div className="text-xs text-slate-600 flex items-center gap-2">
-                    <span>{job.location} • ${job.hourlyRate}/hr • {job.distance}mi</span>
-                    <span className="text-slate-400">•</span>
-                    <span className="flex items-center gap-1"><Clock className="h-3.5 w-3.5" /> {job.requestedMins}m ago</span>
+                  <div className="flex items-center gap-2">
+                    <Link href={`/dashboard/contractor/jobs/${job.id}`} className="btn text-sm">View</Link>
                   </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Link href={`/jobs/${job.id}`} className="btn text-sm">Accept</Link>
-                </div>
-              </li>
-            ))}
-            {availableJobs.length===0 && <li className="text-sm text-slate-600">No emergency jobs available nearby.</li>}
-          </ul>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <div className="text-sm text-slate-600 text-center py-4">No emergency jobs available nearby.</div>
+          )}
         </div>
 
         {/* Today schedule */}
@@ -740,30 +826,38 @@ export default function ContractorDashboardPage() {
           <SectionTitle action={<Link href="/dashboard/contractor" className="text-brand underline text-sm">View all</Link>}>
             Recent earnings
           </SectionTitle>
-          <ul className="space-y-2">
-            {recentEarnings.slice(0,4).map(earning=>(
-              <li key={earning.date} className="flex items-center justify-between rounded-lg border bg-emerald-50 p-3">
-                <div>
-                  <div className="font-medium text-ink dark:text-white">{earning.jobTitle}</div>
-                  <div className="text-xs text-slate-600">{new Date(earning.date).toLocaleDateString()} • {earning.hours}h</div>
-                </div>
-                <div className="text-right">
-                  <div className="font-semibold text-emerald-700">${earning.amount}</div>
-                  <div className="text-xs text-slate-500">${(earning.amount/earning.hours).toFixed(0)}/hr</div>
-                </div>
-              </li>
-            ))}
-          </ul>
+          {recentEarnings.length === 0 ? (
+            <div className="text-center py-8">
+              <DollarSign className="h-12 w-12 text-slate-300 mx-auto mb-3" />
+              <p className="text-sm text-slate-600">No earnings yet</p>
+              <p className="text-xs text-slate-500 mt-1">Complete jobs to start earning</p>
+            </div>
+          ) : (
+            <ul className="space-y-2">
+              {recentEarnings.slice(0,4).map(earning=>(
+                <li key={earning.date} className="flex items-center justify-between rounded-lg border bg-emerald-50 p-3">
+                  <div>
+                    <div className="font-medium text-ink dark:text-white">{earning.jobTitle}</div>
+                    <div className="text-xs text-slate-600">{new Date(earning.date).toLocaleDateString()} • {earning.hours}h</div>
+                  </div>
+                  <div className="text-right">
+                    <div className="font-semibold text-emerald-700">${earning.amount}</div>
+                    <div className="text-xs text-slate-500">${(earning.amount/earning.hours).toFixed(0)}/hr</div>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
           <div className="mt-3 text-center">
             <div className="text-sm font-medium text-emerald-700">
-              Week total: ${recentEarnings.reduce((sum, e) => sum + e.amount, 0)}
+              Week total: ${kpis.weekEarnings.toFixed(2)}
             </div>
           </div>
         </div>
 
         {/* Profile completeness */}
         <div className="rounded-2xl border border-blue-200 bg-white p-4 shadow-sm">
-          <SectionTitle action={<Link href="/profile/settings" className="text-brand underline text-sm">Edit profile</Link>}>
+          <SectionTitle action={<Link href="/dashboard/contractor/settings" className="text-brand underline text-sm">Edit profile</Link>}>
             Emergency readiness
           </SectionTitle>
           <div className="rounded-xl border border-blue-200 bg-blue-50 p-3">
@@ -807,23 +901,25 @@ export default function ContractorDashboardPage() {
                 <span>Customer rating</span>
                 <span className="flex items-center gap-1">
                   <Star className="h-4 w-4 text-amber-500" />
-                  {kpis.rating}
+                  {kpis.rating.toFixed(1)}
                 </span>
               </div>
               <div className="h-2 bg-slate-100 rounded-full">
-                <div className="h-2 bg-amber-500 rounded-full" style={{ width: '98%' }} />
+                <div className="h-2 bg-amber-500 rounded-full" style={{ width: `${(kpis.rating / 5) * 100}%` }} />
               </div>
-              <div className="text-xs text-slate-500 mt-1">Based on 12 reviews this week</div>
+              <div className="text-xs text-slate-500 mt-1">
+                {kpis.completedJobs > 0 ? `Based on ${kpis.completedJobs} completed ${kpis.completedJobs === 1 ? 'job' : 'jobs'}` : 'Complete jobs to receive ratings'}
+              </div>
             </div>
 
             <div className="pt-2 border-t">
               <div className="grid grid-cols-2 gap-4 text-center">
                 <div>
-                  <div className="text-lg font-semibold text-ink dark:text-white">5</div>
+                  <div className="text-lg font-semibold text-ink dark:text-white">{kpis.completedJobs}</div>
                   <div className="text-xs text-slate-500">Jobs completed</div>
                 </div>
                 <div>
-                  <div className="text-lg font-semibold text-ink dark:text-white">23h</div>
+                  <div className="text-lg font-semibold text-ink dark:text-white">{Math.round(kpis.completedJobs * 2.5)}h</div>
                   <div className="text-xs text-slate-500">Hours worked</div>
                 </div>
               </div>
@@ -845,8 +941,8 @@ export default function ContractorDashboardPage() {
           <h3 className="mb-2 font-semibold text-ink dark:text-white">Coverage & availability</h3>
           <p className="text-sm text-slate-600">Set your service area and emergency availability hours.</p>
           <div className="mt-3 flex gap-2">
-            <Link href="/settings/service-area" className="btn">Service Area</Link>
-            <Link href="/settings/calendar" className="btn btn-outline">Availability</Link>
+            <Link href="/dashboard/contractor/settings" className="btn">Service Area</Link>
+            <Link href="/dashboard/contractor/calendar" className="btn btn-outline">Availability</Link>
           </div>
         </div>
       </section>

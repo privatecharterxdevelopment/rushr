@@ -10,7 +10,7 @@ import TagInput from '@/components/TagInput'
 type Day = 'Mon'|'Tue'|'Wed'|'Thu'|'Fri'|'Sat'|'Sun'
 type Hours = Record<Day, { enabled: boolean; open: string; close: string }>
 type RateType = 'Hourly'|'Flat'|'Visit fee'
-type PaymentMethod = 'Visa'|'Mastercard'|'AmEx'|'Discover'|'ACH'|'Cash'|'Check'|'Zelle'|'Venmo'
+// Payment methods removed - all payments go through Stripe Connect
 type StepId = 'basics'|'area'|'credentials'|'pricing'|'review'
 type Mode = 'wizard'|'full'
 
@@ -24,7 +24,7 @@ type FormDataT = {
   licenseNumber: string; licenseType: string; licenseState: string; licenseExpires: string
   insuranceCarrier: string; insurancePolicy: string; insuranceExpires: string
   rateType: RateType; hourlyRate: string; flatMin: string; visitFee: string; freeEstimates: boolean
-  payments: PaymentMethod[]
+  // payments removed - handled by Stripe Connect
   instagram: string; facebook: string; yelp: string; google: string
   logo: File | null; portfolio: File[]; licenseProof: File | null; insuranceProof: File | null
   agreeTerms: boolean; certifyAccuracy: boolean
@@ -44,7 +44,7 @@ const EMPTY_HOURS: Hours = DAYS.reduce((acc, d) => {
   (acc as any)[d] = { enabled: ['Mon','Tue','Wed','Thu','Fri'].includes(d), open:'09:00', close:'17:00' }
   return acc
 }, {} as Hours)
-const PMETHODS: PaymentMethod[] = ['Visa','Mastercard','AmEx','Discover','ACH','Cash','Check','Zelle','Venmo']
+// Payment methods removed - all payments go through Stripe Connect
 const DRAFT_KEY = 'rushr.contractor.signup.v1'
 
 /* ====================== Page ====================== */
@@ -67,7 +67,6 @@ export default function ContractorSignup() {
     licenseNumber:'', licenseType:'', licenseState:'', licenseExpires:'',
     insuranceCarrier:'', insurancePolicy:'', insuranceExpires:'',
     rateType:'Hourly', hourlyRate:'', flatMin:'', visitFee:'', freeEstimates:true,
-    payments:['Visa','Mastercard','AmEx'],
     instagram:'', facebook:'', yelp:'', google:'',
     logo:null, portfolio:[], licenseProof:null, insuranceProof:null,
     agreeTerms:false, certifyAccuracy:false,
@@ -290,6 +289,7 @@ async function submitAll(e?: React.FormEvent) {
           data: {
             name: form.name,
             business_name: form.businessName,
+            role: 'contractor', // CRITICAL: Prevent auto-creation of homeowner profile
           }
         }
       })
@@ -330,6 +330,7 @@ async function submitAll(e?: React.FormEvent) {
         license_number: form.licenseNumber,
         license_state: form.licenseState,
         insurance_carrier: form.insuranceCarrier,
+        insurance_policy: form.insurancePolicy,
         categories: form.categories,
         address: form.address,
         latitude: form.latitude,
@@ -337,6 +338,15 @@ async function submitAll(e?: React.FormEvent) {
         base_zip: form.baseZip,
         service_area_zips: [form.baseZip, ...form.extraZips],
         service_radius_miles: form.radiusMiles,
+        emergency_services: form.emergency,
+        business_hours: form.hours,
+        hourly_rate: form.hourlyRate ? parseFloat(form.hourlyRate.replace(/[^0-9.]/g, '')) : null,
+        rate_type: form.rateType,
+        free_estimates: form.freeEstimates,
+        years_in_business: form.yearsInBusiness ? parseInt(form.yearsInBusiness) : null,
+        team_size: form.teamSize ? parseInt(form.teamSize) : null,
+        business_description: form.about,
+        website: form.website,
         status: 'pending_approval',
         kyc_status: 'in_progress'
       })
@@ -356,6 +366,31 @@ async function submitAll(e?: React.FormEvent) {
     }
 
     console.log('[WIZARD] Profile saved successfully:', upsertData)
+
+    // Send welcome email to contractor (non-blocking - don't fail wizard if email fails)
+    console.log('[WIZARD] Sending welcome email to contractor...')
+    try {
+      const emailResponse = await fetch('/api/send-welcome-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: form.email,
+          name: form.name,
+          businessName: form.businessName,
+          type: 'contractor'
+        })
+      })
+
+      const emailData = await emailResponse.json()
+      if (emailData.success) {
+        console.log('[WIZARD] ✅ Welcome email sent successfully to', form.email)
+      } else {
+        console.warn('[WIZARD] ⚠️ Welcome email failed:', emailData.error)
+      }
+    } catch (emailError: any) {
+      console.error('[WIZARD] ❌ Welcome email error:', emailError)
+      // Don't fail the wizard if email fails
+    }
 
     // Create Stripe Connect account for payouts
     console.log('[WIZARD] Creating Stripe Connect account...')
@@ -419,14 +454,28 @@ async function submitAll(e?: React.FormEvent) {
     // Fallback: If Stripe setup fails, still let them access dashboard
     clearDraft()
     alert('Welcome to Rushr Pro! Your profile has been submitted. Please complete your payment setup from the dashboard to receive payments.')
-    console.log('[WIZARD] Redirecting to dashboard in 2 seconds to allow auth context to refresh...')
+
+    console.log('[WIZARD] ========================================')
+    console.log('[WIZARD] CONTRACTOR PROFILE CREATED SUCCESSFULLY')
+    console.log('[WIZARD] User ID:', session.user.id)
+    console.log('[WIZARD] Email:', form.email)
+    console.log('[WIZARD] Base Zip:', form.baseZip)
+    console.log('[WIZARD] Categories:', form.categories)
+    console.log('[WIZARD] Profile data:', upsertData)
+    console.log('[WIZARD] ========================================')
+    console.log('[WIZARD] Waiting 2 seconds before redirect...')
 
     // CRITICAL: Wait 2 seconds for ProAuthContext to reload the contractor profile
     // Otherwise the dashboard will think wizard isn't complete and redirect back here
     await new Promise(resolve => setTimeout(resolve, 2000))
 
-    console.log('[WIZARD] Now redirecting to /dashboard/contractor')
-    router.push('/dashboard/contractor')
+    console.log('[WIZARD] ========================================')
+    console.log('[WIZARD] REDIRECTING TO CONTRACTOR DASHBOARD')
+    console.log('[WIZARD] Target: /dashboard/contractor')
+    console.log('[WIZARD] Method: window.location.href (hard redirect)')
+    console.log('[WIZARD] ========================================')
+    // Use window.location.href to bypass all client-side routing and force a full page load
+    window.location.href = '/dashboard/contractor'
   } catch (err: any) {
     console.error('[WIZARD] Submit error:', err)
     alert(`Error: ${err?.message || 'Could not submit right now. Check console for details.'}`)
@@ -1300,6 +1349,5 @@ function migrateDraft(v: any): Partial<FormDataT> {
     extraZips: asArr(v.extraZips),
     specialties: asArr(v.specialties),
     categories: asArr(v.categories),
-    payments: asArr(v.payments),
   }
 }

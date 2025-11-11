@@ -64,18 +64,70 @@ export default function ContractorCalendarPage() {
   const fetchCalendarEvents = async () => {
     if (!user) return
     try {
-      // Fetch calendar events for the current user
-      const { data, error } = await supabase
+      // Fetch accepted jobs for the contractor
+      const { data: acceptedBidsData, error: bidsError } = await supabase
+        .from('job_bids')
+        .select(`
+          id,
+          bid_amount,
+          status,
+          homeowner_jobs!inner(
+            id,
+            title,
+            description,
+            address,
+            city,
+            state,
+            zip_code,
+            scheduled_date,
+            status,
+            created_at
+          )
+        `)
+        .eq('contractor_id', user.id)
+        .eq('status', 'accepted')
+
+      if (bidsError) {
+        console.error('Error fetching accepted bids:', bidsError)
+      }
+
+      // Convert accepted jobs to calendar events
+      const jobEvents: CalendarEvent[] = (acceptedBidsData || []).map(bid => {
+        const job = bid.homeowner_jobs as any
+        const scheduledDate = job.scheduled_date ? new Date(job.scheduled_date) : new Date(job.created_at)
+        const endTime = new Date(scheduledDate)
+        endTime.setHours(endTime.getHours() + 2) // Default 2 hour duration
+
+        return {
+          id: bid.id,
+          user_id: user.id,
+          job_id: job.id,
+          title: job.title || 'Service Call',
+          description: job.description || '',
+          start_time: scheduledDate.toISOString(),
+          end_time: endTime.toISOString(),
+          location: `${job.address || ''}, ${job.city || ''}, ${job.state || ''} ${job.zip_code || ''}`.trim(),
+          status: job.status || 'scheduled',
+          event_type: 'job',
+          created_at: bid.created_at || new Date().toISOString(),
+          updated_at: bid.updated_at || new Date().toISOString()
+        }
+      })
+
+      // Also fetch manual calendar events (if any)
+      const { data: manualEvents, error: eventsError } = await supabase
         .from('calendar_events')
         .select('*')
         .eq('user_id', user.id)
         .order('start_time', { ascending: true })
 
-      if (error) {
-        console.error('Error fetching calendar events:', error)
-      } else {
-        setCalendarEvents(data || [])
+      if (eventsError) {
+        console.error('Error fetching calendar events:', eventsError)
       }
+
+      // Combine both job events and manual events
+      const allEvents = [...jobEvents, ...(manualEvents || [])]
+      setCalendarEvents(allEvents)
     } catch (err) {
       console.error('Error fetching calendar events:', err)
     } finally {

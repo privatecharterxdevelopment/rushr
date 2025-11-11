@@ -10,7 +10,7 @@ import { ArrowLeft, MapPin, Clock, DollarSign, User, Phone, Mail } from 'lucide-
 import Link from 'next/link'
 
 // Dynamic imports for real-time components
-const ContractorTracker = dynamic(() => import('../../../../../components/ContractorTracker'), { ssr: false })
+const LiveTrackingMap = dynamic(() => import('../../../../../components/LiveTrackingMap'), { ssr: false })
 const JobChat = dynamic(() => import('../../../../../components/JobChat'), { ssr: false })
 
 export default function JobDetailsPage() {
@@ -97,9 +97,10 @@ export default function JobDetailsPage() {
     )
   }
 
-  const isJobConfirmed = job.status === 'confirmed' || job.status === 'in_progress'
-  const showChat = isJobConfirmed && contractor
-  const showTracking = isJobConfirmed && contractor && homeownerLocation
+  const isJobActive = job.status === 'bid_accepted' || job.status === 'in_progress' || job.status === 'confirmed'
+  const showFullDetails = isJobActive
+  const showChat = isJobActive && contractor
+  const showTracking = isJobActive && contractor && job.latitude && job.longitude
 
   return (
     <div className="container-max py-8 space-y-6">
@@ -152,7 +153,13 @@ export default function JobDetailsPage() {
             <MapPin className="w-5 h-5 text-slate-400 mt-0.5" />
             <div>
               <div className="text-sm font-medium text-slate-700">Location</div>
-              <div className="text-slate-900">{job.address || 'Not specified'}</div>
+              {showFullDetails ? (
+                <div className="text-slate-900">{job.address || 'Not specified'}</div>
+              ) : (
+                <div className="text-slate-600">
+                  {job.location_zip ? `${job.location_zip} area` : 'Address will be revealed when job is accepted'}
+                </div>
+              )}
             </div>
           </div>
 
@@ -185,53 +192,61 @@ export default function JobDetailsPage() {
             </div>
             <div className="flex-1">
               <h3 className="font-semibold text-slate-900">{contractor.business_name || contractor.name}</h3>
-              <div className="flex flex-col gap-2 mt-2 text-sm text-slate-600">
-                {contractor.phone && (
-                  <div className="flex items-center gap-2">
-                    <Phone className="w-4 h-4" />
-                    <a href={`tel:${contractor.phone}`} className="hover:text-blue-600">
-                      {contractor.phone}
-                    </a>
-                  </div>
-                )}
-                {contractor.email && (
-                  <div className="flex items-center gap-2">
-                    <Mail className="w-4 h-4" />
-                    <a href={`mailto:${contractor.email}`} className="hover:text-blue-600">
-                      {contractor.email}
-                    </a>
-                  </div>
-                )}
-              </div>
+              {showFullDetails ? (
+                <div className="flex flex-col gap-2 mt-2 text-sm text-slate-600">
+                  {contractor.phone && (
+                    <div className="flex items-center gap-2">
+                      <Phone className="w-4 h-4" />
+                      <a href={`tel:${contractor.phone}`} className="hover:text-blue-600">
+                        {contractor.phone}
+                      </a>
+                    </div>
+                  )}
+                  {contractor.email && (
+                    <div className="flex items-center gap-2">
+                      <Mail className="w-4 h-4" />
+                      <a href={`mailto:${contractor.email}`} className="hover:text-blue-600">
+                        {contractor.email}
+                      </a>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="mt-2 text-sm text-slate-500 italic">
+                  Contact details will be revealed when job is accepted
+                </div>
+              )}
             </div>
           </div>
         </div>
       )}
 
       {/* Real-time Tracking & Chat Section */}
-      {showChat && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Live Chat */}
-          <div className="bg-white rounded-lg border border-slate-200 p-6">
-            <h2 className="text-lg font-semibold text-slate-900 mb-4">💬 Live Chat</h2>
-            <JobChat
-              jobId={jobId}
-              contractorName={contractor.business_name || contractor.name}
-              homeownerName={user.email?.split('@')[0] || 'You'}
-            />
-          </div>
+      {showTracking && (
+        <div className="bg-white rounded-lg border border-slate-200 p-6" style={{ height: '600px' }}>
+          <h2 className="text-lg font-semibold text-slate-900 mb-4">📍 Live Location Tracking</h2>
+          <LiveTrackingMap
+            jobId={jobId}
+            jobAddress={job.address}
+            jobLatitude={job.latitude}
+            jobLongitude={job.longitude}
+            contractorName={contractor.business_name || contractor.name}
+            onArrival={() => {
+              console.log('Contractor has arrived!')
+            }}
+          />
+        </div>
+      )}
 
-          {/* Real-time Tracking */}
-          {showTracking && (
-            <div className="bg-white rounded-lg border border-slate-200 p-6">
-              <h2 className="text-lg font-semibold text-slate-900 mb-4">📍 Live Location Tracking</h2>
-              <ContractorTracker
-                jobId={jobId}
-                contractorId={contractor.id}
-                homeownerLocation={homeownerLocation}
-              />
-            </div>
-          )}
+      {/* Live Chat */}
+      {showChat && (
+        <div className="bg-white rounded-lg border border-slate-200 p-6">
+          <h2 className="text-lg font-semibold text-slate-900 mb-4">💬 Live Chat</h2>
+          <JobChat
+            jobId={jobId}
+            contractorName={contractor.business_name || contractor.name}
+            homeownerName={user.email?.split('@')[0] || 'You'}
+          />
         </div>
       )}
 

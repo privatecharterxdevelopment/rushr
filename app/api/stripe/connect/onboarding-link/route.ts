@@ -40,8 +40,11 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Get app URL from environment or construct from request
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+    // Get app URL from environment - use production URL for Stripe (requires HTTPS)
+    const appUrl = process.env.NEXT_PUBLIC_SITE_URL || process.env.NEXT_PUBLIC_BASE_URL || 'https://rushr-main.vercel.app'
+
+    console.log('[Stripe Onboarding] Creating account link for:', connectAccount.stripe_account_id)
+    console.log('[Stripe Onboarding] Using app URL:', appUrl)
 
     // Create account link for onboarding
     const accountLink = await stripe.accountLinks.create({
@@ -50,6 +53,8 @@ export async function POST(request: NextRequest) {
       return_url: `${appUrl}/dashboard/contractor/stripe/success`,
       type: 'account_onboarding',
     })
+
+    console.log('[Stripe Onboarding] Account link created successfully')
 
     return NextResponse.json({
       success: true,

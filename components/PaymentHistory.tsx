@@ -50,11 +50,16 @@ export default function PaymentHistory({ userType }: { userType: 'homeowner' | '
   const [filter, setFilter] = useState<'all' | 'charge' | 'release' | 'hold' | 'refund'>('all')
 
   useEffect(() => {
-    if (!user) return
+    if (!user) {
+      setLoading(false)
+      return
+    }
     fetchTransactions()
   }, [user, userType])
 
   async function fetchTransactions() {
+    if (!user) return
+
     try {
       setLoading(true)
 
@@ -63,13 +68,20 @@ export default function PaymentHistory({ userType }: { userType: 'homeowner' | '
         ? 'homeowner_payment_history'
         : 'contractor_earnings_history'
 
+      console.log('[PaymentHistory] Fetching from view:', viewName, 'for user:', user.id)
+
       const { data, error } = await supabase
         .from(viewName)
         .select('*')
         .order('created_at', { ascending: false })
         .limit(50)
 
-      if (error) throw error
+      if (error) {
+        console.error('[PaymentHistory] Database error:', error)
+        throw error
+      }
+
+      console.log('[PaymentHistory] Fetched', data?.length || 0, 'transactions')
 
       setTransactions(data || [])
 
@@ -103,7 +115,15 @@ export default function PaymentHistory({ userType }: { userType: 'homeowner' | '
       setStats(stats)
 
     } catch (error: any) {
-      console.error('Error fetching transactions:', error)
+      console.error('[PaymentHistory] Error fetching transactions:', error)
+      // Set empty state on error (e.g., view doesn't exist)
+      setTransactions([])
+      setStats({
+        inEscrow: 0,
+        pendingRelease: 0,
+        transactionCount: 0,
+        ...(userType === 'homeowner' ? { totalSpent: 0 } : { totalEarned: 0 })
+      })
     } finally {
       setLoading(false)
     }

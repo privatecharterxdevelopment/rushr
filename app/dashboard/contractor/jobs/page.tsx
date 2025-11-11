@@ -1,10 +1,11 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import Link from 'next/link'
 import { useProAuth } from '../../../../contexts/ProAuthContext'
 import { supabase } from '../../../../lib/supabaseClient'
 import LoadingSpinner from '../../../../components/LoadingSpinner'
+import { useSearchParams } from 'next/navigation'
 import {
   ArrowLeft,
   MapPin,
@@ -12,7 +13,14 @@ import {
   DollarSign,
   AlertCircle,
   MessageSquare,
-  Send
+  Send,
+  CheckCircle,
+  X,
+  Briefcase,
+  ListChecks,
+  Eye,
+  Download,
+  Search
 } from 'lucide-react'
 
 interface Job {
@@ -27,20 +35,49 @@ interface Job {
   phone: string
   homeowner_id: string
   created_at: string
+  urgencyScore?: number
+}
+
+interface MyJob extends Job {
+  bid_amount?: number
+  bid_status?: string
+  bid_created_at?: string
 }
 
 export default function ContractorJobsPage() {
   const { user, contractorProfile } = useProAuth()
+  const searchParams = useSearchParams()
+  const tabParam = searchParams.get('tab') as 'available' | 'my-jobs' | null
+  const [activeTab, setActiveTab] = useState<'available' | 'my-jobs'>(tabParam || 'available')
+
+  // State for available jobs
   const [jobs, setJobs] = useState<Job[]>([])
+  const [myJobs, setMyJobs] = useState<MyJob[]>([])
   const [loading, setLoading] = useState(true)
+
+  // Filters for available jobs
+  const [q, setQ] = useState('')
+  const [cat, setCat] = useState('All')
+  const [zip, setZip] = useState('')
+  const [radius, setRadius] = useState(0)
+  const [sort, setSort] = useState<'Newest'|'Urgency high'>('Newest')
+
+  // Bidding state
   const [bidding, setBidding] = useState<string | null>(null)
   const [bidAmount, setBidAmount] = useState<Record<string, string>>({})
   const [bidMessage, setBidMessage] = useState<Record<string, string>>({})
+  const [showSuccessModal, setShowSuccessModal] = useState(false)
+  const [successMessage, setSuccessMessage] = useState('')
+  const [showBidModal, setShowBidModal] = useState(false)
+  const [selectedJobForBid, setSelectedJobForBid] = useState<Job | null>(null)
+
+  // Categories
+  const categories = ['Plumbing', 'Electrical', 'HVAC', 'Locksmith', 'Garage Door', 'Glass Repair', 'Appliance Repair', 'Handyman', 'Roofing', 'Fencing', 'Gas', 'Snow Removal', 'Security', 'Water Damage', 'Drywall']
 
   const fetchJobs = async () => {
     if (!user) return
     try {
-      // Fetch all pending emergency jobs
+      // Fetch all bids from this contractor
       const { data: appliedJobs, error: bidsError } = await supabase
         .from('job_bids')
         .select('job_id')
@@ -52,24 +89,24 @@ export default function ContractorJobsPage() {
 
       const appliedJobIds = appliedJobs?.map(b => b.job_id) || [];
 
-      // 2️⃣ Get all jobs except those already applied to
+      // Get all available jobs except those already bid on
       const { data: availableJobs, error: jobsError } = await supabase
         .from('homeowner_jobs')
         .select('*')
         .eq('status', 'pending')
-        .not('id', 'in', `(${appliedJobIds.join(',') || ''})`)
+        .not('id', 'in', `(${appliedJobIds.join(',') || 'none'})`)
         .order('created_at', { ascending: false });
 
       if (jobsError) {
         console.error('Error fetching jobs:', jobsError);
-      }
-
-      // console.log('Available jobs:', availableJobs);
-
-      if (jobsError) {
-        console.error('Error fetching jobs:', jobsError)
       } else {
-        setJobs(availableJobs || [])
+        const transformedJobs = (availableJobs || []).map(job => ({
+          ...job,
+          urgencyScore: job.priority === 'emergency' ? 9 :
+                       job.priority === 'high' ? 7 :
+                       job.priority === 'medium' ? 5 : 3,
+        }));
+        setJobs(transformedJobs);
       }
     } catch (err) {
       console.error('Error fetching jobs:', err)
@@ -78,11 +115,91 @@ export default function ContractorJobsPage() {
     }
   }
 
+  const fetchMyJobs = async () => {
+    if (!user) return
+    try {
+      // Fetch all my bids first
+      const { data: myBids, error: bidsError } = await supabase
+        .from('job_bids')
+        .select('*')
+        .eq('contractor_id', user.id)
+        .order('created_at', { ascending: false});
+
+      if (bidsError) {
+        console.error('Error fetching my bids:', bidsError);
+        return;
+      }
+
+      if (!myBids || myBids.length === 0) {
+        setMyJobs([]);
+        return;
+      }
+
+      // Fetch corresponding jobs
+      const jobIds = myBids.map(bid => bid.job_id);
+      const { data: jobs, error: jobsError } = await supabase
+        .from('homeowner_jobs')
+        .select('*')
+        .in('id', jobIds);
+
+      if (jobsError) {
+        console.error('Error fetching jobs:', jobsError);
+        return;
+      }
+
+      // Combine bids with job data
+      const transformedJobs = myBids.map((bid: any) => {
+        const job = jobs?.find(j => j.id === bid.job_id);
+        return {
+          ...job,
+          bid_amount: bid.bid_amount,
+          bid_status: bid.status,
+          bid_created_at: bid.created_at
+        };
+      }).filter(job => job.id); // Filter out any nulls
+
+      setMyJobs(transformedJobs);
+    } catch (err) {
+      console.error('Error fetching my jobs:', err)
+    }
+  }
+
   useEffect(() => {
-    console.log({user})
     if (!user) return
     fetchJobs()
+    fetchMyJobs()
   }, [user])
+
+  // Filter available jobs
+  const filtered = useMemo(()=>{
+    let arr = [...jobs]
+
+    // Search filter
+    if(q){
+      const qq = q.toLowerCase()
+      arr = arr.filter(j =>
+        j.title.toLowerCase().includes(qq) ||
+        (j.description || '').toLowerCase().includes(qq) ||
+        (j.category || '').toLowerCase().includes(qq)
+      )
+    }
+
+    // Category filter
+    if(cat!=='All') arr = arr.filter(j => j.category === cat)
+
+    // ZIP code and radius filter
+    if(zip){
+      if (radius<=5) arr = arr.filter(j => j.zip_code === zip)
+      else if (radius<=10) arr = arr.filter(j => j.zip_code?.slice(0,4) === zip.slice(0,4))
+      else if (radius<=25) arr = arr.filter(j => j.zip_code?.slice(0,3) === zip.slice(0,3))
+    }
+
+    // Sorting
+    if(sort==='Urgency high') arr.sort((a,b)=> (b.urgencyScore ?? 0) - (a.urgencyScore ?? 0))
+    if(sort==='Newest') arr.sort((a,b)=> new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+
+    return arr
+  }, [jobs, q, cat, zip, radius, sort])
 
   const handleSubmitBid = async (job: Job) => {
     if (!user || !contractorProfile) return
@@ -91,19 +208,12 @@ export default function ContractorJobsPage() {
     const message = bidMessage[job.id]
 
     if (!amount || parseFloat(amount) <= 0) {
-      alert('Please enter a valid bid amount')
+      setSuccessMessage('Please enter a valid bid amount')
+      setShowSuccessModal(true)
       return
     }
 
     setBidding(job.id)
-    console.log('job data', {
-      job_id: job.id,
-      contractor_id: user.id,
-      homeowner_id: job.homeowner_id,
-      bid_amount: parseFloat(amount),
-      description: message || '',
-      status: 'pending'
-    })
 
     try {
       const { error } = await supabase
@@ -119,18 +229,66 @@ export default function ContractorJobsPage() {
 
       if (error) {
         console.error('Error submitting bid:', error)
-        alert('Failed to submit bid. Please try again.')
+        setSuccessMessage('Failed to submit bid. Please try again.')
+        setShowSuccessModal(true)
       } else {
-        alert('Bid submitted successfully!')
+        setSuccessMessage(`Bid of $${parseFloat(amount).toFixed(2)} submitted successfully! The homeowner will be notified.`)
+        setShowSuccessModal(true)
         fetchJobs()
+        fetchMyJobs() // Refresh my jobs list
         setBidAmount(prev => ({ ...prev, [job.id]: '' }))
         setBidMessage(prev => ({ ...prev, [job.id]: '' }))
+        setShowBidModal(false) // Close the bid modal
+        setSelectedJobForBid(null)
       }
     } catch (err) {
       console.error('Error submitting bid:', err)
-      alert('Failed to submit bid. Please try again.')
+      setSuccessMessage('Failed to submit bid. Please try again.')
+      setShowSuccessModal(true)
     } finally {
       setBidding(null)
+    }
+  }
+
+  const exportCSV = ()=>{
+    const rows = [
+      ['Title','Category','ZIP','Priority','Status','Created Date'],
+      ...filtered.map(j => [
+        j.title, j.category || 'General', j.zip_code || '', j.priority,
+        j.status, new Date(j.created_at).toLocaleDateString()
+      ])
+    ]
+    const csv = rows.map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n')
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a'); a.href = url; a.download = 'rushr-contractor-jobs.csv'; a.click(); URL.revokeObjectURL(url)
+  }
+
+  const getBidStatusColor = (status: string) => {
+    switch (status) {
+      case 'accepted':
+        return 'bg-emerald-100 text-emerald-800 border-emerald-200'
+      case 'pending':
+        return 'bg-amber-100 text-amber-800 border-amber-200'
+      case 'rejected':
+        return 'bg-red-100 text-red-800 border-red-200'
+      default:
+        return 'bg-slate-100 text-slate-800 border-slate-200'
+    }
+  }
+
+  const getJobStatusColor = (status: string) => {
+    switch (status) {
+      case 'completed':
+        return 'bg-emerald-100 text-emerald-800'
+      case 'in_progress':
+        return 'bg-blue-100 text-blue-800'
+      case 'confirmed':
+        return 'bg-purple-100 text-purple-800'
+      case 'pending':
+        return 'bg-amber-100 text-amber-800'
+      default:
+        return 'bg-slate-100 text-slate-800'
     }
   }
 
@@ -143,7 +301,7 @@ export default function ContractorJobsPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-6xl">
+    <div className="container mx-auto px-4 py-8 max-w-7xl">
       {/* Header */}
       <div className="mb-6">
         <Link
@@ -153,114 +311,502 @@ export default function ContractorJobsPage() {
           <ArrowLeft className="h-4 w-4" />
           Back to Dashboard
         </Link>
-        <h1 className="text-3xl font-bold text-slate-900">Available Jobs</h1>
-        <p className="text-slate-600 mt-1">Find and bid on emergency jobs in your area</p>
+        <h1 className="text-3xl font-bold text-slate-900">Jobs</h1>
+        <p className="text-slate-600 mt-1">Find jobs to bid on and track your active work</p>
       </div>
 
-      {/* Jobs List */}
-      {jobs.length === 0 ? (
-        <div className="text-center py-12 bg-slate-50 rounded-lg">
-          <AlertCircle className="h-12 w-12 text-slate-400 mx-auto mb-3" />
-          <p className="text-slate-600">No available jobs at the moment</p>
-          <p className="text-sm text-slate-500 mt-1">Check back soon for new opportunities</p>
+      {/* Tabs */}
+      <div className="mb-6 border-b border-slate-200">
+        <div className="flex gap-4">
+          <button
+            onClick={() => setActiveTab('available')}
+            className={`pb-3 px-2 font-medium transition-colors relative ${
+              activeTab === 'available'
+                ? 'text-blue-600'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            <div className="flex items-center gap-2">
+              <Briefcase className="h-4 w-4" />
+              <span>Available Jobs</span>
+              {filtered.length > 0 && (
+                <span className="ml-1 px-2 py-0.5 text-xs bg-blue-100 text-blue-700 rounded-full">
+                  {filtered.length}
+                </span>
+              )}
+            </div>
+            {activeTab === 'available' && (
+              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600" />
+            )}
+          </button>
+
+          <button
+            onClick={() => setActiveTab('my-jobs')}
+            className={`pb-3 px-2 font-medium transition-colors relative ${
+              activeTab === 'my-jobs'
+                ? 'text-blue-600'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            <div className="flex items-center gap-2">
+              <ListChecks className="h-4 w-4" />
+              <span>My Jobs</span>
+              {myJobs.length > 0 && (
+                <span className="ml-1 px-2 py-0.5 text-xs bg-blue-100 text-blue-700 rounded-full">
+                  {myJobs.length}
+                </span>
+              )}
+            </div>
+            {activeTab === 'my-jobs' && (
+              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600" />
+            )}
+          </button>
         </div>
-      ) : (
-        <div className="space-y-4">
-          {jobs.map((job) => (
-            <div key={job.id} className="bg-white border border-slate-200 rounded-lg p-6 shadow-sm hover:shadow-md transition-shadow">
-              {/* Job Header */}
-              <div className="flex items-start justify-between mb-4">
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-2">
-                    <h3 className="text-xl font-semibold text-slate-900">{job.title}</h3>
-                    {job.priority === 'emergency' && (
-                      <span className="px-2 py-1 bg-red-100 text-red-700 text-xs font-medium rounded-full">
-                        EMERGENCY
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-slate-600">{job.description}</p>
+      </div>
+
+      {/* Available Jobs Tab */}
+      {activeTab === 'available' && (
+        <>
+          {/* Filters Section */}
+          <section className="bg-white border border-blue-200 rounded-2xl p-6 shadow-sm mb-6">
+            <div className="flex items-start justify-between mb-4">
+              <div>
+                <h2 className="text-xl font-bold text-blue-900">Browse Available Jobs</h2>
+                <p className="text-slate-600 text-sm mt-1">Find emergency jobs in your area and submit competitive bids</p>
+              </div>
+              <button
+                onClick={exportCSV}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors"
+              >
+                <Download className="h-4 w-4" />
+                Export CSV
+              </button>
+            </div>
+
+            {/* Filter Controls */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+              {/* Search */}
+              <div className="lg:col-span-2">
+                <label className="block text-sm font-medium text-slate-700 mb-1">Search</label>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                  <input
+                    type="text"
+                    placeholder="Title, description, category…"
+                    value={q}
+                    onChange={e => setQ(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
                 </div>
               </div>
 
+              {/* Category */}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Category</label>
+                <select
+                  value={cat}
+                  onChange={e => setCat(e.target.value)}
+                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  <option value="All">All</option>
+                  {categories.map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
+              </div>
+
+              {/* ZIP */}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">ZIP</label>
+                <input
+                  type="text"
+                  placeholder="10001"
+                  value={zip}
+                  onChange={e => setZip(e.target.value)}
+                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  maxLength={5}
+                />
+              </div>
+
+              {/* Radius */}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Radius</label>
+                <select
+                  value={radius}
+                  onChange={e => setRadius(Number(e.target.value))}
+                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  disabled={!zip}
+                >
+                  <option value={0}>Any</option>
+                  <option value={5}>5 miles</option>
+                  <option value={10}>10 miles</option>
+                  <option value={25}>25 miles</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Sort */}
+            <div className="mt-4 flex items-center gap-4">
+              <label className="text-sm font-medium text-slate-700">Sort</label>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setSort('Newest')}
+                  className={`px-4 py-1.5 text-sm rounded-lg transition-colors ${
+                    sort === 'Newest'
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                  }`}
+                >
+                  Newest
+                </button>
+                <button
+                  onClick={() => setSort('Urgency high')}
+                  className={`px-4 py-1.5 text-sm rounded-lg transition-colors ${
+                    sort === 'Urgency high'
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                  }`}
+                >
+                  Urgency High
+                </button>
+              </div>
+            </div>
+
+            {/* Results Count */}
+            <div className="mt-4 text-sm text-slate-600">
+              Showing <span className="font-semibold text-blue-700">{filtered.length}</span> {filtered.length === 1 ? 'job' : 'jobs'}
+            </div>
+          </section>
+
+          {/* Jobs List */}
+          {filtered.length === 0 ? (
+            <div className="text-center py-12 bg-slate-50 rounded-lg">
+              <Briefcase className="h-12 w-12 text-slate-400 mx-auto mb-3" />
+              <p className="text-slate-600 font-medium">No available jobs match your filters</p>
+              <p className="text-sm text-slate-500 mt-1">Try adjusting your search criteria</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {filtered.map((job) => (
+                <div key={job.id} className="bg-white border border-slate-200 rounded-lg shadow-sm hover:shadow-md transition-shadow overflow-hidden flex flex-col">
+                  {/* Job Card Content */}
+                  <div className="p-6 flex-1 flex flex-col">
+                    {/* Title and Status */}
+                    <div className="mb-3">
+                      <div className="flex items-start gap-2 mb-2">
+                        <h3 className="text-lg font-semibold text-slate-900 flex-1 line-clamp-2">{job.title}</h3>
+                        {job.priority === 'emergency' && (
+                          <span className="px-2 py-0.5 bg-red-100 text-red-700 text-xs font-medium rounded-full flex-shrink-0">
+                            🚨 URGENT
+                          </span>
+                        )}
+                      </div>
+                      <span className={`inline-block px-2 py-0.5 text-xs font-medium rounded-full ${getJobStatusColor(job.status)}`}>
+                        {job.status.toUpperCase()}
+                      </span>
+                    </div>
+
+                    {/* Description */}
+                    <p className="text-slate-600 text-sm mb-4 line-clamp-3 flex-1">{job.description}</p>
+
+                    {/* Job Details */}
+                    <div className="space-y-2 mb-4">
+                      <div className="flex items-center gap-2 text-sm text-slate-600">
+                        <MapPin className="h-4 w-4 flex-shrink-0" />
+                        <span className="truncate">{job.address || job.zip_code}</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-sm text-slate-600">
+                        <AlertCircle className="h-4 w-4 flex-shrink-0" />
+                        <span className="capitalize">{job.category}</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-sm text-slate-600">
+                        <Clock className="h-4 w-4 flex-shrink-0" />
+                        <span>{new Date(job.created_at).toLocaleDateString()}</span>
+                      </div>
+                    </div>
+
+                    {/* Action Buttons */}
+                    <div className="flex gap-2 mt-auto pt-4 border-t border-slate-100">
+                      <Link
+                        href={`/dashboard/contractor/jobs/${job.id}`}
+                        className="flex-1 text-center px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium text-sm rounded-lg transition-colors"
+                      >
+                        View Details
+                      </Link>
+                      <button
+                        onClick={() => {
+                          setSelectedJobForBid(job)
+                          setShowBidModal(true)
+                        }}
+                        className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm rounded-lg transition-colors"
+                      >
+                        Bid Now
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </>
+      )}
+
+      {/* My Jobs Tab */}
+      {activeTab === 'my-jobs' && (
+        <>
+          {myJobs.length === 0 ? (
+            <div className="text-center py-12 bg-slate-50 rounded-lg">
+              <ListChecks className="h-12 w-12 text-slate-400 mx-auto mb-3" />
+              <p className="text-slate-600 font-medium">No jobs yet</p>
+              <p className="text-sm text-slate-500 mt-1">Start bidding on available jobs to see them here</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {myJobs.map((job) => (
+                <div key={job.id} className="bg-white border border-slate-200 rounded-lg p-6 shadow-sm hover:shadow-md transition-shadow">
+                  {/* Job Header */}
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-2">
+                        <h3 className="text-xl font-semibold text-slate-900">{job.title}</h3>
+                        {job.priority === 'emergency' && (
+                          <span className="px-2 py-1 bg-red-100 text-red-700 text-xs font-medium rounded-full">
+                            🚨 EMERGENCY
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-slate-600 text-sm">{job.description}</p>
+                    </div>
+                  </div>
+
+                  {/* Job Stats */}
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4 pb-4 border-b border-slate-200">
+                    <div>
+                      <div className="text-xs text-slate-500 mb-1">Your Bid</div>
+                      <div className="text-lg font-semibold text-blue-600">
+                        ${job.bid_amount?.toFixed(2)}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-xs text-slate-500 mb-1">Bid Status</div>
+                      <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full border ${getBidStatusColor(job.bid_status || 'pending')}`}>
+                        {job.bid_status?.toUpperCase() || 'PENDING'}
+                      </span>
+                    </div>
+                    <div>
+                      <div className="text-xs text-slate-500 mb-1">Job Status</div>
+                      <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${getJobStatusColor(job.status)}`}>
+                        {job.status.replace('_', ' ').toUpperCase()}
+                      </span>
+                    </div>
+                    <div>
+                      <div className="text-xs text-slate-500 mb-1">Bid Placed</div>
+                      <div className="text-sm text-slate-700">
+                        {job.bid_created_at ? new Date(job.bid_created_at).toLocaleDateString() : 'N/A'}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Job Details */}
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4 text-sm text-slate-600">
+                      <div className="flex items-center gap-1">
+                        <MapPin className="h-4 w-4" />
+                        <span>{job.address || job.zip_code}</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Clock className="h-4 w-4" />
+                        <span className="capitalize">{job.category}</span>
+                      </div>
+                    </div>
+
+                    {/* View Job Button (only show if bid is accepted) */}
+                    {job.bid_status === 'accepted' && (
+                      <Link
+                        href={`/dashboard/contractor/jobs/${job.id}`}
+                        className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors text-sm"
+                      >
+                        <Eye className="h-4 w-4" />
+                        View Job
+                      </Link>
+                    )}
+                  </div>
+
+                  {/* Status Message */}
+                  {job.bid_status === 'pending' && (
+                    <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                      <p className="text-sm text-amber-800">
+                        ⏳ Waiting for homeowner to review your bid
+                      </p>
+                    </div>
+                  )}
+                  {job.bid_status === 'accepted' && job.status === 'confirmed' && (
+                    <div className="mt-4 p-3 bg-emerald-50 border border-emerald-200 rounded-lg">
+                      <p className="text-sm text-emerald-800">
+                        ✅ Your bid was accepted! Click "View Job" to start working
+                      </p>
+                    </div>
+                  )}
+                  {job.bid_status === 'rejected' && (
+                    <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                      <p className="text-sm text-red-800">
+                        ❌ Your bid was not accepted. The homeowner chose another contractor.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </>
+      )}
+
+      {/* Success Modal */}
+      {showSuccessModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 relative animate-in fade-in duration-200">
+            <button
+              onClick={() => setShowSuccessModal(false)}
+              className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 transition-colors"
+            >
+              <X className="h-5 w-5" />
+            </button>
+
+            <div className="text-center">
+              <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <CheckCircle className="h-8 w-8 text-blue-600" />
+              </div>
+              <h3 className="text-xl font-bold text-slate-900 mb-2">Bid Submitted!</h3>
+              <p className="text-slate-600 mb-6">{successMessage}</p>
+              <button
+                onClick={() => setShowSuccessModal(false)}
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-4 rounded-lg transition-colors"
+              >
+                Got it!
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Bid Modal */}
+      {showBidModal && selectedJobForBid && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto relative animate-in fade-in duration-200">
+            <button
+              onClick={() => {
+                setShowBidModal(false)
+                setSelectedJobForBid(null)
+              }}
+              className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 transition-colors z-10"
+            >
+              <X className="h-5 w-5" />
+            </button>
+
+            <div className="p-6">
               {/* Job Details */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4 pb-4 border-b border-slate-200">
-                <div className="flex items-center gap-2 text-sm text-slate-600">
-                  <MapPin className="h-4 w-4" />
-                  <span>{job.address || job.zip_code}</span>
+              <div className="mb-6">
+                <div className="flex items-start gap-3 mb-4">
+                  <h3 className="text-2xl font-bold text-slate-900 flex-1">{selectedJobForBid.title}</h3>
+                  {selectedJobForBid.priority === 'emergency' && (
+                    <span className="px-3 py-1 bg-red-100 text-red-700 text-sm font-medium rounded-full">
+                      🚨 EMERGENCY
+                    </span>
+                  )}
                 </div>
-                <div className="flex items-center gap-2 text-sm text-slate-600">
-                  <Clock className="h-4 w-4" />
-                  <span>{new Date(job.created_at).toLocaleDateString()}</span>
-                </div>
-                <div className="flex items-center gap-2 text-sm text-slate-600">
-                  <AlertCircle className="h-4 w-4" />
-                  <span className="capitalize">{job.category}</span>
+
+                <p className="text-slate-600 mb-4">{selectedJobForBid.description}</p>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 p-4 bg-slate-50 rounded-lg">
+                  <div className="flex items-center gap-2 text-sm">
+                    <MapPin className="h-4 w-4 text-slate-500" />
+                    <span className="text-slate-700">{selectedJobForBid.address || selectedJobForBid.zip_code}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm">
+                    <AlertCircle className="h-4 w-4 text-slate-500" />
+                    <span className="text-slate-700 capitalize">{selectedJobForBid.category}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm">
+                    <Clock className="h-4 w-4 text-slate-500" />
+                    <span className="text-slate-700">{new Date(selectedJobForBid.created_at).toLocaleDateString()}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm">
+                    <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${getJobStatusColor(selectedJobForBid.status)}`}>
+                      {selectedJobForBid.status.toUpperCase()}
+                    </span>
+                  </div>
                 </div>
               </div>
 
               {/* Bid Form */}
-              <div className="space-y-3">
-                <div className="flex gap-3">
-                  <div className="flex-1">
+              <div className="border-t border-slate-200 pt-6">
+                <h4 className="font-semibold text-slate-900 mb-4">Submit Your Bid</h4>
+                <div className="space-y-4">
+                  <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1">
-                      Your Bid Amount ($)
+                      Your Bid Amount ($) <span className="text-red-500">*</span>
                     </label>
                     <div className="relative">
                       <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
                       <input
                         type="number"
                         placeholder="Enter amount"
-                        value={bidAmount[job.id] || ''}
-                        onChange={(e) => setBidAmount(prev => ({ ...prev, [job.id]: e.target.value }))}
-                        className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        value={bidAmount[selectedJobForBid.id] || ''}
+                        onChange={(e) => setBidAmount(prev => ({ ...prev, [selectedJobForBid.id]: e.target.value }))}
+                        className="w-full pl-10 pr-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         min="0"
                         step="0.01"
                       />
                     </div>
                   </div>
-                </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">
-                    Message (Optional)
-                  </label>
-                  <div className="relative">
-                    <MessageSquare className="absolute left-3 top-3 h-5 w-5 text-slate-400" />
-                    <textarea
-                      placeholder="Add a message to homeowner..."
-                      value={bidMessage[job.id] || ''}
-                      onChange={(e) => setBidMessage(prev => ({ ...prev, [job.id]: e.target.value }))}
-                      className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      rows={2}
-                    />
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                      Message (Optional)
+                    </label>
+                    <div className="relative">
+                      <MessageSquare className="absolute left-3 top-3 h-5 w-5 text-slate-400" />
+                      <textarea
+                        placeholder="Add a message to the homeowner..."
+                        value={bidMessage[selectedJobForBid.id] || ''}
+                        onChange={(e) => setBidMessage(prev => ({ ...prev, [selectedJobForBid.id]: e.target.value }))}
+                        className="w-full pl-10 pr-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        rows={4}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex gap-3 pt-2">
+                    <button
+                      onClick={() => handleSubmitBid(selectedJobForBid)}
+                      disabled={bidding === selectedJobForBid.id}
+                      className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white font-medium py-3 px-4 rounded-lg transition-colors flex items-center justify-center gap-2"
+                    >
+                      {bidding === selectedJobForBid.id ? (
+                        <>
+                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                          Submitting...
+                        </>
+                      ) : (
+                        <>
+                          <Send className="h-4 w-4" />
+                          Submit Bid
+                        </>
+                      )}
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowBidModal(false)
+                        setSelectedJobForBid(null)
+                      }}
+                      disabled={bidding === selectedJobForBid.id}
+                      className="px-6 py-3 bg-slate-200 hover:bg-slate-300 disabled:bg-slate-100 text-slate-700 font-medium rounded-lg transition-colors"
+                    >
+                      Cancel
+                    </button>
                   </div>
                 </div>
-
-                <button
-                  onClick={() => handleSubmitBid(job)}
-                  disabled={bidding === job.id}
-                  className="w-full md:w-auto px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                >
-                  {bidding === job.id ? (
-                    <>
-                      <img
-                          src="https://jtrxdcccswdwlritgstp.supabase.co/storage/v1/object/public/contractor-logos/RushrLogoAnimation.gif"
-                          alt="Loading..."
-                          className="w-4 h-4 object-contain"
-                        />
-                      Submitting...
-                    </>
-                  ) : (
-                    <>
-                      <Send className="h-4 w-4" />
-                      Submit Bid
-                    </>
-                  )}
-                </button>
               </div>
             </div>
-          ))}
+          </div>
         </div>
       )}
     </div>

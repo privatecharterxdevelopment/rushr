@@ -67,33 +67,6 @@ export default function ContractorMessagesPage() {
     scrollToBottom()
   }, [messages])
 
-  // Early return if not authenticated - BEFORE any data fetching
-  if (authLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <img
-          src="https://jtrxdcccswdwlritgstp.supabase.co/storage/v1/object/public/contractor-logos/RushrLogoAnimation.gif"
-          alt="Loading..."
-          className="h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4 object-contain"
-        />
-          <p>Loading...</p>
-        </div>
-      </div>
-    )
-  }
-
-  if (!user || !contractorProfile) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <h2 className="text-xl font-semibold mb-4">Contractor access required</h2>
-          <Link href="/pro" className="btn-primary">Go to Pro Dashboard</Link>
-        </div>
-      </div>
-    )
-  }
-
   // Fetch conversations with real data
   useEffect(() => {
     const fetchConversations = async () => {
@@ -314,6 +287,33 @@ export default function ContractorMessagesPage() {
     } finally {
       setSending(false)
     }
+  }
+
+  // Conditional rendering AFTER all hooks
+  if (authLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <img
+          src="https://jtrxdcccswdwlritgstp.supabase.co/storage/v1/object/public/contractor-logos/RushrLogoAnimation.gif"
+          alt="Loading..."
+          className="h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4 object-contain"
+        />
+          <p>Loading...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (!user || !contractorProfile) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <h2 className="text-xl font-semibold mb-4">Contractor access required</h2>
+          <Link href="/pro" className="btn-primary">Go to Pro Dashboard</Link>
+        </div>
+      </div>
+    )
   }
 
   if (loading) {

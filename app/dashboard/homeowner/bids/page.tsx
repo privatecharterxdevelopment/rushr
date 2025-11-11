@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
+import dynamic from 'next/dynamic'
 import { useAuth } from '../../../../contexts/AuthContext'
 import { supabase } from '../../../../lib/supabaseClient'
 import LoadingSpinner from '../../../../components/LoadingSpinner'
@@ -14,6 +15,8 @@ import {
   MessageSquare,
   Star
 } from 'lucide-react'
+
+const PaymentModal = dynamic(() => import('../../../../components/PaymentModal'), { ssr: false })
 
 interface Bid {
   id: string
@@ -32,6 +35,8 @@ export default function HomeownerBidsPage() {
   const [bids, setBids] = useState<Bid[]>([])
   const [loading, setLoading] = useState(true)
   const [acceptingBid, setAcceptingBid] = useState<string | null>(null)
+  const [selectedBid, setSelectedBid] = useState<Bid | null>(null)
+  const [showPaymentModal, setShowPaymentModal] = useState(false)
 
   const fetchBids = async () => {
     if (!user) return
@@ -122,12 +127,13 @@ export default function HomeownerBidsPage() {
         return
       }
 
-      // Update job status and final cost
+      // Update job status to bid_accepted
       const { error: jobError } = await supabase
         .from('homeowner_jobs')
         .update({
-          status: 'in_progress',
-          final_cost: bid.bid_amount
+          status: 'bid_accepted',
+          final_cost: bid.bid_amount,
+          contractor_id: bid.contractor_id
         })
         .eq('id', bid.job_id)
 
@@ -135,14 +141,28 @@ export default function HomeownerBidsPage() {
         console.error('Error updating job status:', jobError)
       }
 
-      // Redirect to Stripe payment for escrow
-      const jobTitle = bid.job_title || 'Job'
-      window.location.href = `/payments/checkout?job_id=${bid.job_id}&amount=${bid.bid_amount}&description=${encodeURIComponent(jobTitle)}&type=escrow`
+      alert('✅ Bid accepted! You will receive a notification to proceed with payment.')
+
+      // Refresh bids to show updated status
+      fetchBids()
+      setAcceptingBid(null)
     } catch (err) {
       console.error('Error accepting bid:', err)
       alert('Error accepting bid')
       setAcceptingBid(null)
     }
+  }
+
+  const handleOpenPayment = (bid: Bid) => {
+    setSelectedBid(bid)
+    setShowPaymentModal(true)
+  }
+
+  const handlePaymentSuccess = () => {
+    setShowPaymentModal(false)
+    alert('Payment secured in escrow! The contractor has been notified.')
+    // Refresh bids
+    fetchBids()
   }
 
   const getBidStatusColor = (status: string) => {
@@ -262,9 +282,43 @@ export default function HomeownerBidsPage() {
                   </button>
                 </div>
               )}
+
+              {/* Show Payment Button for Accepted Bids */}
+              {bid.status === 'accepted' && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-blue-900 mb-1">💳 Payment Required</p>
+                      <p className="text-sm text-blue-700">Secure payment in escrow to start the job</p>
+                    </div>
+                    <button
+                      onClick={() => handleOpenPayment(bid)}
+                      className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-colors flex items-center gap-2 shadow-lg"
+                    >
+                      <DollarSign className="h-5 w-5" />
+                      Place Payment
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           ))}
         </div>
+      )}
+
+      {/* Payment Modal */}
+      {selectedBid && selectedBid.bid_amount != null && (
+        <PaymentModal
+          isOpen={showPaymentModal}
+          onClose={() => setShowPaymentModal(false)}
+          bidId={selectedBid.id}
+          jobId={selectedBid.job_id}
+          amount={selectedBid.bid_amount}
+          contractorName={selectedBid.contractor_name || 'Contractor'}
+          jobTitle={selectedBid.job_title || 'Job'}
+          homeownerId={user?.id || ''}
+          onPaymentSuccess={handlePaymentSuccess}
+        />
       )}
     </div>
   )

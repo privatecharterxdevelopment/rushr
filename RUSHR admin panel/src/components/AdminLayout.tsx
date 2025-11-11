@@ -1,17 +1,18 @@
 import React, { ReactNode } from 'react';
-import { 
-  Users, 
-  CreditCard, 
-  MapPin, 
-  Shield, 
-  Crown, 
+import {
+  Users,
+  CreditCard,
+  MapPin,
+  Shield,
+  Crown,
   MessageSquare,
   BarChart3,
   Grid3X3,
   Menu,
   Bell,
   Search,
-  LogOut
+  LogOut,
+  Briefcase
 } from 'lucide-react';
 
 interface AdminLayoutProps {
@@ -24,6 +25,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, activeTab, onTabCha
   const navigation = [
     { id: 'dashboard', name: 'Dashboard', icon: BarChart3 },
     { id: 'users', name: 'Users', icon: Users },
+    { id: 'contractors', name: 'Contractors', icon: Briefcase },
     { id: 'categories', name: 'Job Categories', icon: Grid3X3 },
     { id: 'payments', name: 'Payments', icon: CreditCard },
     { id: 'auftrags', name: 'Jobs', icon: MapPin },

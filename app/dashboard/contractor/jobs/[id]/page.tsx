@@ -6,11 +6,12 @@ import { useProAuth } from '../../../../../contexts/ProAuthContext'
 import { supabase } from '../../../../../lib/supabaseClient'
 import dynamic from 'next/dynamic'
 import LoadingSpinner from '../../../../../components/LoadingSpinner'
-import { ArrowLeft, MapPin, Clock, DollarSign, User, Phone, Mail, Navigation } from 'lucide-react'
+import { ArrowLeft, MapPin, Clock, DollarSign, User, Phone, Mail, Navigation, CheckCircle, Send, MessageSquare, AlertCircle } from 'lucide-react'
 import Link from 'next/link'
 
-// Dynamic import for chat
+// Dynamic imports
 const JobChat = dynamic(() => import('../../../../../components/JobChat'), { ssr: false })
+const ContractorNavigationMap = dynamic(() => import('../../../../../components/ContractorNavigationMap'), { ssr: false })
 
 export default function ContractorJobDetailsPage() {
   const params = useParams()
@@ -19,9 +20,12 @@ export default function ContractorJobDetailsPage() {
   const [job, setJob] = useState<any>(null)
   const [homeowner, setHomeowner] = useState<any>(null)
   const [loading, setLoading] = useState(true)
-  const [trackingEnabled, setTrackingEnabled] = useState(false)
-  const [updatingLocation, setUpdatingLocation] = useState(false)
-  const watchId = React.useRef<number | null>(null)
+  const [markingComplete, setMarkingComplete] = useState(false)
+
+  // Bidding state
+  const [bidAmount, setBidAmount] = useState('')
+  const [bidMessage, setBidMessage] = useState('')
+  const [submittingBid, setSubmittingBid] = useState(false)
 
   const jobId = params.id as string
 
@@ -42,22 +46,20 @@ export default function ContractorJobDetailsPage() {
           return
         }
 
-        // Verify this contractor has access to this job (has accepted bid)
+        setJob(jobData)
+
+        // Check if contractor has already bid on this job (optional - just for display)
         const { data: bidData } = await supabase
           .from('job_bids')
           .select('*')
           .eq('job_id', jobId)
           .eq('contractor_id', user.id)
-          .eq('status', 'accepted')
-          .single()
+          .maybeSingle()
 
-        if (!bidData) {
-          console.error('Contractor does not have access to this job')
-          router.push('/dashboard/contractor')
-          return
+        if (bidData) {
+          // Contractor has a bid on this job - show bid status
+          setJob((prev: any) => ({ ...prev, myBid: bidData }))
         }
-
-        setJob(jobData)
 
         // Fetch homeowner details
         if (jobData.homeowner_id) {
@@ -73,19 +75,6 @@ export default function ContractorJobDetailsPage() {
             setHomeowner(homeownerData)
           }
         }
-
-        // Check if tracking is already enabled
-        const { data: locationData } = await supabase
-          .from('contractor_locations')
-          .select('is_tracking_enabled')
-          .eq('job_id', jobId)
-          .eq('contractor_id', user.id)
-          .single()
-
-        if (locationData?.is_tracking_enabled) {
-          setTrackingEnabled(true)
-          startLocationTracking()
-        }
       } catch (error) {
         console.error('Error loading job details:', error)
       } finally {
@@ -94,91 +83,7 @@ export default function ContractorJobDetailsPage() {
     }
 
     fetchJobDetails()
-
-    return () => {
-      stopLocationTracking()
-    }
   }, [user, jobId, router])
-
-  const startLocationTracking = () => {
-    if (!navigator.geolocation) {
-      alert('Geolocation is not supported by your browser')
-      return
-    }
-
-    // Start watching position
-    watchId.current = navigator.geolocation.watchPosition(
-      async (position) => {
-        const { latitude, longitude, heading, speed } = position.coords
-
-        // Update location in database
-        await supabase
-          .from('contractor_locations')
-          .upsert({
-            contractor_id: user?.id,
-            job_id: jobId,
-            latitude,
-            longitude,
-            heading: heading || 0,
-            speed: speed ? speed * 3.6 : 0, // Convert m/s to km/h
-            accuracy: position.coords.accuracy,
-            is_tracking_enabled: true,
-            last_updated_at: new Date().toISOString()
-          })
-
-        console.log('[TRACKING] Location updated:', { latitude, longitude })
-      },
-      (error) => {
-        console.error('[TRACKING] Error:', error)
-      },
-      {
-        enableHighAccuracy: true,
-        timeout: 5000,
-        maximumAge: 0
-      }
-    )
-  }
-
-  const stopLocationTracking = () => {
-    if (watchId.current !== null) {
-      navigator.geolocation.clearWatch(watchId.current)
-      watchId.current = null
-    }
-  }
-
-  const toggleTracking = async () => {
-    setUpdatingLocation(true)
-
-    if (!trackingEnabled) {
-      // Enable tracking
-      setTrackingEnabled(true)
-      startLocationTracking()
-
-      // Update database
-      await supabase
-        .from('contractor_locations')
-        .upsert({
-          contractor_id: user?.id,
-          job_id: jobId,
-          latitude: 0,
-          longitude: 0,
-          is_tracking_enabled: true
-        })
-    } else {
-      // Disable tracking
-      setTrackingEnabled(false)
-      stopLocationTracking()
-
-      // Update database
-      await supabase
-        .from('contractor_locations')
-        .update({ is_tracking_enabled: false })
-        .eq('job_id', jobId)
-        .eq('contractor_id', user?.id)
-    }
-
-    setUpdatingLocation(false)
-  }
 
   const openInMaps = () => {
     if (!job?.address) return
@@ -186,6 +91,79 @@ export default function ContractorJobDetailsPage() {
     const address = encodeURIComponent(job.address)
     const url = `https://maps.google.com/?q=${address}`
     window.open(url, '_blank')
+  }
+
+  const markJobAsComplete = async () => {
+    if (!user || !jobId) return
+
+    if (!confirm('Are you sure you want to mark this job as complete? This will notify the homeowner and trigger payment once they approve.')) {
+      return
+    }
+
+    setMarkingComplete(true)
+
+    try {
+      // Update job status to 'completed' and mark contractor_marked_complete
+      const { error } = await supabase
+        .from('homeowner_jobs')
+        .update({
+          status: 'completed',
+          contractor_marked_complete: true,
+          completed_date: new Date().toISOString()
+        })
+        .eq('id', jobId)
+
+      if (error) {
+        console.error('Error marking job as complete:', error)
+        alert('Failed to mark job as complete. Please try again.')
+      } else {
+        alert('✅ Job marked as complete! The homeowner will review and release payment.')
+        // Refresh job data
+        window.location.reload()
+      }
+    } catch (err) {
+      console.error('Error marking job as complete:', err)
+      alert('Failed to mark job as complete. Please try again.')
+    } finally {
+      setMarkingComplete(false)
+    }
+  }
+
+  const handleSubmitBid = async () => {
+    if (!bidAmount || parseFloat(bidAmount) <= 0) {
+      alert('Please enter a valid bid amount')
+      return
+    }
+
+    if (!user || !jobId) return
+
+    setSubmittingBid(true)
+
+    try {
+      const { error } = await supabase
+        .from('job_bids')
+        .insert([{
+          job_id: jobId,
+          contractor_id: user.id,
+          homeowner_id: job.homeowner_id,
+          bid_amount: parseFloat(bidAmount),
+          description: bidMessage || '',
+          status: 'pending'
+        }])
+
+      if (error) {
+        console.error('Error submitting bid:', error)
+        alert('Failed to submit bid. Please try again.')
+      } else {
+        alert(`✅ Bid of $${parseFloat(bidAmount).toFixed(2)} submitted successfully! The homeowner will be notified.`)
+        router.push('/dashboard/contractor/jobs?tab=my-jobs')
+      }
+    } catch (err) {
+      console.error('Error submitting bid:', err)
+      alert('Failed to submit bid. Please try again.')
+    } finally {
+      setSubmittingBid(false)
+    }
   }
 
   if (loading) {
@@ -209,8 +187,10 @@ export default function ContractorJobDetailsPage() {
     )
   }
 
-  const isJobConfirmed = job.status === 'confirmed' || job.status === 'in_progress'
-  const showChat = isJobConfirmed && homeowner
+  const isJobActive = job.status === 'bid_accepted' || job.status === 'confirmed' || job.status === 'in_progress'
+  const showFullDetails = isJobActive
+  const showChat = isJobActive && homeowner
+  const showNavigation = isJobActive && job.latitude && job.longitude
 
   return (
     <div className="container-max py-8 space-y-6">
@@ -263,15 +243,23 @@ export default function ContractorJobDetailsPage() {
             <MapPin className="w-5 h-5 text-slate-400 mt-0.5" />
             <div>
               <div className="text-sm font-medium text-slate-700">Location</div>
-              <div className="text-slate-900">{job.address || 'Not specified'}</div>
-              {job.address && (
-                <button
-                  onClick={openInMaps}
-                  className="mt-2 text-sm text-blue-600 hover:text-blue-700 flex items-center gap-1"
-                >
-                  <Navigation className="w-4 h-4" />
-                  Open in Google Maps
-                </button>
+              {showFullDetails ? (
+                <>
+                  <div className="text-slate-900">{job.address || 'Not specified'}</div>
+                  {job.address && (
+                    <button
+                      onClick={openInMaps}
+                      className="mt-2 text-sm text-blue-600 hover:text-blue-700 flex items-center gap-1"
+                    >
+                      <Navigation className="w-4 h-4" />
+                      Open in Google Maps
+                    </button>
+                  )}
+                </>
+              ) : (
+                <div className="text-slate-600">
+                  {job.location_zip ? `${job.location_zip} area` : 'Address will be revealed when you accept the job'}
+                </div>
               )}
             </div>
           </div>
@@ -305,52 +293,211 @@ export default function ContractorJobDetailsPage() {
             </div>
             <div className="flex-1">
               <h3 className="font-semibold text-slate-900">{homeowner.name || 'Homeowner'}</h3>
-              <div className="flex flex-col gap-2 mt-2 text-sm text-slate-600">
-                {homeowner.phone && (
-                  <div className="flex items-center gap-2">
-                    <Phone className="w-4 h-4" />
-                    <a href={`tel:${homeowner.phone}`} className="hover:text-blue-600">
-                      {homeowner.phone}
-                    </a>
-                  </div>
-                )}
-                {homeowner.email && (
-                  <div className="flex items-center gap-2">
-                    <Mail className="w-4 h-4" />
-                    <a href={`mailto:${homeowner.email}`} className="hover:text-blue-600">
-                      {homeowner.email}
-                    </a>
-                  </div>
-                )}
-              </div>
+              {showFullDetails ? (
+                <div className="flex flex-col gap-2 mt-2 text-sm text-slate-600">
+                  {homeowner.phone && (
+                    <div className="flex items-center gap-2">
+                      <Phone className="w-4 h-4" />
+                      <a href={`tel:${homeowner.phone}`} className="hover:text-blue-600">
+                        {homeowner.phone}
+                      </a>
+                    </div>
+                  )}
+                  {homeowner.email && (
+                    <div className="flex items-center gap-2">
+                      <Mail className="w-4 h-4" />
+                      <a href={`mailto:${homeowner.email}`} className="hover:text-blue-600">
+                        {homeowner.email}
+                      </a>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="mt-2 text-sm text-slate-500 italic">
+                  Contact details will be revealed when you accept the job
+                </div>
+              )}
             </div>
           </div>
         </div>
       )}
 
-      {/* Location Tracking Toggle */}
-      {isJobConfirmed && (
-        <div className="bg-white rounded-lg border border-slate-200 p-6">
-          <div className="flex items-center justify-between">
+      {/* Bidding Section - Show if contractor hasn't bid yet */}
+      {!job.myBid && job.status === 'pending' && (
+        <div className="bg-white rounded-lg border border-blue-200 p-6">
+          <div className="flex items-center gap-3 mb-4">
+            <DollarSign className="h-6 w-6 text-blue-600" />
+            <h2 className="text-lg font-semibold text-slate-900">Submit Your Bid</h2>
+          </div>
+
+          <div className="space-y-4">
             <div>
-              <h3 className="font-semibold text-slate-900 mb-1">📍 Location Sharing</h3>
-              <p className="text-sm text-slate-600">
-                {trackingEnabled
-                  ? 'Homeowner can see your real-time location'
-                  : 'Share your location so homeowner can track your arrival'}
+              <label className="block text-sm font-medium text-slate-700 mb-1">
+                Your Bid Amount ($) <span className="text-red-500">*</span>
+              </label>
+              <div className="relative">
+                <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
+                <input
+                  type="number"
+                  placeholder="Enter amount"
+                  value={bidAmount}
+                  onChange={(e) => setBidAmount(e.target.value)}
+                  className="w-full pl-10 pr-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  min="0"
+                  step="0.01"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">
+                Message to Homeowner (Optional)
+              </label>
+              <div className="relative">
+                <MessageSquare className="absolute left-3 top-3 h-5 w-5 text-slate-400" />
+                <textarea
+                  placeholder="Add a message to the homeowner..."
+                  value={bidMessage}
+                  onChange={(e) => setBidMessage(e.target.value)}
+                  className="w-full pl-10 pr-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  rows={4}
+                />
+              </div>
+            </div>
+
+            <button
+              onClick={handleSubmitBid}
+              disabled={submittingBid || !bidAmount}
+              className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white font-medium py-3 px-4 rounded-lg transition-colors flex items-center justify-center gap-2"
+            >
+              {submittingBid ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  Submitting Bid...
+                </>
+              ) : (
+                <>
+                  <Send className="h-4 w-4" />
+                  Submit Bid
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Show Bid Status if contractor already bid */}
+      {job.myBid && (
+        <div className={`rounded-lg border p-6 ${
+          job.myBid.status === 'accepted' ? 'bg-emerald-50 border-emerald-200' :
+          job.myBid.status === 'rejected' ? 'bg-red-50 border-red-200' :
+          'bg-amber-50 border-amber-200'
+        }`}>
+          <div className="flex items-start gap-3">
+            <AlertCircle className={`h-6 w-6 mt-0.5 ${
+              job.myBid.status === 'accepted' ? 'text-emerald-600' :
+              job.myBid.status === 'rejected' ? 'text-red-600' :
+              'text-amber-600'
+            }`} />
+            <div>
+              <h3 className={`font-semibold mb-1 ${
+                job.myBid.status === 'accepted' ? 'text-emerald-900' :
+                job.myBid.status === 'rejected' ? 'text-red-900' :
+                'text-amber-900'
+              }`}>
+                {job.myBid.status === 'accepted' ? '✅ Your Bid Was Accepted!' :
+                 job.myBid.status === 'rejected' ? '❌ Your Bid Was Not Accepted' :
+                 '⏳ Your Bid Is Pending'}
+              </h3>
+              <p className={`text-sm ${
+                job.myBid.status === 'accepted' ? 'text-emerald-800' :
+                job.myBid.status === 'rejected' ? 'text-red-800' :
+                'text-amber-800'
+              }`}>
+                Your bid: <strong>${job.myBid.bid_amount?.toFixed(2)}</strong>
+                {job.myBid.status === 'pending' && ' - Waiting for homeowner to review'}
+                {job.myBid.status === 'rejected' && ' - The homeowner chose another contractor'}
               </p>
+              {job.myBid.description && (
+                <p className="text-sm text-slate-600 mt-2 italic">
+                  Your message: "{job.myBid.description}"
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Navigation Map */}
+      {showNavigation && (
+        <div className="bg-white rounded-lg border border-slate-200 p-6" style={{ height: '600px' }}>
+          <h2 className="text-lg font-semibold text-slate-900 mb-4">🧭 Navigate to Job</h2>
+          <ContractorNavigationMap
+            jobId={jobId}
+            jobAddress={job.address}
+            jobLatitude={job.latitude}
+            jobLongitude={job.longitude}
+            contractorId={user?.id || ''}
+            onNavigationStart={() => {
+              console.log('Navigation started')
+            }}
+            onArrival={() => {
+              console.log('Contractor arrived at job location')
+            }}
+          />
+        </div>
+      )}
+
+      {/* Mark Job as Complete Button */}
+      {job.status === 'in_progress' && !job.contractor_marked_complete && (
+        <div className="bg-gradient-to-r from-emerald-50 to-blue-50 rounded-lg border-2 border-emerald-200 p-6">
+          <div className="flex items-center justify-between">
+            <div className="flex-1">
+              <h3 className="font-semibold text-slate-900 mb-1 flex items-center gap-2">
+                <CheckCircle className="h-5 w-5 text-emerald-600" />
+                Ready to Complete?
+              </h3>
+              <p className="text-sm text-slate-600">
+                Once you mark this job as complete, the homeowner will review your work and release the payment.
+              </p>
+              {job.final_cost && (
+                <p className="text-sm font-medium text-emerald-700 mt-2">
+                  💰 Payment: ${job.final_cost.toFixed(2)}
+                </p>
+              )}
             </div>
             <button
-              onClick={toggleTracking}
-              disabled={updatingLocation}
-              className={`px-6 py-3 rounded-lg font-medium transition-colors ${
-                trackingEnabled
-                  ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
-                  : 'bg-slate-200 hover:bg-slate-300 text-slate-700'
-              } disabled:opacity-50`}
+              onClick={markJobAsComplete}
+              disabled={markingComplete}
+              className="px-6 py-3 bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white font-semibold rounded-lg transition-colors flex items-center gap-2"
             >
-              {updatingLocation ? 'Updating...' : trackingEnabled ? '✓ Sharing Location' : 'Enable Sharing'}
+              {markingComplete ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  Marking...
+                </>
+              ) : (
+                <>
+                  <CheckCircle className="h-5 w-5" />
+                  Mark as Complete
+                </>
+              )}
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Job Already Marked Complete */}
+      {job.contractor_marked_complete && job.status !== 'completed' && (
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-6">
+          <div className="flex items-center gap-3">
+            <Clock className="h-6 w-6 text-amber-600" />
+            <div>
+              <h3 className="font-semibold text-amber-900 mb-1">⏳ Waiting for Homeowner Approval</h3>
+              <p className="text-sm text-amber-800">
+                You've marked this job as complete. The homeowner will review your work and release payment shortly.
+              </p>
+            </div>
           </div>
         </div>
       )}

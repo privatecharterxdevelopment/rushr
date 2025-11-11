@@ -102,8 +102,8 @@ export default function ContractorSettingsPage() {
         minimumJobAmount: 100,
         serviceRadiusMiles: contractorProfile.service_radius_miles || 25,
         bio: '',
-        emergencyAvailable: contractorProfile.emergency_available ?? true,
-        weekendAvailable: contractorProfile.weekend_available ?? true
+        emergencyAvailable: contractorProfile.emergency_services ?? true,
+        weekendAvailable: contractorProfile.weekend_services ?? true
       })
     }
   }, [contractorProfile, user])
@@ -179,8 +179,8 @@ export default function ContractorSettingsPage() {
           service_radius_miles: profileData.serviceRadiusMiles,
           hourly_rate: profileData.hourlyRate,
           categories: profileData.categories,
-          emergency_available: profileData.emergencyAvailable,
-          weekend_available: profileData.weekendAvailable,
+          emergency_services: profileData.emergencyAvailable,
+          weekend_services: profileData.weekendAvailable,
           updated_at: new Date().toISOString()
         })
         .eq('id', user.id)

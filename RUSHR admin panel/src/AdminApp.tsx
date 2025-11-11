@@ -3,6 +3,7 @@ import { useState } from 'react';
 import AdminLayout from './components/AdminLayout';
 import Dashboard from './components/Dashboard';
 import UsersTab from './components/UsersTab';
+import ContractorsTab from './components/ContractorsTab';
 import JobCategoriesTab from './components/JobCategoriesTab';
 import PaymentsTab from './components/PaymentsTab';
 import JobsTab from './components/JobsTab';
@@ -19,6 +20,8 @@ function AdminApp() {
         return <Dashboard />;
       case 'users':
         return <UsersTab />;
+      case 'contractors':
+        return <ContractorsTab />;
       case 'categories':
         return <JobCategoriesTab />;
       case 'payments':
