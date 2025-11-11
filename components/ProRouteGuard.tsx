@@ -68,6 +68,22 @@ export default function ProRouteGuard({ children }: { children: React.ReactNode 
     )
   }
 
+  // CRITICAL: Block unauthenticated users from accessing contractor dashboard
+  if (!contractorUser) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-blue-50">
+        <div className="text-center max-w-md bg-white p-8 rounded-lg shadow-lg">
+          <h2 className="text-xl font-semibold mb-4 text-blue-600">Sign In Required</h2>
+          <p className="mb-4">Please sign in to access the contractor dashboard.</p>
+          <p className="text-sm text-gray-600 mb-6">You need to be logged in as a contractor.</p>
+          <a href="/pro/sign-in" className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 inline-block">
+            Sign In to Pro
+          </a>
+        </div>
+      </div>
+    )
+  }
+
   // Allow access to contractors
   return <>{children}</>
 }
