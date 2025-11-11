@@ -186,10 +186,14 @@ export function ProAuthProvider({ children }: { children: React.ReactNode }) {
 
 
   useEffect(() => {
+    let mounted = true
+
     // Safety timeout: force loading to false after 3 seconds to prevent infinite loading
     const loadingTimeout = setTimeout(() => {
-      console.log('[PRO-AUTH] Loading timeout - forcing loading to false')
-      setLoading(false)
+      if (mounted) {
+        console.log('[PRO-AUTH] Loading timeout - forcing loading to false')
+        setLoading(false)
+      }
     }, 3000)
 
     // Get initial session state
@@ -197,6 +201,8 @@ export function ProAuthProvider({ children }: { children: React.ReactNode }) {
       try {
         setLoading(true)
         const { data: { session }, error } = await supabase.auth.getSession()
+
+        if (!mounted) return
 
         if (error) {
           console.error('Error getting session:', error)
@@ -216,12 +222,16 @@ export function ProAuthProvider({ children }: { children: React.ReactNode }) {
         }
       } catch (err) {
         console.error('Failed to get initial session:', err)
-        setSession(null)
-        setUser(null)
-        setContractorProfile(null)
+        if (mounted) {
+          setSession(null)
+          setUser(null)
+          setContractorProfile(null)
+        }
       } finally {
         clearTimeout(loadingTimeout)
-        setLoading(false)
+        if (mounted) {
+          setLoading(false)
+        }
       }
     }
 
@@ -230,6 +240,8 @@ export function ProAuthProvider({ children }: { children: React.ReactNode }) {
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        if (!mounted) return
+
         try {
           console.log('[PRO-AUTH] Event:', event, 'User:', session?.user?.id?.substring(0, 8))
 
@@ -253,6 +265,8 @@ export function ProAuthProvider({ children }: { children: React.ReactNode }) {
               .eq('id', session.user.id)
               .single()
 
+            if (!mounted) return
+
             if (!profileError && profile) {
               // This is a contractor
               setContractorProfile(profile)
@@ -267,14 +281,21 @@ export function ProAuthProvider({ children }: { children: React.ReactNode }) {
           }
         } catch (err) {
           console.error('[PRO-AUTH] Error:', err)
-          setContractorProfile(null)
+          if (mounted) {
+            setContractorProfile(null)
+          }
         } finally {
-          setLoading(false)
+          if (mounted) {
+            setLoading(false)
+          }
         }
       }
     )
 
-    return () => subscription.unsubscribe()
+    return () => {
+      mounted = false
+      subscription.unsubscribe()
+    }
   }, [])
 
   // Real-time subscription for contractor profile updates

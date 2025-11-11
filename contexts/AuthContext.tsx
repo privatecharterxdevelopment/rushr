@@ -167,6 +167,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             .eq('id', session.user.id)
             .single()
 
+          if (!mounted) {
+            // Component unmounted during fetch, don't update state
+            return
+          }
+
           if (!profileError && profile) {
             // Only set profile if user is a homeowner
             if (profile.role === 'homeowner') {
@@ -180,11 +185,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           } else {
             setUserProfile(null)
           }
-          setLoading(false)
         } else {
           setUserProfile(null)
-          setLoading(false)
         }
+
+        // Always set loading to false after processing auth state change
+        setLoading(false)
       }
     )
 

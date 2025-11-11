@@ -44,6 +44,7 @@ CREATE POLICY "Admins can update all contractors" ON pro_contractors
         'zac@spgrp.com',
         'zac@spgroup.com',
         'jacob@spgroup.com',
+        'jakob@spgroup.com',
         'jake@spgrp.com',
         'zac.schwartz212@gmail.com',
         'jakezpodolsky@gmail.com'
