@@ -454,11 +454,8 @@ export function ProAuthProvider({ children }: { children: React.ReactNode }) {
         return
       }
 
-      // 3️⃣ Clear ONLY auth-related storage (preserve other app data)
-      const authKeys = Object.keys(localStorage).filter(key =>
-        key.includes('supabase') || key.includes('auth') || key.includes('rushr-auth')
-      )
-      authKeys.forEach(key => localStorage.removeItem(key))
+      // 3️⃣ Supabase.auth.signOut() already clears session from localStorage
+      // No need to manually clear - it handles it automatically
 
       // 4️⃣ Redirect cleanly using Next.js router
       router.push('/pro')

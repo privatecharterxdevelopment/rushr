@@ -312,12 +312,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return
       }
 
-      // 3. Clear ONLY auth-related storage (don't clear everything!)
-      // Remove only Supabase auth keys, preserve other app data
-      const authKeys = Object.keys(localStorage).filter(key =>
-        key.includes('supabase') || key.includes('auth') || key.includes('rushr-auth')
-      )
-      authKeys.forEach(key => localStorage.removeItem(key))
+      // 3. Supabase.auth.signOut() already clears session from localStorage
+      // No need to manually clear - it handles it automatically
 
       // 4. Toast feedback
       showGlobalToast('You have been logged out successfully.', 'success')
