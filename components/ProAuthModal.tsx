@@ -96,19 +96,19 @@ export default function ProAuthModal() {
 
       if (result.success) {
         setSuccess(true)
+        setLoading(false)
         // Clear form immediately
         setEmail("")
         setPassword("")
         setError(null)
-        // Show success for 500ms then redirect smoothly
+        // Show success message for 1.5 seconds then redirect smoothly
         setTimeout(() => {
           setOpen(false)
           setSuccess(false)
-          setLoading(false)
           cleanUrl()
           // Use router.push for smooth navigation without full page reload
           router.push('/dashboard/contractor?login=success')
-        }, 500)
+        }, 1500)
       }
     } catch (err: any) {
       setError(err?.message || "Something went wrong. Please try again.")
