@@ -419,7 +419,13 @@ async function submitAll(e?: React.FormEvent) {
     // Fallback: If Stripe setup fails, still let them access dashboard
     clearDraft()
     alert('Welcome to Rushr Pro! Your profile has been submitted. Please complete your payment setup from the dashboard to receive payments.')
-    console.log('[WIZARD] Redirecting to dashboard...')
+    console.log('[WIZARD] Redirecting to dashboard in 2 seconds to allow auth context to refresh...')
+
+    // CRITICAL: Wait 2 seconds for ProAuthContext to reload the contractor profile
+    // Otherwise the dashboard will think wizard isn't complete and redirect back here
+    await new Promise(resolve => setTimeout(resolve, 2000))
+
+    console.log('[WIZARD] Now redirecting to /dashboard/contractor')
     router.push('/dashboard/contractor')
   } catch (err: any) {
     console.error('[WIZARD] Submit error:', err)
