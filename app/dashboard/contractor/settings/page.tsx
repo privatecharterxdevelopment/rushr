@@ -22,7 +22,8 @@ import {
   Clock,
   Plus,
   X,
-  Briefcase
+  Briefcase,
+  LogOut
 } from 'lucide-react'
 
 interface ContractorProfileData {
@@ -59,7 +60,7 @@ const stateOptions = [
 ]
 
 export default function ContractorSettingsPage() {
-  const { user, contractorProfile, refreshProfile } = useProAuth()
+  const { user, contractorProfile, refreshProfile, signOut } = useProAuth()
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -522,7 +523,19 @@ export default function ContractorSettingsPage() {
         </div>
 
         {/* Save Button */}
-        <div className="flex justify-end">
+        <div className="flex justify-between items-center">
+          <button
+            onClick={async () => {
+              if (confirm('Are you sure you want to log out?')) {
+                await signOut()
+              }
+            }}
+            className="px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 flex items-center gap-2 transition-colors"
+          >
+            <LogOut className="h-4 w-4" />
+            Log Out
+          </button>
+
           <button
             onClick={handleSave}
             disabled={loading}
