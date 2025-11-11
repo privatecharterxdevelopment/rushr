@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useMemo, useState, useEffect } from 'react'
-import { useSearchParams } from 'next/navigation'
+import { useSearchParams, useRouter } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import { supabase } from '../../lib/supabaseClient'
 import {
@@ -307,6 +307,8 @@ function TopProgress({ active }: { active: boolean }) {
 }
 
 export default function PostJobInner({ userId }: Props) {
+  const router = useRouter()
+
   // Form state
   const [address, setAddress] = useState('')
   const [phone, setPhone] = useState('')
@@ -805,7 +807,7 @@ export default function PostJobInner({ userId }: Props) {
 
       // Redirect to homeowner dashboard
       setSending(false)
-      window.location.href = '/dashboard/homeowner'
+      router.push('/dashboard/homeowner')
 
     } catch (err) {
       console.error('Error submitting job:', err)
