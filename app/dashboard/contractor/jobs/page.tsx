@@ -127,47 +127,68 @@ export default function ContractorJobsPage() {
   const fetchMyJobs = async () => {
     if (!user) return
     try {
-      // Fetch all my bids first
+      // 1. Fetch all my bids first
       const { data: myBids, error: bidsError } = await supabase
         .from('job_bids')
         .select('*')
         .eq('contractor_id', user.id)
         .order('created_at', { ascending: false});
 
-      if (bidsError) {
+      if (bidsError && bidsError.code !== 'PGRST116') {
         console.error('Error fetching my bids:', bidsError);
-        return;
       }
 
-      if (!myBids || myBids.length === 0) {
-        setMyJobs([]);
-        return;
-      }
-
-      // Fetch corresponding jobs
-      const jobIds = myBids.map(bid => bid.job_id);
-      const { data: jobs, error: jobsError } = await supabase
+      // 2. Fetch jobs where I was directly requested (direct offers)
+      const { data: directOffers, error: directOffersError } = await supabase
         .from('homeowner_jobs')
         .select('*')
-        .in('id', jobIds);
+        .eq('requested_contractor_id', user.id)
+        .order('created_at', { ascending: false});
 
-      if (jobsError) {
-        console.error('Error fetching jobs:', jobsError);
-        return;
+      if (directOffersError && directOffersError.code !== 'PGRST116') {
+        console.error('Error fetching direct offers:', directOffersError);
       }
 
-      // Combine bids with job data
-      const transformedJobs = myBids.map((bid: any) => {
-        const job = jobs?.find(j => j.id === bid.job_id);
-        return {
-          ...job,
-          bid_amount: bid.bid_amount,
-          bid_status: bid.status,
-          bid_created_at: bid.created_at
-        };
-      }).filter(job => job.id); // Filter out any nulls
+      // 3. Fetch jobs for my bids
+      let jobsFromBids: any[] = [];
+      if (myBids && myBids.length > 0) {
+        const jobIds = myBids.map(bid => bid.job_id);
+        const { data: jobs, error: jobsError } = await supabase
+          .from('homeowner_jobs')
+          .select('*')
+          .in('id', jobIds);
 
-      setMyJobs(transformedJobs);
+        if (jobsError) {
+          console.error('Error fetching jobs:', jobsError);
+        } else {
+          // Combine bids with job data
+          jobsFromBids = myBids.map((bid: any) => {
+            const job = jobs?.find(j => j.id === bid.job_id);
+            return {
+              ...job,
+              bid_amount: bid.bid_amount,
+              bid_status: bid.status,
+              bid_created_at: bid.created_at,
+              source: 'bid' // Mark source
+            };
+          }).filter(job => job.id); // Filter out any nulls
+        }
+      }
+
+      // 4. Transform direct offers to include source marker
+      const transformedDirectOffers = (directOffers || []).map(job => ({
+        ...job,
+        source: 'direct_offer',
+        bid_status: 'direct_offer' // Special status for direct offers
+      }));
+
+      // 5. Combine both lists, removing duplicates (prefer bid version if exists)
+      const allJobs = [...transformedDirectOffers, ...jobsFromBids];
+      const uniqueJobs = allJobs.filter((job, index, self) =>
+        index === self.findIndex(j => j.id === job.id)
+      );
+
+      setMyJobs(uniqueJobs);
     } catch (err) {
       console.error('Error fetching my jobs:', err)
     }
@@ -288,6 +309,8 @@ export default function ContractorJobsPage() {
         return 'bg-amber-100 text-amber-800 border-amber-200'
       case 'rejected':
         return 'bg-red-100 text-red-800 border-red-200'
+      case 'direct_offer':
+        return 'bg-blue-100 text-blue-800 border-blue-200'
       default:
         return 'bg-slate-100 text-slate-800 border-slate-200'
     }
@@ -595,30 +618,57 @@ export default function ContractorJobsPage() {
 
                   {/* Job Stats */}
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4 pb-4 border-b border-slate-200">
-                    <div>
-                      <div className="text-xs text-slate-500 mb-1">Your Bid</div>
-                      <div className="text-lg font-semibold text-blue-600">
-                        ${job.bid_amount?.toFixed(2)}
-                      </div>
-                    </div>
-                    <div>
-                      <div className="text-xs text-slate-500 mb-1">Bid Status</div>
-                      <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full border ${getBidStatusColor(job.bid_status || 'pending')}`}>
-                        {job.bid_status?.toUpperCase() || 'PENDING'}
-                      </span>
-                    </div>
-                    <div>
-                      <div className="text-xs text-slate-500 mb-1">Job Status</div>
-                      <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${getJobStatusColor(job.status)}`}>
-                        {job.status.replace('_', ' ').toUpperCase()}
-                      </span>
-                    </div>
-                    <div>
-                      <div className="text-xs text-slate-500 mb-1">Bid Placed</div>
-                      <div className="text-sm text-slate-700">
-                        {job.bid_created_at ? new Date(job.bid_created_at).toLocaleDateString() : 'N/A'}
-                      </div>
-                    </div>
+                    {job.bid_status === 'direct_offer' ? (
+                      <>
+                        {/* Direct Offer - Show special UI */}
+                        <div className="col-span-2">
+                          <div className="text-xs text-slate-500 mb-1">Offer Type</div>
+                          <span className="inline-flex px-3 py-2 text-sm font-medium rounded-lg bg-gradient-to-r from-blue-500 to-blue-600 text-white border border-blue-400">
+                            ⭐ DIRECT OFFER - You were specifically requested!
+                          </span>
+                        </div>
+                        <div>
+                          <div className="text-xs text-slate-500 mb-1">Job Status</div>
+                          <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${getJobStatusColor(job.status)}`}>
+                            {job.status.replace('_', ' ').toUpperCase()}
+                          </span>
+                        </div>
+                        <div>
+                          <div className="text-xs text-slate-500 mb-1">Requested</div>
+                          <div className="text-sm text-slate-700">
+                            {new Date(job.created_at).toLocaleDateString()}
+                          </div>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        {/* Regular Bid - Show bid info */}
+                        <div>
+                          <div className="text-xs text-slate-500 mb-1">Your Bid</div>
+                          <div className="text-lg font-semibold text-blue-600">
+                            ${job.bid_amount?.toFixed(2)}
+                          </div>
+                        </div>
+                        <div>
+                          <div className="text-xs text-slate-500 mb-1">Bid Status</div>
+                          <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full border ${getBidStatusColor(job.bid_status || 'pending')}`}>
+                            {job.bid_status?.toUpperCase() || 'PENDING'}
+                          </span>
+                        </div>
+                        <div>
+                          <div className="text-xs text-slate-500 mb-1">Job Status</div>
+                          <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${getJobStatusColor(job.status)}`}>
+                            {job.status.replace('_', ' ').toUpperCase()}
+                          </span>
+                        </div>
+                        <div>
+                          <div className="text-xs text-slate-500 mb-1">Bid Placed</div>
+                          <div className="text-sm text-slate-700">
+                            {job.bid_created_at ? new Date(job.bid_created_at).toLocaleDateString() : 'N/A'}
+                          </div>
+                        </div>
+                      </>
+                    )}
                   </div>
 
                   {/* Job Details */}
@@ -634,8 +684,19 @@ export default function ContractorJobsPage() {
                       </div>
                     </div>
 
-                    {/* View Job Button (only show if bid is accepted) */}
-                    {job.bid_status === 'accepted' && (
+                    {/* Action Buttons */}
+                    {job.bid_status === 'direct_offer' ? (
+                      <button
+                        onClick={() => {
+                          setSelectedJobForBid(job)
+                          setShowBidModal(true)
+                        }}
+                        className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-medium rounded-lg transition-all text-sm shadow-md hover:shadow-lg"
+                      >
+                        <DollarSign className="h-4 w-4" />
+                        Place Your Bid
+                      </button>
+                    ) : job.bid_status === 'accepted' ? (
                       <Link
                         href={`/dashboard/contractor/jobs/${job.id}`}
                         className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors text-sm"
@@ -643,10 +704,17 @@ export default function ContractorJobsPage() {
                         <Eye className="h-4 w-4" />
                         View Job
                       </Link>
-                    )}
+                    ) : null}
                   </div>
 
                   {/* Status Message */}
+                  {job.bid_status === 'direct_offer' && (
+                    <div className="mt-4 p-3 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg">
+                      <p className="text-sm text-blue-800 font-medium">
+                        🎯 You were specifically requested for this job! Place your bid to accept this opportunity.
+                      </p>
+                    </div>
+                  )}
                   {job.bid_status === 'pending' && (
                     <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
                       <p className="text-sm text-amber-800">
