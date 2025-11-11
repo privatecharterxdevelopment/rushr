@@ -50,7 +50,7 @@ export default function Header() {
   const isProRoute = pathname.startsWith('/pro') || pathname.startsWith('/dashboard/contractor')
 
   // Determine user type and signed in status
-  const isSignedInAsHomeowner = !!homeownerUser && !!userProfile && !contractorProfile
+  const isSignedInAsHomeowner = !!homeownerUser && !!userProfile
   const isSignedInAsContractor = !!contractorUser && !!contractorProfile
   const signedIn = isSignedInAsHomeowner || isSignedInAsContractor
 

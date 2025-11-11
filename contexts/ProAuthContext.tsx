@@ -277,6 +277,58 @@ export function ProAuthProvider({ children }: { children: React.ReactNode }) {
     return () => subscription.unsubscribe()
   }, [])
 
+  // Real-time subscription for contractor profile updates
+  useEffect(() => {
+    if (!user?.id) return
+
+    console.log('[PRO-AUTH] Setting up real-time subscription for contractor profile')
+
+    // Subscribe to changes in pro_contractors table for this specific contractor
+    const contractorSubscription = supabase
+      .channel(`contractor-profile-${user.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'pro_contractors',
+          filter: `id=eq.${user.id}`,
+        },
+        (payload) => {
+          console.log('[PRO-AUTH] Contractor profile updated:', payload)
+
+          // Update the contractor profile immediately with the new data
+          if (payload.new) {
+            const mappedProfile: ContractorProfile = {
+              id: payload.new.id,
+              email: payload.new.email,
+              name: payload.new.name,
+              business_name: payload.new.business_name,
+              phone: payload.new.phone,
+              license_number: payload.new.license_number,
+              license_state: payload.new.license_state,
+              insurance_carrier: payload.new.insurance_carrier,
+              status: payload.new.status || 'pending',
+              kyc_status: payload.new.kyc_status || 'not_started',
+              subscription_type: 'pro',
+              created_at: payload.new.created_at,
+              profile_approved_at: payload.new.profile_approved_at,
+              kyc_completed_at: payload.new.kyc_completed_at
+            }
+
+            setContractorProfile(mappedProfile)
+            console.log('[PRO-AUTH] Contractor profile updated to:', mappedProfile.status)
+          }
+        }
+      )
+      .subscribe()
+
+    return () => {
+      console.log('[PRO-AUTH] Cleaning up contractor profile subscription')
+      contractorSubscription.unsubscribe()
+    }
+  }, [user?.id])
+
   const signIn = async (email: string, password: string) => {
     const { data, error } = await supabase.auth.signInWithPassword({
       email,

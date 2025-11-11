@@ -174,6 +174,7 @@ export default function ContractorApprovalsPage() {
         .update({
           status: 'approved',
           kyc_status: 'completed',
+          availability: 'online',  // Auto-switch to online when approved
           profile_approved_at: new Date().toISOString(),
         })
         .eq('id', contractorId)
@@ -185,7 +186,7 @@ export default function ContractorApprovalsPage() {
       setSelectedContractor(null)
 
       // Show success notification (you can add toast here)
-      alert('Contractor approved successfully!')
+      alert('Contractor approved successfully and set to ONLINE!')
     } catch (error) {
       console.error('Error approving contractor:', error)
       alert('Failed to approve contractor. Check console for details.')

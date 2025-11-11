@@ -63,20 +63,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .single()
 
       if (error) {
-        console.error('[AuthContext] Error fetching user profile:', error)
+        // Only log actual errors, not "no rows" scenarios
+        if (error.code !== 'PGRST116') {
+          console.error('[AuthContext] Error fetching user profile:', error)
+        }
         setUserProfile(null)
         return
       }
 
       if (data) {
-        // Only set profile if user is a homeowner
-        if (data.role === 'homeowner') {
-          console.log('[AuthContext] Homeowner profile loaded successfully')
-          setUserProfile(data)
-        } else {
-          console.log('[AuthContext] User is not a homeowner, skipping profile')
-          setUserProfile(null)
-        }
+        // Set profile for homeowners OR admins (admins might not have role set)
+        setUserProfile(data)
+        console.log('[AuthContext] Profile loaded successfully, role:', data.role)
       }
     } catch (err) {
       console.error('[AuthContext] Failed to fetch user profile:', err)

@@ -16,7 +16,7 @@ const ContractorNavigationMap = dynamic(() => import('../../../../../components/
 export default function ContractorJobDetailsPage() {
   const params = useParams()
   const router = useRouter()
-  const { user } = useProAuth()
+  const { user, contractorProfile } = useProAuth()
   const [job, setJob] = useState<any>(null)
   const [homeowner, setHomeowner] = useState<any>(null)
   const [loading, setLoading] = useState(true)
@@ -26,6 +26,8 @@ export default function ContractorJobDetailsPage() {
   const [bidAmount, setBidAmount] = useState('')
   const [bidMessage, setBidMessage] = useState('')
   const [submittingBid, setSubmittingBid] = useState(false)
+  const [showSuccessModal, setShowSuccessModal] = useState(false)
+  const [successMessage, setSuccessMessage] = useState('')
 
   const jobId = params.id as string
 
@@ -115,23 +117,36 @@ export default function ContractorJobDetailsPage() {
 
       if (error) {
         console.error('Error marking job as complete:', error)
-        alert('Failed to mark job as complete. Please try again.')
+        setSuccessMessage('Failed to mark job as complete. Please try again.')
+        setShowSuccessModal(true)
       } else {
-        alert('✅ Job marked as complete! The homeowner will review and release payment.')
-        // Refresh job data
-        window.location.reload()
+        setSuccessMessage('Job marked as complete! The homeowner will review and release payment.')
+        setShowSuccessModal(true)
+        // Refresh job data after modal is shown
+        setTimeout(() => {
+          window.location.reload()
+        }, 2000)
       }
     } catch (err) {
       console.error('Error marking job as complete:', err)
-      alert('Failed to mark job as complete. Please try again.')
+      setSuccessMessage('Failed to mark job as complete. Please try again.')
+      setShowSuccessModal(true)
     } finally {
       setMarkingComplete(false)
     }
   }
 
   const handleSubmitBid = async () => {
+    // Check if contractor is approved
+    if (!contractorProfile || contractorProfile.status !== 'approved') {
+      setSuccessMessage('You must be approved by an administrator before you can place bids. Please wait for approval or contact support.')
+      setShowSuccessModal(true)
+      return
+    }
+
     if (!bidAmount || parseFloat(bidAmount) <= 0) {
-      alert('Please enter a valid bid amount')
+      setSuccessMessage('Please enter a valid bid amount')
+      setShowSuccessModal(true)
       return
     }
 
@@ -153,14 +168,20 @@ export default function ContractorJobDetailsPage() {
 
       if (error) {
         console.error('Error submitting bid:', error)
-        alert('Failed to submit bid. Please try again.')
+        setSuccessMessage('Failed to submit bid. Please try again.')
+        setShowSuccessModal(true)
       } else {
-        alert(`✅ Bid of $${parseFloat(bidAmount).toFixed(2)} submitted successfully! The homeowner will be notified.`)
-        router.push('/dashboard/contractor/jobs?tab=my-jobs')
+        setSuccessMessage(`Bid of $${parseFloat(bidAmount).toFixed(2)} submitted successfully! The homeowner will be notified.`)
+        setShowSuccessModal(true)
+        // Redirect after modal is shown
+        setTimeout(() => {
+          router.push('/dashboard/contractor/jobs?tab=my-jobs')
+        }, 2000)
       }
     } catch (err) {
       console.error('Error submitting bid:', err)
-      alert('Failed to submit bid. Please try again.')
+      setSuccessMessage('Failed to submit bid. Please try again.')
+      setShowSuccessModal(true)
     } finally {
       setSubmittingBid(false)
     }
@@ -514,15 +535,56 @@ export default function ContractorJobDetailsPage() {
         </div>
       )}
 
-      {/* Waiting for Confirmation Message */}
-      {!isJobConfirmed && (
+      {/* Open for Bidding Message */}
+      {job.status === 'pending' && (
         <div className="bg-amber-50 border border-amber-200 rounded-lg p-6 text-center">
           <div className="text-amber-800">
             <Clock className="w-12 h-12 mx-auto mb-3" />
-            <h3 className="text-lg font-semibold mb-2">Waiting for Confirmation</h3>
+            <h3 className="text-lg font-semibold mb-2">Open for Bidding</h3>
             <p className="text-sm">
-              Chat and location tracking will be available once the homeowner confirms the job.
+              This job is currently accepting bids from contractors. Chat and navigation will be available once a bid is accepted.
             </p>
+          </div>
+        </div>
+      )}
+
+      {/* Success/Error Modal */}
+      {showSuccessModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
+          <div className="bg-white rounded-lg max-w-md w-full p-8 shadow-xl relative border border-gray-200 animate-in zoom-in-95 duration-300">
+            <div className="text-center">
+              {/* Icon - Success or Error */}
+              {successMessage.includes('submitted successfully') || successMessage.includes('marked as complete') ? (
+                <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-blue-100 mb-4">
+                  <svg className="h-10 w-10 text-blue-600 animate-in zoom-in-50 duration-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
+              ) : (
+                <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-red-100 mb-4">
+                  <AlertCircle className="h-10 w-10 text-red-600 animate-in zoom-in-50 duration-500" />
+                </div>
+              )}
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                {successMessage.includes('submitted successfully') || successMessage.includes('marked as complete') ? 'Success!' : 'Cannot Place Bid'}
+              </h3>
+              <p className="text-sm text-gray-600">{successMessage}</p>
+              <button
+                onClick={() => {
+                  setShowSuccessModal(false)
+                  if (successMessage.includes('submitted successfully')) {
+                    router.push('/dashboard/contractor/jobs?tab=my-jobs')
+                  }
+                }}
+                className={`mt-6 px-6 py-2 rounded-md focus:outline-none focus:ring-2 transition-colors ${
+                  successMessage.includes('submitted successfully') || successMessage.includes('marked as complete')
+                    ? 'bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500'
+                    : 'bg-gray-600 text-white hover:bg-gray-700 focus:ring-gray-500'
+                }`}
+              >
+                OK
+              </button>
+            </div>
           </div>
         </div>
       )}

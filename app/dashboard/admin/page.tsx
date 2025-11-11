@@ -120,29 +120,41 @@ export default function AdminDashboard() {
         .eq('role', 'homeowner')
 
       // Fetch support tickets (if table exists)
-      const { count: totalTickets } = await supabase
-        .from('support_messages')
-        .select('*', { count: 'exact', head: true })
-        .catch(() => ({ count: 0 }))
+      let totalTickets = 0
+      let newTickets = 0
+      try {
+        const { count: total } = await supabase
+          .from('support_messages')
+          .select('*', { count: 'exact', head: true })
+        totalTickets = total || 0
 
-      const { count: newTickets } = await supabase
-        .from('support_messages')
-        .select('*', { count: 'exact', head: true })
-        .eq('status', 'new')
-        .catch(() => ({ count: 0 }))
+        const { count: newCount } = await supabase
+          .from('support_messages')
+          .select('*', { count: 'exact', head: true })
+          .eq('status', 'new')
+        newTickets = newCount || 0
+      } catch (err) {
+        console.log('Support messages table not found')
+      }
 
       // Fetch jobs data
-      const { count: activeJobs } = await supabase
-        .from('emergency_requests')
-        .select('*', { count: 'exact', head: true })
-        .in('status', ['pending', 'accepted', 'in_progress'])
-        .catch(() => ({ count: 0 }))
+      let activeJobs = 0
+      let completedJobs = 0
+      try {
+        const { count: active } = await supabase
+          .from('emergency_requests')
+          .select('*', { count: 'exact', head: true })
+          .in('status', ['pending', 'accepted', 'in_progress'])
+        activeJobs = active || 0
 
-      const { count: completedJobs } = await supabase
-        .from('emergency_requests')
-        .select('*', { count: 'exact', head: true })
-        .eq('status', 'completed')
-        .catch(() => ({ count: 0 }))
+        const { count: completed } = await supabase
+          .from('emergency_requests')
+          .select('*', { count: 'exact', head: true })
+          .eq('status', 'completed')
+        completedJobs = completed || 0
+      } catch (err) {
+        console.log('Emergency requests table not found')
+      }
 
       setStats({
         pendingContractors: pendingCount || 0,

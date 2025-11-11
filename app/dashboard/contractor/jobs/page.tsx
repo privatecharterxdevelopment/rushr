@@ -84,7 +84,10 @@ export default function ContractorJobsPage() {
         .eq('contractor_id', user.id);
 
       if (bidsError) {
-        console.error('Error fetching bids:', bidsError);
+        // Only log actual errors, not "no rows" scenarios
+        if (bidsError.code !== 'PGRST116') {
+          console.error('Error fetching bids:', bidsError);
+        }
       }
 
       const appliedJobIds = appliedJobs?.map(b => b.job_id) || [];
@@ -209,6 +212,13 @@ export default function ContractorJobsPage() {
 
   const handleSubmitBid = async (job: Job) => {
     if (!user || !contractorProfile) return
+
+    // Check if contractor is approved
+    if (contractorProfile.status !== 'approved') {
+      setSuccessMessage('You must be approved by an administrator before you can place bids. Please wait for approval or contact support.')
+      setShowSuccessModal(true)
+      return
+    }
 
     const amount = bidAmount[job.id]
     const message = bidMessage[job.id]
@@ -665,7 +675,7 @@ export default function ContractorJobsPage() {
         </>
       )}
 
-      {/* Success Modal */}
+      {/* Success/Error Modal */}
       {showSuccessModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 relative animate-in fade-in duration-200">
@@ -677,14 +687,27 @@ export default function ContractorJobsPage() {
             </button>
 
             <div className="text-center">
-              <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <CheckCircle className="h-8 w-8 text-blue-600" />
-              </div>
-              <h3 className="text-xl font-bold text-slate-900 mb-2">Bid Submitted!</h3>
+              {/* Icon - Success or Error */}
+              {successMessage.includes('submitted successfully') ? (
+                <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <CheckCircle className="h-8 w-8 text-blue-600" />
+                </div>
+              ) : (
+                <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <AlertCircle className="h-8 w-8 text-red-600" />
+                </div>
+              )}
+              <h3 className="text-xl font-bold text-slate-900 mb-2">
+                {successMessage.includes('submitted successfully') ? 'Bid Submitted!' : 'Cannot Place Bid'}
+              </h3>
               <p className="text-slate-600 mb-6">{successMessage}</p>
               <button
                 onClick={() => setShowSuccessModal(false)}
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-4 rounded-lg transition-colors"
+                className={`w-full font-medium py-3 px-4 rounded-lg transition-colors ${
+                  successMessage.includes('submitted successfully')
+                    ? 'bg-blue-600 hover:bg-blue-700 text-white'
+                    : 'bg-gray-600 hover:bg-gray-700 text-white'
+                }`}
               >
                 Got it!
               </button>
