@@ -21,6 +21,7 @@ CREATE POLICY "Admins can view all contractors" ON pro_contractors
       'lorenzo.vanza@hotmail.com',
       'zac@spgrp.com',
       'zac@spgroup.com',
+      'jacob@spgroup.com',
       'jake@spgrp.com',
       'zac.schwartz212@gmail.com',
       'jakezpodolsky@gmail.com'
@@ -39,6 +40,7 @@ CREATE POLICY "Admins can update all contractors" ON pro_contractors
       'lorenzo.vanza@hotmail.com',
       'zac@spgrp.com',
       'zac@spgroup.com',
+      'jacob@spgroup.com',
       'jake@spgrp.com',
       'zac.schwartz212@gmail.com',
       'jakezpodolsky@gmail.com'

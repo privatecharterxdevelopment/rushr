@@ -1,5 +1,5 @@
 -- =============================================================================
--- GRANT ADMIN RIGHTS TO zac@spgroup.com
+-- GRANT ADMIN RIGHTS TO zac@spgroup.com AND jacob@spgroup.com
 -- Run this in Supabase SQL Editor to grant admin permissions
 -- =============================================================================
 
@@ -20,6 +20,7 @@ CREATE POLICY "Admins can view all contractors" ON pro_contractors
         'lorenzo.vanza@hotmail.com',
         'zac@spgrp.com',
         'zac@spgroup.com',
+        'jacob@spgroup.com',
         'jake@spgrp.com',
         'zac.schwartz212@gmail.com',
         'jakezpodolsky@gmail.com'
@@ -42,6 +43,7 @@ CREATE POLICY "Admins can update all contractors" ON pro_contractors
         'lorenzo.vanza@hotmail.com',
         'zac@spgrp.com',
         'zac@spgroup.com',
+        'jacob@spgroup.com',
         'jake@spgrp.com',
         'zac.schwartz212@gmail.com',
         'jakezpodolsky@gmail.com'
@@ -54,7 +56,7 @@ CREATE POLICY "Admins can update all contractors" ON pro_contractors
 
 -- 4. VERIFY SETUP
 -- -----------------------------------------------------------------------------
-SELECT 'Admin permissions updated! zac@spgroup.com now has admin rights.' as status;
+SELECT 'Admin permissions updated! zac@spgroup.com and jacob@spgroup.com now have admin rights.' as status;
 
 -- Show all admin policies
 SELECT
