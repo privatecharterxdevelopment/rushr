@@ -112,13 +112,13 @@ export default function AuthModal() {
         // Immediate redirect on success
         const target = callbackRef.current || "/dashboard/homeowner"
 
-        // Show success briefly, then hard redirect
+        // Show success briefly, then smooth redirect
         setTimeout(() => {
           setOpen(false)
           cleanUrl()
-          // Hard redirect to avoid AuthContext race condition
-          window.location.href = target
-        }, 800)
+          // Use router.push for smooth client-side navigation
+          router.push(target)
+        }, 1500)
       }
     } catch (err: any) {
       setError(err?.message || "Something went wrong. Please try again.")
