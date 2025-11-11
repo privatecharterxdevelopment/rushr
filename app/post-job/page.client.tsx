@@ -571,11 +571,32 @@ export default function PostJobInner({ userId }: Props) {
         // Client-side filter by emergency category if selected
         let contractors = allContractors || []
         if (emergencyType && contractors.length > 0) {
+          // Map emergency type keys to actual contractor category values
+          const emergencyTypeToCategory: Record<string, string> = {
+            'plumbing': 'Plumbing',
+            'electrical': 'Electrical',
+            'hvac': 'HVAC',
+            'roofing': 'Roofing',
+            'water-damage': 'Plumbing', // Water damage handled by plumbers
+            'locksmith': 'Locksmith',
+            'appliance': 'Appliance Repair',
+            'other': null, // Show all for 'other'
+          }
+
+          const targetCategory = emergencyTypeToCategory[emergencyType]
+          console.log('[POST-JOB] Emergency type:', emergencyType, '→ Target category:', targetCategory)
+
           contractors = contractors.filter(c => {
             const cats = c.categories || []
-            console.log('[POST-JOB] Contractor categories:', cats, 'Looking for:', emergencyType)
-            // Check if categories array includes the emergencyType
-            return Array.isArray(cats) && cats.includes(emergencyType)
+            console.log('[POST-JOB] Contractor categories:', cats, 'Looking for:', targetCategory)
+
+            // If 'other' or no mapping, show all contractors
+            if (!targetCategory) return true
+
+            // Check if categories array includes the target category (case-insensitive)
+            return Array.isArray(cats) && cats.some((cat: string) =>
+              cat.toLowerCase() === targetCategory.toLowerCase()
+            )
           })
           console.log('[POST-JOB] After category filter:', contractors.length, 'contractors match', emergencyType)
         }
