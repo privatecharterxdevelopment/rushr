@@ -369,13 +369,16 @@ async function submitAll(e?: React.FormEvent) {
         })
       })
 
+      console.log('[WIZARD] Stripe create-account response status:', stripeResponse.status)
       const stripeData = await stripeResponse.json()
+      console.log('[WIZARD] Stripe create-account data:', stripeData)
 
       if (!stripeData.success) {
-        console.error('[WIZARD] Stripe account creation failed:', stripeData.error)
+        console.error('[WIZARD] ❌ Stripe account creation failed:', stripeData.error)
+        alert(`⚠️ Stripe setup failed: ${stripeData.error}\n\nYou can complete payment setup later from your dashboard.`)
         // Don't fail wizard - can complete Stripe setup later from dashboard
       } else {
-        console.log('[WIZARD] Stripe Connect account created:', stripeData.accountId)
+        console.log('[WIZARD] ✅ Stripe Connect account created:', stripeData.accountId)
 
         // Get Stripe onboarding link to complete KYC and bank account setup
         console.log('[WIZARD] Getting Stripe onboarding link...')
@@ -386,23 +389,28 @@ async function submitAll(e?: React.FormEvent) {
             body: JSON.stringify({ contractorId: session.user.id })
           })
 
+          console.log('[WIZARD] Stripe onboarding-link response status:', onboardingResponse.status)
           const onboardingData = await onboardingResponse.json()
+          console.log('[WIZARD] Stripe onboarding-link data:', onboardingData)
 
           if (onboardingData.success && onboardingData.url) {
             clearDraft()
             alert('Welcome to Rushr Pro! Redirecting you to complete your payment and bank account setup with Stripe...')
-            console.log('[WIZARD] Redirecting to Stripe onboarding:', onboardingData.url)
+            console.log('[WIZARD] ✅ Redirecting to Stripe onboarding:', onboardingData.url)
             window.location.href = onboardingData.url
             return // Exit here - Stripe will redirect back to dashboard
           } else {
-            console.error('[WIZARD] Failed to get onboarding link:', onboardingData.error)
+            console.error('[WIZARD] ❌ Failed to get onboarding link:', onboardingData.error)
+            alert(`⚠️ Could not generate Stripe onboarding link: ${onboardingData.error}\n\nPlease complete payment setup from your dashboard.`)
           }
-        } catch (onboardingError) {
-          console.error('[WIZARD] Onboarding link error:', onboardingError)
+        } catch (onboardingError: any) {
+          console.error('[WIZARD] ❌ Onboarding link fetch error:', onboardingError)
+          alert(`⚠️ Network error getting Stripe link: ${onboardingError.message}\n\nPlease complete payment setup from your dashboard.`)
         }
       }
-    } catch (stripeError) {
-      console.error('[WIZARD] Stripe Connect error:', stripeError)
+    } catch (stripeError: any) {
+      console.error('[WIZARD] ❌ Stripe Connect fetch error:', stripeError)
+      alert(`⚠️ Network error contacting Stripe: ${stripeError.message}\n\nYou can complete payment setup later from your dashboard.`)
       // Don't fail wizard - can complete Stripe setup later
     }
 
