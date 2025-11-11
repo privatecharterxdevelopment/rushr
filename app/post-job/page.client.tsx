@@ -548,17 +548,13 @@ export default function PostJobInner({ userId }: Props) {
       setLoadingContractors(true)
 
       try {
-        // Get ALL contractors with available fields
-        let query = supabase
+        console.log('[POST-JOB] Filtering by emergencyType:', emergencyType)
+
+        // Get ALL contractors first (no filter)
+        const { data: allContractors, error } = await supabase
           .from('pro_contractors')
           .select('*')
-
-        // Filter by emergency category if selected
-        if (emergencyType) {
-          query = query.contains('categories', [emergencyType])
-        }
-
-        const { data: contractors, error } = await query.limit(200)
+          .limit(200)
 
         if (error) {
           console.error('[POST-JOB] Database error:', error)
@@ -567,9 +563,25 @@ export default function PostJobInner({ userId }: Props) {
           return
         }
 
+        console.log('[POST-JOB] Fetched ALL contractors:', allContractors?.length)
+        if (allContractors && allContractors.length > 0) {
+          console.log('[POST-JOB] Sample contractor categories:', allContractors[0].categories)
+        }
+
+        // Client-side filter by emergency category if selected
+        let contractors = allContractors || []
+        if (emergencyType && contractors.length > 0) {
+          contractors = contractors.filter(c => {
+            const cats = c.categories || []
+            console.log('[POST-JOB] Contractor categories:', cats, 'Looking for:', emergencyType)
+            // Check if categories array includes the emergencyType
+            return Array.isArray(cats) && cats.includes(emergencyType)
+          })
+          console.log('[POST-JOB] After category filter:', contractors.length, 'contractors match', emergencyType)
+        }
+
         if (contractors && contractors.length > 0) {
-          console.log('[POST-JOB] Fetched contractors:', contractors.length)
-          console.log('[POST-JOB] Sample contractor:', contractors[0])
+          console.log('[POST-JOB] Final contractors count:', contractors.length)
 
           const DEFAULT_RADIUS_MILES = 15
 
