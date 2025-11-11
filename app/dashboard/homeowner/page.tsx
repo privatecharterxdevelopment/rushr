@@ -342,9 +342,11 @@ export default function HomeownerDashboardPage() {
   }, [displayJobs, completeness])
 
 
-  // Fetch bids for all jobs
+  // Fetch bids for all jobs - TEMPORARILY DISABLED
   useEffect(() => {
     if (!user || !realJobs || realJobs.length === 0) return
+    // DISABLED TO TEST IF THIS IS CAUSING LOGIN ISSUES
+    return
 
     const fetchBidsForJobs = async () => {
       try {
