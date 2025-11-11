@@ -276,11 +276,13 @@ async function submitAll(e?: React.FormEvent) {
 
   try {
     // Check if user already has a session
+    console.log('[WIZARD] Checking for existing session...')
     let { data: { session } } = await supabase.auth.getSession()
+    console.log('[WIZARD] Session check complete. Has session?', !!session, 'User ID:', session?.user?.id?.substring(0, 8))
 
     // If no session, create new account
     if (!session) {
-      console.log('[WIZARD] No session - creating new account')
+      console.log('[WIZARD] No session - creating new account with email:', form.email)
       const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
         email: form.email,
         password: form.password,
@@ -877,6 +879,401 @@ async function submitAll(e?: React.FormEvent) {
               {canBack && <button type="button" className="px-4 py-2 border rounded-md hover:bg-gray-50" onClick={prevStep}>Back</button>}
               {canNext && <button type="button" className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700" onClick={nextStep}>Next</button>}
               <span className="text-xs text-slate-500 ml-auto">We typically review new pros within 1–2 business days.</span>
+            </div>
+          </form>
+        )}
+
+        {/* ------------- FULL FORM MODE ------------- */}
+        {mode==='full' && (
+          <form onSubmit={submitAll} className="bg-white rounded-lg shadow-md p-6 space-y-8">
+            {/* BASICS */}
+            <div>
+              <h2 className="text-xl font-semibold text-slate-900 mb-4 border-b pb-2">Basic Information</h2>
+              <div className="grid md:grid-cols-2 gap-4">
+                <div data-err="name">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Your name *</label>
+                  <input className={`w-full px-3 py-2 border rounded-md ${badgeErr('name')}`} value={form.name} onChange={e=>set('name', e.target.value)} placeholder="Alex Contractor" />
+                  {hintErr('name')}
+                </div>
+                <div data-err="email">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Email *</label>
+                  <input type="email" className={`w-full px-3 py-2 border rounded-md ${badgeErr('email')}`} value={form.email} onChange={e=>set('email', e.target.value)} placeholder="you@company.com" />
+                  {hintErr('email')}
+                </div>
+                <div data-err="password">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Password *</label>
+                  <input type="password" className={`w-full px-3 py-2 border rounded-md ${badgeErr('password')}`} value={form.password} onChange={e=>set('password', e.target.value)} placeholder="Create a secure password (min 6 chars)" minLength={6} />
+                  {hintErr('password')}
+                </div>
+                <div data-err="phone">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Phone *</label>
+                  <input className={`w-full px-3 py-2 border rounded-md ${badgeErr('phone')}`} value={form.phone} onChange={e=>set('phone', e.target.value)} placeholder="(555) 555-5555" />
+                  {hintErr('phone')}
+                </div>
+                <div data-err="businessName">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Business name *</label>
+                  <input className={`w-full px-3 py-2 border rounded-md ${badgeErr('businessName')}`} value={form.businessName} onChange={e=>set('businessName', e.target.value)} placeholder="BrightSpark Electric LLC" />
+                  {hintErr('businessName')}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Website</label>
+                  <input className="w-full px-3 py-2 border rounded-md" value={form.website} onChange={e=>set('website', e.target.value)} placeholder="https://example.com" />
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Years in business</label>
+                    <input className="w-full px-3 py-2 border rounded-md" value={form.yearsInBusiness} onChange={e=>set('yearsInBusiness', e.target.value)} placeholder="e.g., 8" inputMode="numeric" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Team size</label>
+                    <input className="w-full px-3 py-2 border rounded-md" value={form.teamSize} onChange={e=>set('teamSize', e.target.value)} placeholder="e.g., 3" inputMode="numeric" />
+                  </div>
+                </div>
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">About your business</label>
+                  <textarea
+                    className="w-full min-h-[120px] px-3 py-2 border rounded-md"
+                    value={form.about}
+                    onChange={(e)=>set('about', e.target.value)}
+                    placeholder="What you specialize in, what customers love, service guarantees, etc."
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Logo (optional)</label>
+                  {!form.logo ? (
+                    <label className="px-4 py-2 border rounded-md cursor-pointer inline-block hover:bg-gray-50">
+                      Upload
+                      <input type="file" className="hidden" accept="image/*" onChange={e=> set('logo', e.target.files?.[0] ?? null)} />
+                    </label>
+                  ) : (
+                    <div className="flex items-center gap-3">
+                      <img src={URL.createObjectURL(form.logo)} alt="logo preview" className="h-16 w-16 object-contain rounded border border-slate-200 bg-white" />
+                      <button type="button" className="px-4 py-2 border rounded-md hover:bg-gray-50" onClick={()=>set('logo', null)}>Remove</button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* SERVICE AREA */}
+            <div>
+              <h2 className="text-xl font-semibold text-slate-900 mb-4 border-b pb-2">Service Area</h2>
+              <div className="grid md:grid-cols-2 gap-4">
+                <div className="md:col-span-2" data-err="address">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Business Address *
+                    <span className="text-xs text-gray-500 ml-2">(This will be shown on the map)</span>
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      className={`flex-1 px-3 py-2 border rounded-md ${badgeErr('address')}`}
+                      value={form.address}
+                      onChange={async (e) => {
+                        set('address', e.target.value)
+                        if (e.target.value && form.baseZip && /^\d{5}$/.test(form.baseZip)) {
+                          setGeocoding(true)
+                          const coords = await geocodeAddress(e.target.value, form.baseZip)
+                          if (coords) {
+                            set('latitude', coords.lat)
+                            set('longitude', coords.lng)
+                          }
+                          setGeocoding(false)
+                        }
+                      }}
+                      placeholder="123 Main Street, Brooklyn, NY"
+                    />
+                    <button
+                      type="button"
+                      onClick={useCurrentLocation}
+                      disabled={geocoding}
+                      className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 whitespace-nowrap flex items-center gap-2"
+                    >
+                      {geocoding ? (
+                        <>
+                          <img
+                            src="https://jtrxdcccswdwlritgstp.supabase.co/storage/v1/object/public/contractor-logos/RushrLogoAnimation.gif"
+                            alt="Loading..."
+                            className="h-4 w-4 border-2 border-white border-t-transparent rounded-full object-contain"
+                          />
+                          Getting...
+                        </>
+                      ) : (
+                        <>
+                          <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                          </svg>
+                          Use My Location
+                        </>
+                      )}
+                    </button>
+                  </div>
+                  {hintErr('address')}
+                  {locationError && <div className="mt-1 text-xs text-amber-600">{locationError}</div>}
+                  {form.latitude && form.longitude && (
+                    <div className="mt-1 text-xs text-green-600">
+                      ✓ Location verified: {form.latitude.toFixed(6)}, {form.longitude.toFixed(6)}
+                    </div>
+                  )}
+                </div>
+                <div data-err="baseZip">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Base ZIP *</label>
+                  <input
+                    className={`w-full px-3 py-2 border rounded-md ${badgeErr('baseZip')}`}
+                    value={form.baseZip}
+                    onChange={async (e) => {
+                      set('baseZip', e.target.value)
+                      if (/^\d{5}$/.test(e.target.value) && form.address) {
+                        setGeocoding(true)
+                        const coords = await geocodeAddress(form.address, e.target.value)
+                        if (coords) {
+                          set('latitude', coords.lat)
+                          set('longitude', coords.lng)
+                        }
+                        setGeocoding(false)
+                      }
+                    }}
+                    placeholder="11215"
+                    inputMode="numeric"
+                  />
+                  {hintErr('baseZip')}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Coverage radius (miles)</label>
+                  <select className="w-full px-3 py-2 border rounded-md" value={form.radiusMiles} onChange={e=>set('radiusMiles', Number(e.target.value))}>
+                    {[5,10,15,25,50].map(n=><option key={n} value={n}>{n}</option>)}
+                  </select>
+                </div>
+                <div className="md:col-span-2" data-err="extraZips">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Additional ZIPs</label>
+                  <TagInput
+                    values={form.extraZips}
+                    onChange={(vals)=>set('extraZips', vals)}
+                    placeholder="Type ZIP and press Enter (or comma)…"
+                    allowComma
+                    allowEnter
+                    inputMode="numeric"
+                    validate={(v)=> /^\d{5}$/.test(v) ? null : '5-digit ZIP'}
+                  />
+                  {hintErr('extraZips')}
+                </div>
+                <div data-err="categories" className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Categories you serve *</label>
+                  <div className={`rounded-xl border p-2 ${errors.categories ? 'border-rose-300 ring-rose-300' : 'border-slate-200'}`}>
+                    <div className="flex flex-wrap gap-2">
+                      {categories.map(c=>(
+                        <button
+                          key={c}
+                          type="button"
+                          onClick={()=> set('categories', toggle(form.categories, c))}
+                          className={`px-3 py-1.5 rounded-lg border text-sm ${
+                            form.categories.includes(c)
+                              ? 'border-blue-500 text-blue-700 bg-blue-50'
+                              : 'border-slate-200 hover:border-slate-300'
+                          }`}
+                        >
+                          {c}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  {hintErr('categories')}
+                </div>
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Specialties</label>
+                  <TagInput
+                    values={form.specialties}
+                    onChange={(vals)=>set('specialties', vals)}
+                    placeholder="Add specialties (Enter or comma)…"
+                    allowComma
+                    allowEnter
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* CREDENTIALS */}
+            <div>
+              <h2 className="text-xl font-semibold text-slate-900 mb-4 border-b pb-2">License & Insurance</h2>
+              <div className="grid md:grid-cols-2 gap-4">
+                <div data-err="licenseNumber">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">License # *</label>
+                  <input className={`w-full px-3 py-2 border rounded-md ${badgeErr('licenseNumber')}`} value={form.licenseNumber} onChange={e=>set('licenseNumber', e.target.value)} placeholder="123456" />
+                  {hintErr('licenseNumber')}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">License type</label>
+                  <input className="w-full px-3 py-2 border rounded-md" value={form.licenseType} onChange={e=>set('licenseType', e.target.value)} placeholder="Master electrician, Home improvement contractor…" />
+                </div>
+                <div data-err="licenseState">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Issuing state/authority *</label>
+                  <input className={`w-full px-3 py-2 border rounded-md ${badgeErr('licenseState')}`} value={form.licenseState} onChange={e=>set('licenseState', e.target.value)} placeholder="NY (DOB), NJ (DCA), etc." />
+                  {hintErr('licenseState')}
+                </div>
+                <div data-err="licenseExpires">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">License expires *</label>
+                  <input type="date" className={`w-full px-3 py-2 border rounded-md ${badgeErr('licenseExpires')}`} value={form.licenseExpires} onChange={e=>set('licenseExpires', e.target.value)} />
+                  {hintErr('licenseExpires')}
+                </div>
+                <div data-err="insuranceCarrier">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Insurance carrier *</label>
+                  <input className={`w-full px-3 py-2 border rounded-md ${badgeErr('insuranceCarrier')}`} value={form.insuranceCarrier} onChange={e=>set('insuranceCarrier', e.target.value)} placeholder="ABC Insurance" />
+                  {hintErr('insuranceCarrier')}
+                </div>
+                <div data-err="insurancePolicy">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Policy # *</label>
+                  <input className={`w-full px-3 py-2 border rounded-md ${badgeErr('insurancePolicy')}`} value={form.insurancePolicy} onChange={e=>set('insurancePolicy', e.target.value)} placeholder="POL-1234567" />
+                  {hintErr('insurancePolicy')}
+                </div>
+                <div data-err="insuranceExpires">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Policy expires *</label>
+                  <input type="date" className={`w-full px-3 py-2 border rounded-md ${badgeErr('insuranceExpires')}`} value={form.insuranceExpires} onChange={e=>set('insuranceExpires', e.target.value)} />
+                  {hintErr('insuranceExpires')}
+                </div>
+                <div data-err="licenseProof">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Upload license proof (PDF/JPG)</label>
+                  {!form.licenseProof ? (
+                    <label className="px-4 py-2 border rounded-md cursor-pointer inline-block hover:bg-gray-50">
+                      Upload
+                      <input type="file" className="hidden" accept=".pdf,image/*" onChange={e=> set('licenseProof', e.target.files?.[0] ?? null)} />
+                    </label>
+                  ) : (
+                    <div className="flex items-center gap-2 text-sm">
+                      <span className="truncate max-w-[240px]">{form.licenseProof.name}</span>
+                      <button type="button" className="px-4 py-2 border rounded-md hover:bg-gray-50" onClick={()=>set('licenseProof', null)}>Remove</button>
+                    </div>
+                  )}
+                  {hintErr('licenseProof')}
+                </div>
+                <div data-err="insuranceProof">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Upload insurance COI (PDF/JPG)</label>
+                  {!form.insuranceProof ? (
+                    <label className="px-4 py-2 border rounded-md cursor-pointer inline-block hover:bg-gray-50">
+                      Upload
+                      <input type="file" className="hidden" accept=".pdf,image/*" onChange={e=> set('insuranceProof', e.target.files?.[0] ?? null)} />
+                    </label>
+                  ) : (
+                    <div className="flex items-center gap-2 text-sm">
+                      <span className="truncate max-w-[240px]">{form.insuranceProof.name}</span>
+                      <button type="button" className="px-4 py-2 border rounded-md hover:bg-gray-50" onClick={()=>set('insuranceProof', null)}>Remove</button>
+                    </div>
+                  )}
+                  {hintErr('insuranceProof')}
+                </div>
+              </div>
+            </div>
+
+            {/* PRICING & AVAILABILITY */}
+            <div>
+              <h2 className="text-xl font-semibold text-slate-900 mb-4 border-b pb-2">Pricing & Availability</h2>
+              <div className="space-y-4">
+                <div>
+                  <SectionTitle>Pricing</SectionTitle>
+                  <div className="flex flex-wrap gap-2">
+                    {(['Hourly','Flat','Visit fee'] as RateType[]).map(rt=>(
+                      <button
+                        key={rt}
+                        type="button"
+                        onClick={()=>set('rateType', rt)}
+                        className={`px-3 py-1.5 rounded-lg border text-sm ${
+                          form.rateType===rt ? 'border-blue-500 text-blue-700 bg-blue-50' : 'border-slate-200 hover:border-slate-300'
+                        }`}
+                      >
+                        {rt}
+                      </button>
+                    ))}
+                  </div>
+                  {form.rateType==='Hourly' && (
+                    <div className="mt-2" data-err="hourlyRate">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Hourly rate *</label>
+                      <input className={`w-full px-3 py-2 border rounded-md ${badgeErr('hourlyRate')}`} value={form.hourlyRate} onChange={e=>set('hourlyRate', e.target.value)} placeholder="$120" />
+                      {hintErr('hourlyRate')}
+                    </div>
+                  )}
+                  {form.rateType==='Flat' && (
+                    <div className="mt-2" data-err="flatMin">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Typical flat price *</label>
+                      <input className={`w-full px-3 py-2 border rounded-md ${badgeErr('flatMin')}`} value={form.flatMin} onChange={e=>set('flatMin', e.target.value)} placeholder="$600" />
+                      {hintErr('flatMin')}
+                    </div>
+                  )}
+                  {form.rateType==='Visit fee' && (
+                    <div className="mt-2" data-err="visitFee">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Visit/diagnostic fee *</label>
+                      <input className={`w-full px-3 py-2 border rounded-md ${badgeErr('visitFee')}`} value={form.visitFee} onChange={e=>set('visitFee', e.target.value)} placeholder="$89" />
+                      {hintErr('visitFee')}
+                    </div>
+                  )}
+                  <label className="mt-2 flex items-center gap-2">
+                    <input type="checkbox" checked={form.freeEstimates} onChange={e=>set('freeEstimates', e.target.checked)} />
+                    Offer free estimates
+                  </label>
+                </div>
+                <div>
+                  <SectionTitle>Availability & Hours</SectionTitle>
+                  <label className="flex items-center gap-2">
+                    <input type="checkbox" checked={form.emergency} onChange={e=>set('emergency', e.target.checked)} />
+                    Offer emergency service (after-hours / same-day)
+                  </label>
+                  <div className={`mt-3 rounded-xl border p-3 ${badgeErr('hours')}`} data-err="hours">
+                    <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                      {DAYS.map((d)=>(
+                        <div key={d} className="flex items-center gap-2 text-sm">
+                          <label className="w-10">{d}</label>
+                          <input type="checkbox" checked={form.hours[d].enabled} onChange={e=>setHours(d, { enabled: e.target.checked })} />
+                          <input className="w-20 px-2 py-1 border rounded" value={form.hours[d].open} onChange={e=>setHours(d, { open: e.target.value })} placeholder="09:00" />
+                          <span>–</span>
+                          <input className="w-20 px-2 py-1 border rounded" value={form.hours[d].close} onChange={e=>setHours(d, { close: e.target.value })} placeholder="17:00" />
+                        </div>
+                      ))}
+                    </div>
+                    {hintErr('hours')}
+                    <div className="mt-1 text-xs text-slate-500">Use 24-hour format (e.g., 08:30, 17:00). Uncheck to mark a day as closed.</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* REVIEW & SUBMIT */}
+            <div>
+              <h2 className="text-xl font-semibold text-slate-900 mb-4 border-b pb-2">Review & Submit</h2>
+              <div className="space-y-4">
+                <div className="rounded-xl border border-slate-200 p-4">
+                  <div className="text-sm font-semibold mb-2">Quick preview</div>
+                  <ul className="text-sm text-slate-700 space-y-1">
+                    <li><b>{form.businessName || 'Your business name'}</b> — {form.categories.join(', ') || 'No categories selected'}</li>
+                    <li>{form.baseZip ? `Base ZIP ${form.baseZip}` : 'No base ZIP'} • Radius {form.radiusMiles} mi</li>
+                    <li>Extra ZIPs: {form.extraZips.length ? form.extraZips.join(', ') : '—'}</li>
+                    <li>License #{form.licenseNumber || '—'} • Ins: {form.insuranceCarrier || '—'}</li>
+                    <li>Rate: {form.rateType} {form.rateType==='Hourly' ? form.hourlyRate : form.rateType==='Flat' ? form.flatMin : form.visitFee}</li>
+                    <li>Specialties: {form.specialties.length ? form.specialties.join(', ') : '—'}</li>
+                  </ul>
+                </div>
+                <div className="grid gap-2">
+                  <label className="flex items-start gap-2 text-sm" data-err="agreeTerms">
+                    <input type="checkbox" checked={form.agreeTerms} onChange={e=>set('agreeTerms', e.target.checked)} />
+                    <span>I agree to the <a className="text-blue-600 underline" href="/terms" target="_blank">Terms</a> and <a className="text-blue-600 underline" href="/privacy" target="_blank">Privacy Policy</a>.
+                      {errors.agreeTerms && <span className="block text-rose-600 text-xs">You must accept.</span>}
+                    </span>
+                  </label>
+                  <label className="flex items-start gap-2 text-sm" data-err="certifyAccuracy">
+                    <input type="checkbox" checked={form.certifyAccuracy} onChange={e=>set('certifyAccuracy', e.target.checked)} />
+                    <span>I certify the information is accurate and I'm authorized to represent this business.
+                      {errors.certifyAccuracy && <span className="block text-rose-600 text-xs">Please certify.</span>}
+                    </span>
+                  </label>
+                </div>
+                <div className="pt-1">
+                  <button
+                    type="submit"
+                    className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled={busy || !form.agreeTerms || !form.certifyAccuracy}
+                  >
+                    {busy ? 'Submitting…' : 'Submit for review'}
+                  </button>
+                  <p className="text-xs text-slate-500 mt-2">We typically review new pros within 1–2 business days.</p>
+                </div>
+              </div>
             </div>
           </form>
         )}
