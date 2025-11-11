@@ -1,6 +1,7 @@
 'use client'
 
 import React, { Suspense, useEffect } from 'react'
+import { usePathname } from 'next/navigation'
 import { AuthProvider } from '../contexts/AuthContext'
 import { ProAuthProvider } from '../contexts/ProAuthContext'
 import { AppProvider } from '../lib/state'
@@ -19,11 +20,16 @@ function SP() {
 }
 
 export default function Providers({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname()
+
+  // Determine which auth provider to use based on route
+  const isProRoute = pathname.startsWith('/dashboard/contractor') ||
+                     pathname.startsWith('/pro/')
+
   return (
     <ToastProvider>
-      {/* NOTE: Both auth providers share the same Supabase client singleton */}
-      {/* The warning about multiple instances is harmless and expected */}
-      <AuthProvider>
+      {isProRoute ? (
+        // Pro routes: Only ProAuthProvider
         <ProAuthProvider>
           <AppProvider>
             <Suspense fallback={null}>
@@ -33,7 +39,18 @@ export default function Providers({ children }: { children: React.ReactNode }) {
             <AuthModal />
           </AppProvider>
         </ProAuthProvider>
-      </AuthProvider>
+      ) : (
+        // Homeowner routes: Only AuthProvider
+        <AuthProvider>
+          <AppProvider>
+            <Suspense fallback={null}>
+              <SP />
+            </Suspense>
+            {children}
+            <AuthModal />
+          </AppProvider>
+        </AuthProvider>
+      )}
     </ToastProvider>
   )
 }
