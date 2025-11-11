@@ -2,6 +2,7 @@
 import type { NextRequest } from 'next/server'
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { ADMIN_EMAILS } from './lib/adminConfig'
 
 export async function middleware(req: NextRequest) {
   const url = req.nextUrl
@@ -57,6 +58,15 @@ export async function middleware(req: NextRequest) {
   }
 
   console.log(`[MIDDLEWARE] User found: ${user.id.substring(0, 8)}`)
+
+  // Check if user is an admin by email
+  const isAdmin = ADMIN_EMAILS.includes(user.email?.toLowerCase() || '')
+
+  // Allow admin access to admin routes
+  if (isAdmin && pathname.startsWith('/dashboard/admin')) {
+    console.log(`[MIDDLEWARE] ✅ ADMIN ACCESS: ${user.email} -> ${pathname}`)
+    return NextResponse.next()
+  }
 
   // Define route protection rules
   const homeownerOnlyRoutes = ['/dashboard/homeowner', '/post-job', '/my-jobs']
