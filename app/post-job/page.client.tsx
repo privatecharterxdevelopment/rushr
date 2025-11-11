@@ -581,7 +581,7 @@ export default function PostJobInner({ userId }: Props) {
         let contractors = allContractors || []
         if (emergencyType && contractors.length > 0) {
           // Map emergency type keys to actual contractor category values
-          const emergencyTypeToCategory: Record<string, string> = {
+          const emergencyTypeToCategory: Record<string, string | null> = {
             'plumbing': 'Plumbing',
             'electrical': 'Electrical',
             'hvac': 'HVAC',
@@ -768,6 +768,9 @@ export default function PostJobInner({ userId }: Props) {
   }
 
   function submit() {
+    console.log('[SUBMIT] ========== BUTTON CLICKED ==========')
+    console.log('[SUBMIT] Form values:', { address, phone, category, emergencyType, issueTitle, details, sendAll, picked })
+
     // Mark all fields as touched to show validation errors
     setTouched({
       address: true,
@@ -779,11 +782,15 @@ export default function PostJobInner({ userId }: Props) {
 
     // Validate all mandatory fields
     const isValid = validateForm()
+    console.log('[SUBMIT] Validation result:', isValid)
+    console.log('[SUBMIT] Current errors:', errors)
 
     if (!isValid) {
+      console.error('[SUBMIT] ❌ VALIDATION FAILED - Form has errors:', errors)
       // Scroll to the first error
       const firstError = document.querySelector('[aria-invalid="true"]')
       if (firstError) {
+        console.log('[SUBMIT] Scrolling to first error field')
         firstError.scrollIntoView({ behavior: 'smooth', block: 'center' })
       }
       return
@@ -791,10 +798,12 @@ export default function PostJobInner({ userId }: Props) {
 
     // If selecting specific contractor, ensure one is picked
     if (!sendAll && !picked) {
+      console.error('[SUBMIT] ❌ No contractor selected and sendAll is false')
       alert('Please select a contractor or choose "Alert All Nearby" option.')
       return
     }
 
+    console.log('[SUBMIT] ✅ Validation passed! Opening confirmation modal...')
     setConfirmOpen(true)
   }
 
