@@ -189,10 +189,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           }
         }
 
-        // Always set loading to false after processing auth state change (if still mounted)
-        if (mounted) {
-          setLoading(false)
-        }
+        // CRITICAL: Always clear loading, even if unmounted - prevents stuck loading state
+        setLoading(false)
       }
     )
 

@@ -229,9 +229,8 @@ export function ProAuthProvider({ children }: { children: React.ReactNode }) {
         }
       } finally {
         clearTimeout(loadingTimeout)
-        if (mounted) {
-          setLoading(false)
-        }
+        // CRITICAL: Always clear loading, even if unmounted
+        setLoading(false)
       }
     }
 
@@ -288,9 +287,8 @@ export function ProAuthProvider({ children }: { children: React.ReactNode }) {
             setContractorProfile(null)
           }
         } finally {
-          if (mounted) {
-            setLoading(false)
-          }
+          // CRITICAL: Always clear loading, even if unmounted - prevents stuck loading state
+          setLoading(false)
         }
       }
     )
