@@ -80,10 +80,21 @@ export async function middleware(req: NextRequest) {
     console.log(`[MIDDLEWARE] Error checking pro_contractors: ${proError.message}`)
   }
 
-  const isContractor = !!proContractor && !proError
-  const isHomeowner = !isContractor
+  // Check if user is a homeowner by checking user_profiles table
+  const { data: homeownerProfile, error: homeownerError } = await supabase
+    .from('user_profiles')
+    .select('id, role')
+    .eq('id', user.id)
+    .maybeSingle()
 
-  console.log(`[MIDDLEWARE] User ${user.id.substring(0, 8)}: isContractor=${isContractor}, needsHomeownerCheck=${needsHomeownerCheck}, needsContractorCheck=${needsContractorCheck}`)
+  if (homeownerError) {
+    console.log(`[MIDDLEWARE] Error checking user_profiles: ${homeownerError.message}`)
+  }
+
+  const isContractor = !!proContractor && !proError
+  const isHomeowner = !!homeownerProfile && homeownerProfile.role === 'homeowner' && !homeownerError
+
+  console.log(`[MIDDLEWARE] User ${user.id.substring(0, 8)}: isContractor=${isContractor}, isHomeowner=${isHomeowner}, needsHomeownerCheck=${needsHomeownerCheck}, needsContractorCheck=${needsContractorCheck}`)
 
   // BLOCK contractors from homeowner-only routes
   if (isContractor && needsHomeownerCheck) {
