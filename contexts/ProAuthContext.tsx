@@ -265,19 +265,22 @@ export function ProAuthProvider({ children }: { children: React.ReactNode }) {
               .eq('id', session.user.id)
               .single()
 
-            if (!mounted) return
-
-            if (!profileError && profile) {
-              // This is a contractor
-              setContractorProfile(profile)
-              console.log('[PRO-AUTH] Contractor profile loaded')
-            } else {
-              // Not a contractor, don't set profile
-              setContractorProfile(null)
-              console.log('[PRO-AUTH] Not a contractor, skipping profile')
+            // Only update state if component is still mounted
+            if (mounted) {
+              if (!profileError && profile) {
+                // This is a contractor
+                setContractorProfile(profile)
+                console.log('[PRO-AUTH] Contractor profile loaded')
+              } else {
+                // Not a contractor, don't set profile
+                setContractorProfile(null)
+                console.log('[PRO-AUTH] Not a contractor, skipping profile')
+              }
             }
           } else {
-            setContractorProfile(null)
+            if (mounted) {
+              setContractorProfile(null)
+            }
           }
         } catch (err) {
           console.error('[PRO-AUTH] Error:', err)

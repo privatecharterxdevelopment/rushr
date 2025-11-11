@@ -167,30 +167,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             .eq('id', session.user.id)
             .single()
 
-          if (!mounted) {
-            // Component unmounted during fetch, don't update state
-            return
-          }
-
-          if (!profileError && profile) {
-            // Only set profile if user is a homeowner
-            if (profile.role === 'homeowner') {
-              setUserProfile(profile)
-              console.log('[AuthContext] Homeowner profile loaded')
+          // Only update state if component is still mounted
+          if (mounted) {
+            if (!profileError && profile) {
+              // Only set profile if user is a homeowner
+              if (profile.role === 'homeowner') {
+                setUserProfile(profile)
+                console.log('[AuthContext] Homeowner profile loaded')
+              } else {
+                // This is a contractor, don't set homeowner profile
+                setUserProfile(null)
+                console.log('[AuthContext] Contractor detected, skipping homeowner profile')
+              }
             } else {
-              // This is a contractor, don't set homeowner profile
               setUserProfile(null)
-              console.log('[AuthContext] Contractor detected, skipping homeowner profile')
             }
-          } else {
-            setUserProfile(null)
           }
         } else {
-          setUserProfile(null)
+          if (mounted) {
+            setUserProfile(null)
+          }
         }
 
-        // Always set loading to false after processing auth state change
-        setLoading(false)
+        // Always set loading to false after processing auth state change (if still mounted)
+        if (mounted) {
+          setLoading(false)
+        }
       }
     )
 
