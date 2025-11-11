@@ -8,6 +8,8 @@ export async function middleware(req: NextRequest) {
   const host = req.headers.get('host') || ''
   const pathname = url.pathname
 
+  console.log(`[MIDDLEWARE] ========== MIDDLEWARE CALLED: ${pathname} ==========`)
+
   // Handle subdomain rewrites
   if (host.startsWith('pro.') || host.startsWith('professional.')) {
     if (!pathname.startsWith('/pro') && !pathname.startsWith('/profile')) {

@@ -228,6 +228,12 @@ export default function FindProPage() {
         // This allows city search to work independently of category filter
         if (q) {
           const hay = `${name} ${city} ${svc.join(' ')}`.toLowerCase()
+
+          // Debug logging (can be removed after testing)
+          if (typeof window !== 'undefined' && window.location.search.includes('debug')) {
+            console.log('Search:', { query: q, name, city, services: svc, haystack: hay, matches: hay.includes(q) })
+          }
+
           if (!hay.includes(q)) return false
         }
 

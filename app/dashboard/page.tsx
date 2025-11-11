@@ -23,19 +23,23 @@ export default function DashboardChooser() {
         return
       }
 
-      // Check contractor profile first (pro_contractors table)
+      // CRITICAL: Contractor profile takes ABSOLUTE PRIORITY
+      // If user has contractor profile, ALWAYS go to contractor dashboard
       if (contractorProfile) {
+        console.log('[DASHBOARD CHOOSER] Contractor profile found - forcing redirect to /dashboard/contractor')
         router.replace('/dashboard/contractor')
         return
       }
 
-      // Then check homeowner profile (user_profiles table)
-      if (userProfile) {
+      // Only check homeowner profile if NOT a contractor
+      if (userProfile && !contractorProfile) {
+        console.log('[DASHBOARD CHOOSER] Homeowner profile found (no contractor) - redirecting to /dashboard/homeowner')
         router.replace('/dashboard/homeowner')
         return
       }
 
       // If no profile found in either table, show chooser
+      console.log('[DASHBOARD CHOOSER] No profile found - showing manual chooser')
     }
   }, [user, userProfile, contractorProfile, loading, router])
 

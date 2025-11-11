@@ -3,12 +3,14 @@
 import React, { useMemo, useEffect, useState, useRef } from 'react'
 import Link from 'next/link'
 import { useAuth } from '../../../contexts/AuthContext'
+import { useProAuth } from '../../../contexts/ProAuthContext'
 import { useHomeownerStats } from '../../../lib/hooks/useHomeownerStats'
 import { supabase } from '../../../lib/supabaseClient'
 import LoadingSpinner from '../../../components/LoadingSpinner'
 import dynamic from 'next/dynamic'
 import mapboxgl from 'mapbox-gl'
 import 'mapbox-gl/dist/mapbox-gl.css'
+import { useRouter } from 'next/navigation'
 
 // const ContractorTracker = dynamic(() => import('../../../components/ContractorTracker'), { ssr: false })
 import {
@@ -132,9 +134,19 @@ type CompletenessField = { key:string; label:string; weight:number; done:boolean
 /* ---------------------------------- page --------------------------------- */
 export default function HomeownerDashboardPage() {
   // ALL HOOKS MUST BE CALLED FIRST - BEFORE ANY CONDITIONAL RETURNS
+  const router = useRouter()
   const { user, userProfile, loading } = useAuth()
+  const { contractorProfile, loading: contractorLoading } = useProAuth()
   // Always call the hook - it handles the user check internally
   const { stats, jobs: realJobs, messages, loading: statsLoading, refreshStats } = useHomeownerStats()
+
+  // CRITICAL: If user is a contractor, redirect immediately to contractor dashboard
+  useEffect(() => {
+    if (!contractorLoading && contractorProfile) {
+      console.log('[HOMEOWNER DASHBOARD] 🚫 CONTRACTOR DETECTED - Redirecting to /dashboard/contractor')
+      router.replace('/dashboard/contractor')
+    }
+  }, [contractorProfile, contractorLoading, router])
 
 
   // Contractor tracking state
