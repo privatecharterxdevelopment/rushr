@@ -386,8 +386,8 @@ export default function ContractorDashboardPage() {
   // Show overlay if KYC is required but not started
   const showKYCOverlay = contractorData && !contractorData.kyc_status
 
-  // Check if contractor is verified (approved and KYC completed) - for navigation
-  const isVerified = contractorData?.status === 'approved' && contractorData?.kyc_status === 'completed'
+  // Check if contractor is verified (approved by admin) - for navigation
+  const isVerified = contractorData?.status === 'approved'
 
   // Show loading while checking auth
   if (loading) {
