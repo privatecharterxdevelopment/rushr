@@ -425,13 +425,16 @@ export default function PostJobInner({ userId }: Props) {
   // Form validation functions
   const validateField = (field: string, value: string) => {
     const newErrors = { ...errors }
+    let isValid = true
 
     switch (field) {
       case 'address':
         if (!value.trim()) {
           newErrors.address = 'Address is required'
+          isValid = false
         } else if (value.trim().length < 5) {
           newErrors.address = 'Please enter a complete address'
+          isValid = false
         } else {
           delete newErrors.address
         }
@@ -441,8 +444,10 @@ export default function PostJobInner({ userId }: Props) {
         const phoneRegex = /^\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}$/
         if (!value.trim()) {
           newErrors.phone = 'Phone number is required'
+          isValid = false
         } else if (!phoneRegex.test(value.trim())) {
           newErrors.phone = 'Please enter a valid phone number'
+          isValid = false
         } else {
           delete newErrors.phone
         }
@@ -451,6 +456,7 @@ export default function PostJobInner({ userId }: Props) {
       case 'category':
         if (!value) {
           newErrors.category = 'Please select an emergency category'
+          isValid = false
         } else {
           delete newErrors.category
         }
@@ -459,6 +465,7 @@ export default function PostJobInner({ userId }: Props) {
       case 'emergencyType':
         if (!value) {
           newErrors.emergencyType = 'Please select the type of emergency'
+          isValid = false
         } else {
           delete newErrors.emergencyType
         }
@@ -467,8 +474,10 @@ export default function PostJobInner({ userId }: Props) {
       case 'issueTitle':
         if (!value.trim()) {
           newErrors.issueTitle = 'Please describe your emergency'
+          isValid = false
         } else if (value.trim().length < 10) {
           newErrors.issueTitle = 'Please provide more details (at least 10 characters)'
+          isValid = false
         } else {
           delete newErrors.issueTitle
         }
@@ -476,7 +485,7 @@ export default function PostJobInner({ userId }: Props) {
     }
 
     setErrors(newErrors)
-    return Object.keys(newErrors).length === 0
+    return isValid
   }
 
   const validateForm = () => {
