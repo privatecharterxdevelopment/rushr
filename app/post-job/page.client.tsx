@@ -548,23 +548,46 @@ export default function PostJobInner({ userId }: Props) {
       setLoadingContractors(true)
 
       try {
-        // Get ALL contractors with available fields
-        let query = supabase
+        // Get ALL contractors first - we'll filter client-side
+        const { data: allContractors, error } = await supabase
           .from('pro_contractors')
           .select('*')
-
-        // Filter by emergency category if selected
-        if (emergencyType) {
-          query = query.contains('categories', [emergencyType])
-        }
-
-        const { data: contractors, error } = await query.limit(200)
+          .limit(200)
 
         if (error) {
           console.error('[POST-JOB] Database error:', error)
           console.error('[POST-JOB] Error details:', JSON.stringify(error, null, 2))
           setNearbyContractors([])
           return
+        }
+
+        // Client-side filter by emergency type if selected
+        let contractors = allContractors || []
+        if (emergencyType && contractors.length > 0) {
+          // Map emergency type keys to actual contractor category values
+          const emergencyTypeToCategory: Record<string, string> = {
+            'plumbing': 'Plumbing',
+            'electrical': 'Electrical',
+            'hvac': 'HVAC',
+            'roofing': 'Roofing',
+            'water-damage': 'Plumbing',
+            'locksmith': 'Locksmith',
+            'appliance': 'Appliance Repair',
+          }
+
+          const targetCategory = emergencyTypeToCategory[emergencyType]
+          console.log('[POST-JOB] Filtering by emergencyType:', emergencyType, '→ Category:', targetCategory)
+
+          if (targetCategory) {
+            contractors = contractors.filter(c => {
+              const cats = c.categories || []
+              // Case-insensitive match
+              return Array.isArray(cats) && cats.some((cat: string) =>
+                cat.toLowerCase() === targetCategory.toLowerCase()
+              )
+            })
+            console.log('[POST-JOB] After category filter:', contractors.length, 'contractors match', emergencyType)
+          }
         }
 
         if (contractors && contractors.length > 0) {
