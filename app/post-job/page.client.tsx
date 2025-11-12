@@ -878,215 +878,39 @@ export default function PostJobInner({ userId }: Props) {
 
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-5">
           {/* Left column: Emergency form */}
-          <div className="space-y-6 lg:col-span-2">
-            <div className="card p-6 space-y-6">
-              <Field label="Emergency Location" required helper="Precise location helps emergency responders find you faster.">
-                <div className="flex gap-2">
-                  <input
-                    className={`flex-1 px-4 py-3 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 ${touched.address && errors.address ? 'border-red-500' : 'border-slate-200'
-                      }`}
-                    placeholder="Street address"
-                    value={address}
-                    onChange={(e) => {
-                      setAddress(e.target.value)
-                      if (touched.address) validateField('address', e.target.value)
-                    }}
-                    onBlur={(e) => handleFieldBlur('address', e.target.value)}
-                    aria-invalid={touched.address && errors.address ? 'true' : 'false'}
-                    aria-describedby={touched.address && errors.address ? 'address-error' : undefined}
-                  />
-                  <button
-                    type="button"
-                    className="px-3 py-1 border border-slate-200 rounded-lg hover:bg-slate-50 flex items-center gap-1 text-sm"
-                    onClick={getCurrentLocation}
-                    title="Use current location"
-                  >
-                    <MapPin className="h-4 w-4" />
-                  </button>
-                </div>
-                {touched.address && errors.address && (
-                  <div id="address-error" className="mt-1 text-sm text-red-600">
-                    {errors.address}
-                  </div>
-                )}
-              </Field>
-
-              <Field label="Contact Number" required>
-                <div className="flex gap-2">
-                  <input
-                    className={`flex-1 px-4 py-3 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 ${touched.phone && errors.phone ? 'border-red-500' : 'border-slate-200'
-                      }`}
-                    placeholder="Mobile number"
-                    value={phone}
-                    onChange={(e) => {
-                      setPhone(e.target.value)
-                      if (touched.phone) validateField('phone', e.target.value)
-                    }}
-                    onBlur={(e) => handleFieldBlur('phone', e.target.value)}
-                    aria-invalid={touched.phone && errors.phone ? 'true' : 'false'}
-                    aria-describedby={touched.phone && errors.phone ? 'phone-error' : undefined}
-                  />
-                  <button
-                    className="px-3 py-1 border border-slate-200 rounded-lg hover:bg-slate-50 flex items-center gap-1 text-sm"
-                    onClick={() => setPhone('(555) 123-4567')}
-                    title="Autofill from profile"
-                  >
-                    <User className="h-4 w-4" />
-                  </button>
-                </div>
-                {touched.phone && errors.phone && (
-                  <div id="phone-error" className="mt-1 text-sm text-red-600">
-                    {errors.phone}
-                  </div>
-                )}
-              </Field>
-
-              <Field label="Emergency Category" required>
-                <select
-                  value={category}
-                  onChange={(e) => {
-                    const newCategory = e.target.value
-                    setCategory(newCategory)
-                    if (newCategory && EMERGENCY_TYPES_MAP[newCategory]?.length > 0) {
-                      setEmergencyType(EMERGENCY_TYPES_MAP[newCategory][0].key) // Set first emergency type as default
-                    } else {
-                      setEmergencyType('')
-                    }
-                  }}
-                  className="w-full px-4 py-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 bg-white"
-                >
-                  <option value="">Select One</option>
-                  {EMERGENCY_CATEGORIES.map(({ key, label }) => (
-                    <option key={key} value={key}>
-                      {label}
-                    </option>
-                  ))}
-                </select>
-              </Field>
-
-              {category && (
-                <Field label="Emergency Type" required>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                    {EMERGENCY_TYPES_MAP[category]?.map(({ key, label, icon }) => (
-                      <label
-                        key={key}
-                        className={`relative flex flex-col items-center gap-2 p-3 rounded-lg border-2 cursor-pointer transition-all hover:bg-slate-50 ${emergencyType === key
-                          ? 'border-emerald-500 bg-emerald-50'
-                          : 'border-slate-200'
-                          }`}
-                      >
-                        <input
-                          type="radio"
-                          name="emergencyType"
-                          value={key}
-                          checked={emergencyType === key}
-                          onChange={(e) => setEmergencyType(e.target.value)}
-                          className="sr-only"
-                        />
-                        <span className="text-xl">{icon}</span>
-                        <div className="text-center">
-                          <div className="text-sm font-medium text-slate-900 leading-tight">{label}</div>
-                        </div>
-                        {emergencyType === key && (
-                          <div className="absolute top-2 right-2 w-4 h-4 bg-emerald-500 rounded-full flex items-center justify-center">
-                            <Check className="w-2.5 h-2.5 text-white" />
-                          </div>
-                        )}
-                      </label>
-                    )) || []}
-                  </div>
-                </Field>
-              )}
-
-              <Field label="Additional Details (Optional)">
-                <textarea
-                  className="w-full px-4 py-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 min-h-[100px]"
-                  placeholder="Any additional details that might help the professional..."
-                  value={details}
-                  onChange={(e) => setDetails(e.target.value)}
-                />
-              </Field>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
-                  Photos or Video
-                  <span className="text-sm font-normal text-slate-500">
-                    (Optional - helps pros assess your emergency faster)
-                  </span>
-                </label>
-                <input
-                  type="file"
-                  multiple
-                  accept="image/*,video/*"
-                  onChange={onUpload}
-                  className={`w-full px-4 py-3 border rounded-lg ${uploadError ? 'border-red-500' : 'border-slate-200'
-                    }`}
-                />
-                {uploadError && (
-                  <div className="mt-1 text-sm text-red-600">
-                    {uploadError}
-                  </div>
-                )}
-                {photos.length > 0 && (
-                  <div className="mt-2 text-sm text-slate-600">
-                    {photos.length}/6 files uploaded
-                  </div>
-                )}
-                {!!photos.length && (
-                  <div className="mt-4 grid grid-cols-3 gap-3">
-                    {photos.map((f, i) => (
-                      <div key={i} className="relative">
-                        <div className="h-24 w-full rounded-lg bg-slate-100 flex items-center justify-center">
-                          <span className="text-xs text-slate-500">{f.name.slice(0, 10)}...</span>
-                        </div>
-                        <button
-                          className="absolute -top-2 -right-2 h-6 w-6 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600"
-                          onClick={() => removePhoto(i)}
-                        >
-                          <X className="h-3 w-3" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              <SafetyNotice />
-            </div>
-
-            {/* Send mode */}
-            <div className="card p-6">
-              <label className="block text-sm font-medium text-slate-700 mb-4">Emergency Response Mode</label>
-              <div className="grid grid-cols-2 gap-3">
-                <button
-                  className={`p-4 rounded-lg border text-left transition-all ${sendAll ? 'border-emerald-500 bg-emerald-50 text-emerald-700' : 'border-slate-200 hover:border-slate-300'
-                    }`}
-                  onClick={() => setSendAll(true)}
-                >
-                  <div className="font-medium">Alert All Nearby</div>
-                  <div className="text-sm opacity-75">Fastest response</div>
-                </button>
-                <button
-                  className={`p-4 rounded-lg border text-left transition-all ${!sendAll ? 'border-emerald-500 bg-emerald-50 text-emerald-700' : 'border-slate-200 hover:border-slate-300'
-                    }`}
-                  onClick={() => setSendAll(false)}
-                >
-                  <div className="font-medium">Select Pro</div>
-                  <div className="text-sm opacity-75">Choose specific contractor</div>
-                </button>
-              </div>
-              <p className="mt-3 text-xs text-slate-500">
-                "Alert All" notifies all available emergency pros in your area for the fastest response time.
-              </p>
-            </div>
-
-            <div className="card p-4 flex items-start gap-3 bg-blue-50 border-blue-200">
-              <Info className="h-5 w-5 text-blue-600 flex-shrink-0" />
-              <div className="text-sm text-blue-800">
-                <div className="font-medium mb-1">Emergency Pricing</div>
-                Emergency calls typically include a service fee plus hourly rates. You'll approve all costs before work begins.
-              </div>
-            </div>
+          {/* Left column: Multi-step form */}
+          <div className="lg:col-span-2">
+            <PostJobMultiStep
+              address={address}
+              setAddress={setAddress}
+              phone={phone}
+              setPhone={setPhone}
+              category={category}
+              setCategory={setCategory}
+              emergencyType={emergencyType}
+              setEmergencyType={setEmergencyType}
+              details={details}
+              setDetails={setDetails}
+              sendAll={sendAll}
+              setSendAll={setSendAll}
+              picked={picked}
+              setPicked={setPicked}
+              errors={errors}
+              touched={touched}
+              validateField={validateField}
+              handleFieldBlur={handleFieldBlur}
+              emergencyCategories={EMERGENCY_CATEGORIES}
+              emergencyTypesMap={EMERGENCY_TYPES_MAP}
+              nearbyContractors={nearbyContractors}
+              selectedContractor={selectedContractor}
+              getCurrentLocation={getCurrentLocation}
+              onSubmit={submit}
+              photos={photos}
+              setPhotos={setPhotos}
+              onUpload={onUpload}
+              uploadError={uploadError}
+              userId={userId}
+            />
           </div>
 
           {/* Right column: Map and emergency pros */}
