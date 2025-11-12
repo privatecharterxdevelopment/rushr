@@ -156,10 +156,7 @@ export default function Hero(){
 
   const onFindPro = async (e: React.FormEvent)=>{
     e.preventDefault()
-    if(!user){
-      openAuth('signup')
-      return
-    }
+    // No login check here - user can browse and will be prompted at Step 4
 
     // If location is empty and geolocation is available, try to get it
     let finalLocation = location.trim()
@@ -235,57 +232,61 @@ export default function Hero(){
               Upfront pricing and no hidden fees.
             </p>
 
-            {/* Search Form - Single unified field */}
-            <form onSubmit={onFindPro} className="max-w-4xl">
-              <div className="relative flex items-center bg-white rounded-lg shadow-lg">
-                {/* Search input */}
+            {/* Search Form - Mobile responsive */}
+            <form onSubmit={onFindPro} className="max-w-4xl w-full">
+              <div className="relative flex flex-col sm:flex-row items-stretch sm:items-center bg-white rounded-lg shadow-lg overflow-hidden">
+                {/* Search input - full width on mobile */}
                 <input
                   type="text"
                   placeholder={placeholderText}
                   value={searchQuery}
                   onChange={e => setSearchQuery(e.target.value)}
-                  className="flex-1 px-4 py-3.5 rounded-l-lg text-gray-900 placeholder-gray-500 focus:outline-none text-sm border-r border-gray-200"
+                  className="flex-1 px-4 py-3.5 sm:rounded-l-lg text-gray-900 placeholder-gray-500 focus:outline-none text-sm border-b sm:border-b-0 sm:border-r border-gray-200"
                 />
 
-                {/* ZIP Code */}
-                <input
-                  type="text"
-                  placeholder="ZIP"
-                  value={location}
-                  onChange={e => setLocation(e.target.value)}
-                  className="w-24 px-3 py-3.5 text-gray-900 placeholder-gray-500 focus:outline-none text-sm border-r border-gray-200"
-                />
+                {/* Bottom row: ZIP, location button, and submit button */}
+                <div className="flex items-center">
+                  {/* ZIP Code */}
+                  <input
+                    type="text"
+                    placeholder="ZIP"
+                    value={location}
+                    onChange={e => setLocation(e.target.value)}
+                    className="w-20 sm:w-24 px-2 sm:px-3 py-3.5 text-gray-900 placeholder-gray-500 focus:outline-none text-sm border-r border-gray-200"
+                  />
 
-                {/* Location button */}
-                <button
-                  type="button"
-                  onClick={getUserLocation}
-                  disabled={loadingLocation}
-                  className="px-2 py-3.5 hover:bg-gray-50 transition-colors disabled:opacity-50 border-r border-gray-200"
-                  title="Use my location"
-                >
-                  {loadingLocation ? (
-                    <img
-                      src="https://jtrxdcccswdwlritgstp.supabase.co/storage/v1/object/public/contractor-logos/RushrLogoAnimation.gif"
-                      alt="Loading..."
-                      className="w-5 h-5 object-contain"
-                    />
-                  ) : (
-                    <svg className="h-5 w-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                    </svg>
-                  )}
-                </button>
+                  {/* Location button */}
+                  <button
+                    type="button"
+                    onClick={getUserLocation}
+                    disabled={loadingLocation}
+                    className="px-2 py-3.5 hover:bg-gray-50 transition-colors disabled:opacity-50 border-r border-gray-200 flex-shrink-0"
+                    title="Use my location"
+                  >
+                    {loadingLocation ? (
+                      <img
+                        src="https://jtrxdcccswdwlritgstp.supabase.co/storage/v1/object/public/contractor-logos/RushrLogoAnimation.gif"
+                        alt="Loading..."
+                        className="w-5 h-5 object-contain"
+                      />
+                    ) : (
+                      <svg className="h-5 w-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                      </svg>
+                    )}
+                  </button>
 
-                {/* Find a Pro button */}
-                <button
-                  type="submit"
-                  disabled={loadingLocation}
-                  className="px-6 py-3.5 bg-gray-900 hover:bg-black text-white font-semibold rounded-r-lg transition-colors whitespace-nowrap text-sm disabled:opacity-50"
-                >
-                  Find a Pro
-                </button>
+                  {/* Find a Pro button - responsive text */}
+                  <button
+                    type="submit"
+                    disabled={loadingLocation}
+                    className="flex-1 sm:flex-initial px-4 sm:px-6 py-3.5 bg-gray-900 hover:bg-black text-white font-semibold sm:rounded-r-lg transition-colors whitespace-nowrap text-sm disabled:opacity-50"
+                  >
+                    <span className="hidden sm:inline">Find a Pro</span>
+                    <span className="sm:hidden">Find Pro</span>
+                  </button>
+                </div>
               </div>
             </form>
 
@@ -297,13 +298,7 @@ export default function Hero(){
                   {EMERGENCY_CATEGORIES.slice(0, 4).map((cat, idx) => (
                     <button
                       key={`1-${idx}`}
-                      onClick={() => {
-                        if (!user) {
-                          openAuth('signup')
-                          return
-                        }
-                        router.push(cat.href)
-                      }}
+                      onClick={() => router.push(cat.href)}
                       className="flex-shrink-0 px-4 py-2 backdrop-blur-md bg-white/10 border border-white/20 text-white rounded-full text-xs font-medium hover:bg-white/20 hover:border-white/30 transition-all cursor-pointer whitespace-nowrap shadow-lg"
                       style={{ backdropFilter: 'blur(10px)' }}
                     >
@@ -314,13 +309,7 @@ export default function Hero(){
                   {EMERGENCY_CATEGORIES.slice(0, 4).map((cat, idx) => (
                     <button
                       key={`2-${idx}`}
-                      onClick={() => {
-                        if (!user) {
-                          openAuth('signup')
-                          return
-                        }
-                        router.push(cat.href)
-                      }}
+                      onClick={() => router.push(cat.href)}
                       className="flex-shrink-0 px-4 py-2 backdrop-blur-md bg-white/10 border border-white/20 text-white rounded-full text-xs font-medium hover:bg-white/20 hover:border-white/30 transition-all cursor-pointer whitespace-nowrap shadow-lg"
                       style={{ backdropFilter: 'blur(10px)' }}
                     >

@@ -4,6 +4,7 @@ import React, { useMemo, useState, useEffect } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import { supabase } from '../../lib/supabaseClient'
+import { openAuth } from '../../components/AuthModal'
 import {
   Check,
   Clock,
@@ -910,6 +911,14 @@ export default function PostJobInner({ userId }: Props) {
 
   async function actuallySend() {
     setConfirmOpen(false)
+
+    // Auth check - require login before actual submission
+    if (!userId) {
+      console.log('[SUBMIT] User not logged in, opening auth modal')
+      openAuth('signup')
+      return
+    }
+
     setSending(true)
 
     try {
