@@ -65,6 +65,8 @@ export default function PostJobMultiStep(props: PostJobMultiStepProps) {
       case 1:
         return props.validateField('category', props.category) && props.validateField('emergencyType', props.emergencyType)
       case 2:
+        // Validate address and phone in step 2
+        return props.validateField('address', props.address) && props.validateField('phone', props.phone)
       case 3:
         return true
       case 4:
@@ -196,12 +198,68 @@ export default function PostJobMultiStep(props: PostJobMultiStepProps) {
           {currentStep === 2 && (
             <div className="space-y-6 animate-fadeIn font-satoshi">
               <div>
-                <h2 className="text-2xl font-bold text-slate-900 mb-2">📝 Additional Information</h2>
-                <p className="text-slate-600 text-sm">Help professionals understand your situation better (optional)</p>
+                <h2 className="text-2xl font-bold text-slate-900 mb-2">📝 Contact & Details</h2>
+                <p className="text-slate-600 text-sm">Provide your contact information so pros can reach you</p>
+              </div>
+
+              {/* Location */}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Emergency Location <span className="text-red-500">*</span>
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={props.address}
+                    onChange={(e) => {
+                      props.setAddress(e.target.value)
+                      props.handleFieldBlur('address', e.target.value)
+                    }}
+                    onBlur={(e) => props.handleFieldBlur('address', e.target.value)}
+                    placeholder="123 Main St, City, State"
+                    className={`flex-1 px-4 py-3 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 ${
+                      props.errors.address && props.touched.address ? 'border-red-500' : 'border-slate-300'
+                    }`}
+                  />
+                  <button
+                    type="button"
+                    onClick={props.getCurrentLocation}
+                    className="px-4 py-3 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 whitespace-nowrap flex items-center gap-2"
+                  >
+                    <MapPin className="w-4 h-4" />
+                    Use Current
+                  </button>
+                </div>
+                {props.errors.address && props.touched.address && (
+                  <p className="text-sm text-red-500 mt-1">{props.errors.address}</p>
+                )}
+              </div>
+
+              {/* Phone */}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Contact Phone <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="tel"
+                  value={props.phone}
+                  onChange={(e) => {
+                    props.setPhone(e.target.value)
+                    props.handleFieldBlur('phone', e.target.value)
+                  }}
+                  onBlur={(e) => props.handleFieldBlur('phone', e.target.value)}
+                  placeholder="(555) 123-4567"
+                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 ${
+                    props.errors.phone && props.touched.phone ? 'border-red-500' : 'border-slate-300'
+                  }`}
+                />
+                {props.errors.phone && props.touched.phone && (
+                  <p className="text-sm text-red-500 mt-1">{props.errors.phone}</p>
+                )}
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">Description</label>
+                <label className="block text-sm font-medium text-slate-700 mb-2">Description (optional)</label>
                 <textarea
                   value={props.details}
                   onChange={(e) => props.setDetails(e.target.value)}
@@ -301,9 +359,13 @@ export default function PostJobMultiStep(props: PostJobMultiStepProps) {
 
               <div className="space-y-4">
                 <div className="p-4 bg-slate-50 rounded-lg">
-                  <div className="text-sm font-medium text-slate-500 mb-1">Location</div>
-                  <div className="font-medium">{props.address}</div>
-                  <div className="text-sm text-slate-600 mt-1">{props.phone}</div>
+                  <div className="text-sm font-medium text-slate-500 mb-1">Emergency Location</div>
+                  <div className="font-medium">{props.address || <span className="text-red-500">⚠️ Not set</span>}</div>
+                </div>
+
+                <div className="p-4 bg-slate-50 rounded-lg">
+                  <div className="text-sm font-medium text-slate-500 mb-1">Contact Phone</div>
+                  <div className="font-medium">{props.phone || <span className="text-red-500">⚠️ Not set</span>}</div>
                 </div>
 
                 <div className="p-4 bg-slate-50 rounded-lg">
