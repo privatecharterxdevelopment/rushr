@@ -25,6 +25,7 @@ import {
 } from 'lucide-react'
 
 const ProMap = dynamic(() => import('../../components/ProMap'), { ssr: false })
+const PostJobMultiStep = dynamic(() => import('../../components/PostJobMultiStep'), { ssr: false })
 
 type Props = { userId: string | null }
 
