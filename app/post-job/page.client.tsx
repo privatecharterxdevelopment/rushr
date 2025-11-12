@@ -213,6 +213,37 @@ function ConfirmModal({
   )
 }
 
+function ErrorPopup({
+  message,
+  onClose,
+}: {
+  message: string
+  onClose: () => void
+}) {
+  if (!message) return null
+  return (
+    <div className="fixed inset-0 z-[60] grid place-items-center bg-black/40 p-4">
+      <div className="w-full max-w-md rounded-2xl border border-red-200 bg-white p-6 shadow-xl">
+        <div className="flex items-start gap-3">
+          <AlertTriangle className="h-6 w-6 text-red-500 flex-shrink-0" />
+          <div className="flex-1">
+            <div className="font-semibold text-slate-900 mb-2">Action Required</div>
+            <p className="text-sm text-slate-700">{message}</p>
+          </div>
+        </div>
+        <div className="mt-6 flex items-center justify-end">
+          <button
+            className="px-6 py-2 bg-red-500 text-white rounded-lg font-medium hover:bg-red-600 transition-colors"
+            onClick={onClose}
+          >
+            Got it
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 /** Emergency categories and services */
 const EMERGENCY_CATEGORIES = [
   { key: 'home', label: '🏠 Home Emergency' },
@@ -316,6 +347,27 @@ export default function PostJobInner({ userId }: Props) {
   const [category, setCategory] = useState('')
   const [emergencyType, setEmergencyType] = useState('')
   const [details, setDetails] = useState('')
+  const [showLocationModal, setShowLocationModal] = useState(false)
+  const [showPhoneModal, setShowPhoneModal] = useState(false)
+
+  // Fetch user profile data (phone number)
+  useEffect(() => {
+    if (!userId) return
+
+    async function fetchUserProfile() {
+      const { data, error } = await supabase
+        .from('user_profiles')
+        .select('phone')
+        .eq('id', userId)
+        .single()
+
+      if (!error && data?.phone) {
+        setPhone(data.phone)
+      }
+    }
+
+    fetchUserProfile()
+  }, [userId])
 
   // Multi-step form state
   const [currentStep, setCurrentStep] = useState(1)
@@ -333,6 +385,7 @@ export default function PostJobInner({ userId }: Props) {
   const [picked, setPicked] = useState<string | null>(null)
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [sending, setSending] = useState(false)
+  const [errorPopup, setErrorPopup] = useState<string>('')
 
   // Get user's current location
   const getCurrentLocation = () => {
@@ -347,14 +400,38 @@ export default function PostJobInner({ userId }: Props) {
     console.log('Requesting geolocation permission...')
 
     navigator.geolocation.getCurrentPosition(
-      (position) => {
+      async (position) => {
         console.log('Geolocation success!', position.coords)
         const { latitude, longitude } = position.coords
         // Store as [lat, lng] for ProMapInner
         setUserLocation([latitude, longitude])
-        setAddress(`Current Location (${latitude.toFixed(4)}, ${longitude.toFixed(4)})`)
+
+        // Reverse geocode to get readable address
+        try {
+          console.log('Reverse geocoding coordinates:', latitude, longitude)
+          const response = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&addressdetails=1`,
+            {
+              headers: {
+                'User-Agent': 'Rushr Emergency Services App'
+              }
+            }
+          )
+          const data = await response.json()
+
+          if (data.display_name) {
+            console.log('Reverse geocoding successful:', data.display_name)
+            setAddress(data.display_name)
+          } else {
+            console.log('No address found, using coordinates')
+            setAddress(`${latitude.toFixed(4)}, ${longitude.toFixed(4)}`)
+          }
+        } catch (error) {
+          console.error('Reverse geocoding failed:', error)
+          setAddress(`${latitude.toFixed(4)}, ${longitude.toFixed(4)}`)
+        }
+
         console.log('Set userLocation:', [latitude, longitude])
-        console.log('Set address:', `Current Location (${latitude.toFixed(4)}, ${longitude.toFixed(4)})`)
       },
       (error) => {
         console.error('Geolocation error:', error)
@@ -495,7 +572,33 @@ export default function PostJobInner({ userId }: Props) {
   useEffect(() => {
     const categoryParam = searchParams.get('category')
     if (categoryParam) {
-      setCategory(categoryParam)
+      // Map category names from URL to internal category keys
+      const categoryMap: Record<string, { category: string, type: string }> = {
+        'Plumber': { category: 'home', type: 'plumbing' },
+        'Electrician': { category: 'home', type: 'electrical' },
+        'HVAC': { category: 'home', type: 'hvac' },
+        'Roofer': { category: 'home', type: 'roofing' },
+        'Water Damage Restoration': { category: 'home', type: 'water-damage' },
+        'Locksmith': { category: 'home', type: 'locksmith' },
+        'Appliance Repair': { category: 'home', type: 'appliance' },
+        'Other': { category: 'home', type: 'other' },
+        'Auto Battery': { category: 'auto', type: 'battery' },
+        'Auto Tire': { category: 'auto', type: 'tire' },
+        'Auto Lockout': { category: 'auto', type: 'lockout' },
+        'Tow': { category: 'auto', type: 'tow' },
+        'Fuel Delivery': { category: 'auto', type: 'fuel' },
+        'Mobile Mechanic': { category: 'auto', type: 'mechanic' },
+        'Auto Other': { category: 'auto', type: 'other' },
+      }
+
+      const mapped = categoryMap[categoryParam]
+      if (mapped) {
+        setCategory(mapped.category)
+        setEmergencyType(mapped.type)
+      } else {
+        // Fallback: just set the category directly
+        setCategory(categoryParam.toLowerCase())
+      }
     }
   }, [searchParams])
 
@@ -556,32 +659,43 @@ export default function PostJobInner({ userId }: Props) {
           return
         }
 
-        // Client-side filter by emergency type if selected
+        // Client-side filter by emergency type or category
         let contractors = allContractors || []
-        if (emergencyType && contractors.length > 0) {
-          // Map emergency type keys to actual contractor category values
-          const emergencyTypeToCategory: Record<string, string> = {
-            'plumbing': 'Plumbing',
-            'electrical': 'Electrical',
-            'hvac': 'HVAC',
-            'roofing': 'Roofing',
-            'water-damage': 'Plumbing',
-            'locksmith': 'Locksmith',
-            'appliance': 'Appliance Repair',
+
+        // Use emergencyType if available, otherwise fall back to category
+        const filterKey = emergencyType || category
+
+        if (filterKey && contractors.length > 0) {
+          // Map emergency type/category keys to actual contractor category values
+          const emergencyTypeToCategory: Record<string, string[]> = {
+            // Specific emergency types
+            'plumbing': ['Plumbing'],
+            'electrical': ['Electrical'],
+            'hvac': ['HVAC'],
+            'roofing': ['Roofing'],
+            'water-damage': ['Plumbing', 'Water Damage'],
+            'locksmith': ['Locksmith'],
+            'appliance': ['Appliance Repair'],
+            // Broader categories - include multiple contractor types
+            'home': ['Plumbing', 'Electrical', 'HVAC', 'Roofing', 'Locksmith', 'Appliance Repair', 'Water Damage', 'General Contractor'],
+            'auto': ['Auto Repair', 'Towing', 'Locksmith'],
           }
 
-          const targetCategory = emergencyTypeToCategory[emergencyType]
-          console.log('[POST-JOB] Filtering by emergencyType:', emergencyType, '→ Category:', targetCategory)
+          const targetCategories = emergencyTypeToCategory[filterKey]
+          console.log('[POST-JOB] Filtering by:', filterKey, '→ Categories:', targetCategories)
 
-          if (targetCategory) {
+          if (targetCategories && targetCategories.length > 0) {
             contractors = contractors.filter(c => {
               const cats = c.categories || []
-              // Case-insensitive match
+              // Case-insensitive match - check if contractor has ANY of the target categories
               return Array.isArray(cats) && cats.some((cat: string) =>
-                cat.toLowerCase() === targetCategory.toLowerCase()
+                targetCategories.some(targetCat =>
+                  cat.toLowerCase().includes(targetCat.toLowerCase()) ||
+                  targetCat.toLowerCase().includes(cat.toLowerCase())
+                )
               )
             })
-            console.log('[POST-JOB] After category filter:', contractors.length, 'contractors match', emergencyType)
+            console.log('[POST-JOB] After category filter:', contractors.length, 'contractors match', filterKey)
           }
         }
 
@@ -684,7 +798,7 @@ export default function PostJobInner({ userId }: Props) {
     }
 
     fetchNearbyContractors()
-  }, [emergencyType, address, userLocation])
+  }, [category, emergencyType, address, userLocation])
 
   const filteredNearby = useMemo(() => {
     // Only show contractors if we have a location (userLocation OR valid ZIP in address)
@@ -747,6 +861,21 @@ export default function PostJobInner({ userId }: Props) {
     console.log('[SUBMIT] Button clicked!')
     console.log('[SUBMIT] Form values:', { address, phone, category, emergencyType, sendAll, picked })
 
+    // Check address and phone first (they're in modals now)
+    if (!address || address.trim() === '') {
+      console.error('[SUBMIT] Address is missing')
+      setErrorPopup('Please set your emergency location by clicking the "Set location" link at the top.')
+      setShowLocationModal(true)
+      return
+    }
+
+    if (!phone || phone.trim() === '') {
+      console.error('[SUBMIT] Phone is missing')
+      setErrorPopup('Please set your contact number by clicking the "Set phone" link at the top.')
+      setShowPhoneModal(true)
+      return
+    }
+
     // Mark all fields as touched to show validation errors
     setTouched({
       address: true,
@@ -755,26 +884,23 @@ export default function PostJobInner({ userId }: Props) {
       emergencyType: true,
     })
 
-    // Validate all mandatory fields
-    const isValid = validateForm()
-    console.log('[SUBMIT] Validation result:', isValid)
-    console.log('[SUBMIT] Errors:', errors)
+    // Validate category and emergency type
+    if (!category || category.trim() === '') {
+      console.error('[SUBMIT] Category is missing')
+      setErrorPopup('Please select an emergency category.')
+      return
+    }
 
-    if (!isValid) {
-      console.error('[SUBMIT] VALIDATION FAILED! Errors:', errors)
-      // Scroll to the first error
-      const firstError = document.querySelector('[aria-invalid="true"]')
-      if (firstError) {
-        console.log('[SUBMIT] Scrolling to first error')
-        firstError.scrollIntoView({ behavior: 'smooth', block: 'center' })
-      }
+    if (!emergencyType || emergencyType.trim() === '') {
+      console.error('[SUBMIT] Emergency type is missing')
+      setErrorPopup('Please select a specific emergency type.')
       return
     }
 
     // If selecting specific contractor, ensure one is picked
     if (!sendAll && !picked) {
       console.error('[SUBMIT] No contractor selected')
-      alert('Please select a contractor or choose "Alert All Nearby" option.')
+      setErrorPopup('Please select a contractor or choose "Alert All Nearby" option.')
       return
     }
 
@@ -873,8 +999,132 @@ export default function PostJobInner({ userId }: Props) {
           }
         />
 
+        <ErrorPopup
+          message={errorPopup}
+          onClose={() => setErrorPopup('')}
+        />
+
         {/* Emergency banner */}
         <EmergencyBanner />
+
+        {/* Contact Details Section */}
+        <div className="card p-4 mb-6">
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-6">
+              <div className="flex items-center gap-2">
+                <MapPin className="h-4 w-4 text-slate-500" />
+                <span className="text-sm text-slate-600">Location:</span>
+                <button
+                  onClick={() => setShowLocationModal(true)}
+                  className="text-sm text-emerald-600 hover:text-emerald-700 hover:underline font-medium"
+                >
+                  {address || 'Set location'}
+                </button>
+              </div>
+              <div className="flex items-center gap-2">
+                <Phone className="h-4 w-4 text-slate-500" />
+                <span className="text-sm text-slate-600">Phone:</span>
+                <button
+                  onClick={() => setShowPhoneModal(true)}
+                  className="text-sm text-emerald-600 hover:text-emerald-700 hover:underline font-medium"
+                >
+                  {phone || 'Set phone'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Location Modal */}
+        {showLocationModal && (
+          <div className="fixed inset-0 bg-black/20 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div className="bg-white/80 backdrop-blur-lg rounded-xl shadow-2xl max-w-md w-full p-6 border border-white/70" style={{ backdropFilter: 'blur(12px)' }}>
+              <h3 className="text-xl font-bold mb-4 text-gray-900">Set Emergency Location</h3>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Address <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={address}
+                    onChange={(e) => setAddress(e.target.value)}
+                    placeholder="123 Main St, City, State ZIP"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 bg-white"
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    getCurrentLocation()
+                    setShowLocationModal(false)
+                  }}
+                  className="w-full px-4 py-3 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 flex items-center justify-center gap-2"
+                >
+                  <MapPin className="h-5 w-5" />
+                  Use My Current Location
+                </button>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setShowLocationModal(false)}
+                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 bg-white"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={() => {
+                      validateField('address', address)
+                      setShowLocationModal(false)
+                    }}
+                    className="flex-1 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700"
+                  >
+                    Save
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Phone Modal */}
+        {showPhoneModal && (
+          <div className="fixed inset-0 bg-black/20 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div className="bg-white/80 backdrop-blur-lg rounded-xl shadow-2xl max-w-md w-full p-6 border border-white/70" style={{ backdropFilter: 'blur(12px)' }}>
+              <h3 className="text-xl font-bold mb-4 text-gray-900">Set Contact Number</h3>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Phone Number <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="tel"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    placeholder="(555) 123-4567"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 bg-white"
+                  />
+                </div>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setShowPhoneModal(false)}
+                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 bg-white"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={() => {
+                      validateField('phone', phone)
+                      setShowPhoneModal(false)
+                    }}
+                    className="flex-1 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700"
+                  >
+                    Save
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-5">
           {/* Left column: Emergency form */}
@@ -910,6 +1160,7 @@ export default function PostJobInner({ userId }: Props) {
               onUpload={onUpload}
               uploadError={uploadError}
               userId={userId}
+              initialStep={category && emergencyType ? 2 : 1}
             />
           </div>
 
@@ -1051,23 +1302,6 @@ export default function PostJobInner({ userId }: Props) {
                 )}
               </div>
             )}
-
-            <div className="flex items-center justify-between gap-4 p-4 bg-slate-50 rounded-lg">
-              <div className="flex items-center gap-2 text-sm text-slate-600">
-                <Phone className="h-4 w-4" />
-                Your contact info is shared only after a pro accepts your emergency request.
-              </div>
-              <button
-                className={`px-8 py-3 rounded-lg font-semibold text-lg transition-all transform hover:scale-105 ${sending || (!sendAll && !picked)
-                  ? 'bg-slate-300 text-slate-500 cursor-not-allowed'
-                  : 'bg-red-600 hover:bg-red-700 text-white shadow-lg'
-                  }`}
-                disabled={sending || (!sendAll && !picked)}
-                onClick={submit}
-              >
-                {sending ? 'Sending Emergency Request...' : sendAll ? '🚨 Alert All Emergency Pros' : selectedContractor ? `Alert ${selectedContractor.name}` : 'Send Emergency Request'}
-              </button>
-            </div>
           </div>
         </div>
       </div>

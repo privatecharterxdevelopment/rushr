@@ -317,7 +317,7 @@ export default function Header() {
     '--color-primary': '37 99 235',
     '--color-primary-hover': '29 78 216',
     '--color-primary-foreground': '255 255 255',
-    backgroundColor: isScrolled ? 'rgb(255,255,255)' : 'rgba(255,255,255,0.9)',
+    backgroundColor: '#ffffff',
   } as React.CSSProperties : {
     // GREEN HOMEOWNER THEME
     '--brand-border': '#10B981',
@@ -327,13 +327,13 @@ export default function Header() {
     '--color-primary': '16 185 129',
     '--color-primary-hover': '5 150 105',
     '--color-primary-foreground': '255 255 255',
-    backgroundColor: isScrolled ? 'rgb(255,255,255)' : 'rgba(255,255,255,0.9)',
+    backgroundColor: '#ffffff',
   } as React.CSSProperties
 
   return (
     <>
     <header className="sticky top-0 z-50 backdrop-blur-md border-b border-slate-200 dark:bg-slate-900/90 dark:border-slate-700 shadow-sm" style={headerStyle}>
-      <div className="container-max py-3 flex items-center gap-2 sm:gap-4">
+      <div className="mx-auto w-full px-4 sm:px-6 md:px-10 lg:px-16 py-3 flex items-center gap-2 sm:gap-4">
         {/* Logo links to /pro on Pro pages, / on homeowner pages */}
         <Link href={isProRoute ? '/pro' : '/'} className="flex items-center gap-2">
           <LogoWordmark />

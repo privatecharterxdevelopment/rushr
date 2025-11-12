@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Reset Rushr Auth</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        button {
+            background: #ef4444;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            width: 100%;
+            margin: 10px 0;
+        }
+        button:hover {
+            background: #dc2626;
+        }
+        .success {
+            background: #10b981;
+            color: white;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 10px 0;
+            display: none;
+        }
+        h1 { color: #111; }
+        p { color: #666; line-height: 1.6; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 Reset Rushr Authentication</h1>
+        <p>Click the button below to completely clear all authentication data and reset login state.</p>
+
+        <button onclick="resetAuth()">Reset Authentication Now</button>
+
+        <div class="success" id="success">
+            ✅ Authentication reset complete!<br>
+            You can now close this page and try logging in again.
+        </div>
+
+        <hr style="margin: 30px 0; border: none; border-top: 1px solid #ddd;">
+
+        <h3>What this does:</h3>
+        <ul>
+            <li>Clears all localStorage data</li>
+            <li>Clears all sessionStorage data</li>
+            <li>Removes Supabase auth tokens</li>
+            <li>Resets stuck auth states</li>
+        </ul>
+    </div>
+
+    <script>
+        function resetAuth() {
+            // Clear all storage
+            localStorage.clear();
+            sessionStorage.clear();
+
+            // Clear cookies
+            document.cookie.split(";").forEach(function(c) {
+                document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
+            });
+
+            // Show success
+            document.getElementById('success').style.display = 'block';
+
+            console.log('Auth reset complete');
+        }
+    </script>
+</body>
+</html>

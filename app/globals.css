@@ -83,6 +83,11 @@ input, textarea, select, button {
 /* Smooth scrolling */
 html {
   scroll-behavior: smooth;
+  overflow-x: hidden;
+}
+
+body {
+  overflow-x: hidden;
 }
 @import url('https://unpkg.com/leaflet@1.9.4/dist/leaflet.css');
 

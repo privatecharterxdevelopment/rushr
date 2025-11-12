@@ -91,7 +91,7 @@ type CompletenessField = { key:string; label:string; weight:number; done:boolean
 export default function ContractorDashboardPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const { user, contractorProfile, loading } = useProAuth()
+  const { user, contractorProfile, loading: authLoading } = useProAuth()
   const [availability, setAvailability] = useState<Availability>('online')
   const [contractorData, setContractorData] = useState<any>(null)
   const [stripeConnectStatus, setStripeConnectStatus] = useState<any>(null)
@@ -107,6 +107,14 @@ export default function ContractorDashboardPage() {
   })
   const [contractorZips, setContractorZips] = useState<string[]>([])
   const [showSuccessToast, setShowSuccessToast] = useState(false)
+  const [directOffers, setDirectOffers] = useState<any[]>([])
+
+  // Redirect homeowners immediately
+  useEffect(() => {
+    if (!authLoading && user && !contractorProfile) {
+      router.push('/dashboard/homeowner')
+    }
+  }, [authLoading, user, contractorProfile, router])
 
   // Show success toast if login=success in URL
   useEffect(() => {
@@ -264,6 +272,64 @@ export default function ContractorDashboardPage() {
     loadNearbyJobs()
   }, [contractorZips, contractorData?.status, contractorData?.kyc_status])
 
+  // Load direct offers for this contractor
+  useEffect(() => {
+    const loadDirectOffers = async () => {
+      if (!user) return
+
+      try {
+        const { data: offers, error } = await supabase
+          .from('direct_offers')
+          .select(`
+            *,
+            homeowner_jobs (
+              id,
+              job_number,
+              title,
+              description,
+              category,
+              address,
+              phone,
+              created_at,
+              homeowner_id
+            )
+          `)
+          .eq('contractor_id', user.id)
+          .eq('status', 'pending')
+          .order('created_at', { ascending: false })
+
+        if (!error && offers) {
+          setDirectOffers(offers)
+        }
+      } catch (error) {
+        console.error('Error loading direct offers:', error)
+      }
+    }
+
+    loadDirectOffers()
+
+    // Set up real-time subscription for new direct offers
+    const channel = supabase
+      .channel('direct-offers-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'direct_offers',
+          filter: `contractor_id=eq.${user?.id}`
+        },
+        () => {
+          loadDirectOffers()
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [user])
+
   const handleStartKYC = () => {
     // Navigate to the comprehensive onboarding wizard
     router.push('/pro/wizard')
@@ -390,39 +456,40 @@ export default function ContractorDashboardPage() {
   const isVerified = contractorData?.status === 'approved'
 
   // Show loading while checking auth
-  if (loading) {
+  if (authLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <img
-          src="https://jtrxdcccswdwlritgstp.supabase.co/storage/v1/object/public/contractor-logos/RushrLogoAnimation.gif"
-          alt="Loading..."
-          className="h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4 object-contain"
-        />
-          <div className="text-lg font-medium text-slate-700">Loading your contractor dashboard...</div>
-          <div className="text-sm text-slate-500 mt-2">Setting up your profile and preferences</div>
-        </div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
       </div>
     )
   }
 
-  // Show sign-in prompt if no user
   if (!user) {
+    // Redirect handled by useEffect above
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    )
+  }
+
+  if (!contractorProfile) {
+    // Redirect handled by useEffect above
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center max-w-md mx-auto p-8">
           <div className="mb-6">
-            <div className="mx-auto w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mb-4">
-              <svg className="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="mx-auto w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mb-4">
+              <svg className="w-8 h-8 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
               </svg>
             </div>
-            <h2 className="text-2xl font-bold text-slate-900 mb-2">Contractor Access Required</h2>
-            <p className="text-slate-600 mb-6">Please sign in to access your contractor dashboard</p>
+            <h2 className="text-2xl font-bold text-slate-900 mb-2">Homeowner Account Detected</h2>
+            <p className="text-slate-600 mb-6">Redirecting to homeowner dashboard...</p>
           </div>
           <div className="space-y-3">
-            <a href="/pro" className="block w-full bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors font-medium">
-              Sign In to Pro Dashboard
+            <a href="/dashboard/homeowner" className="block w-full bg-emerald-600 text-white px-6 py-3 rounded-lg hover:bg-emerald-700 transition-colors font-medium">
+              Go to Homeowner Dashboard
             </a>
             <a href="/pro/contractor-signup" className="block w-full bg-slate-100 text-slate-700 px-6 py-3 rounded-lg hover:bg-slate-200 transition-colors font-medium">
               Create Contractor Account
@@ -728,40 +795,45 @@ export default function ContractorDashboardPage() {
           </div>
         </div>
 
-        {/* Emergency job alerts */}
+        {/* Direct Offers */}
         <div className="rounded-2xl border border-slate-200 p-4">
-          <SectionTitle action={(contractorData?.status === 'approved' && contractorData?.kyc_status === 'completed') ? <Link href="/dashboard/contractor/jobs" className="text-brand underline text-sm">See all</Link> : null}>
-            Emergency jobs nearby
+          <SectionTitle action={directOffers.length > 0 ? <Link href="/dashboard/contractor/jobs?tab=my-jobs" className="text-brand underline text-sm">See all</Link> : null}>
+            Direct Offers
           </SectionTitle>
           {!(contractorData?.status === 'approved' && contractorData?.kyc_status === 'completed') ? (
             <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-center">
               <AlertTriangle className="h-8 w-8 text-amber-500 mx-auto mb-2" />
               <p className="text-sm font-medium text-amber-900 mb-1">Verification Required</p>
-              <p className="text-xs text-amber-700">Complete your profile verification to receive emergency job alerts</p>
+              <p className="text-xs text-amber-700">Complete your profile verification to receive direct job offers</p>
             </div>
-          ) : availableJobs.length > 0 ? (
+          ) : directOffers.length > 0 ? (
             <ul className="space-y-2 max-h-[300px] overflow-y-auto">
-              {availableJobs.slice(0,3).map(job=>(
-                <li key={job.id} className="flex items-center justify-between rounded-lg border bg-white p-3">
+              {directOffers.slice(0,3).map(offer=>(
+                <li key={offer.id} className="flex items-center justify-between rounded-lg border border-emerald-200 bg-emerald-50 p-3">
                   <div>
                     <div className="font-medium text-ink dark:text-white flex items-center gap-2">
-                      {job.title}
-                      {job.priority === 'Emergency' && <span className="text-red-500 text-xs">🚨</span>}
+                      {offer.homeowner_jobs?.title || 'Direct Job Offer'}
+                      <span className="text-emerald-600 text-xs">🎯 Direct</span>
                     </div>
                     <div className="text-xs text-slate-600 flex items-center gap-2">
-                      <span>{job.location} • ${job.hourlyRate}/hr • {job.distance}mi</span>
+                      <span>{offer.homeowner_jobs?.address || 'Location TBD'}</span>
                       <span className="text-slate-400">•</span>
-                      <span className="flex items-center gap-1"><Clock className="h-3.5 w-3.5" /> {job.requestedMins}m ago</span>
+                      <span className="flex items-center gap-1">
+                        <Clock className="h-3.5 w-3.5" />
+                        {Math.floor((new Date().getTime() - new Date(offer.created_at).getTime()) / (1000 * 60))}m ago
+                      </span>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Link href={`/dashboard/contractor/jobs/${job.id}`} className="btn text-sm">View</Link>
+                    <Link href={`/dashboard/contractor/jobs?tab=my-jobs`} className="btn-primary text-sm px-4 py-2 rounded-lg">
+                      View Offer
+                    </Link>
                   </div>
                 </li>
               ))}
             </ul>
           ) : (
-            <div className="text-sm text-slate-600 text-center py-4">No emergency jobs available nearby.</div>
+            <div className="text-sm text-slate-600 text-center py-4">No direct offers at the moment.</div>
           )}
         </div>
 

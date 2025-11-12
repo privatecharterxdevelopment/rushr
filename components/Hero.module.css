@@ -1,0 +1,405 @@
+/* Animated Emerald Gradient Background */
+.gradientContainer {
+  position: relative;
+  background: linear-gradient(
+    135deg,
+    #064e3b 0%,
+    #065f46 30%,
+    #047857 50%,
+    #065f46 70%,
+    #064e3b 100%
+  );
+  background-size: 400% 400%;
+  animation: gradientFlow 25s ease-in-out infinite;
+  overflow: hidden;
+  will-change: background-position;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  /* Full width - no padding in parent anymore */
+  width: 100%;
+}
+
+@keyframes gradientFlow {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+/* Bottom to white gradient overlay */
+.gradientContainer::before {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 40%;
+  background: linear-gradient(
+    to top,
+    rgba(255, 255, 255, 0.95) 0%,
+    rgba(240, 244, 248, 0.7) 20%,
+    rgba(229, 231, 235, 0.4) 40%,
+    transparent 100%
+  );
+  z-index: 1;
+  will-change: opacity;
+  pointer-events: none;
+}
+
+/* Wave Layer 1 - Large waves */
+.waveLayer1 {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(
+    ellipse at 50% 50%,
+    rgba(5, 150, 105, 0.4) 0%,
+    transparent 70%
+  );
+  filter: blur(80px);
+  animation: waveFloat1 30s ease-in-out infinite;
+  z-index: 2;
+  will-change: transform;
+  transform: translate3d(0, 0, 0);
+  pointer-events: none;
+}
+
+@keyframes waveFloat1 {
+  0%, 100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(80px, -80px, 0) scale(1.2);
+  }
+}
+
+/* Wave Layer 2 - Medium waves */
+.waveLayer2 {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(
+    circle at 80% 60%,
+    rgba(16, 185, 129, 0.35) 0%,
+    transparent 65%
+  );
+  filter: blur(75px);
+  animation: waveFloat2 35s ease-in-out infinite;
+  z-index: 2;
+  will-change: transform;
+  transform: translate3d(0, 0, 0);
+  pointer-events: none;
+}
+
+@keyframes waveFloat2 {
+  0%, 100% {
+    transform: translate3d(0, 0, 0) rotate(0deg);
+  }
+  50% {
+    transform: translate3d(-90px, 50px, 0) rotate(10deg);
+  }
+}
+
+/* Wave Layer 3 - Small waves */
+.waveLayer3 {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(
+    ellipse at 20% 30%,
+    rgba(4, 120, 87, 0.35) 0%,
+    transparent 55%
+  );
+  filter: blur(70px);
+  animation: waveFloat3 28s ease-in-out infinite;
+  z-index: 2;
+  will-change: transform, opacity;
+  transform: translate3d(0, 0, 0);
+  pointer-events: none;
+}
+
+@keyframes waveFloat3 {
+  0%, 100% {
+    transform: translate3d(0, 0, 0) scale(1);
+    opacity: 0.9;
+  }
+  50% {
+    transform: translate3d(100px, 70px, 0) scale(1.35);
+    opacity: 1;
+  }
+}
+
+/* Bright Emerald Wave - travels across screen */
+.brightWave {
+  position: absolute;
+  width: 180%;
+  height: 180%;
+  top: -40%;
+  left: -150%;
+  background: radial-gradient(
+    ellipse 1000px 1400px at center,
+    rgba(110, 231, 183, 0.8) 0%,
+    rgba(52, 211, 153, 0.6) 25%,
+    rgba(16, 185, 129, 0.4) 50%,
+    transparent 75%
+  );
+  filter: blur(100px);
+  animation: brightWaveTravel 20s ease-in-out infinite;
+  z-index: 3;
+  will-change: transform;
+  transform: translate3d(0, 0, 0);
+  pointer-events: none;
+}
+
+@keyframes brightWaveTravel {
+  0% {
+    transform: translate3d(0%, 0%, 0);
+  }
+  50% {
+    transform: translate3d(140%, 0%, 0);
+  }
+  100% {
+    transform: translate3d(0%, 0%, 0);
+  }
+}
+
+/* Lava Lamp Blob 1 */
+.lavaBlob1 {
+  position: absolute;
+  width: 800px;
+  height: 800px;
+  top: -300px;
+  left: -300px;
+  background: radial-gradient(
+    circle,
+    rgba(5, 150, 105, 0.6) 0%,
+    rgba(4, 120, 87, 0.35) 30%,
+    transparent 70%
+  );
+  border-radius: 63% 37% 54% 46% / 55% 48% 52% 45%;
+  filter: blur(90px);
+  animation: lavaBlob1 40s ease-in-out infinite;
+  z-index: 2;
+  will-change: transform, border-radius;
+  transform: translate3d(0, 0, 0);
+  pointer-events: none;
+}
+
+@keyframes lavaBlob1 {
+  0% {
+    transform: translate3d(0, 0, 0) scale(1) rotate(0deg);
+    border-radius: 63% 37% 54% 46% / 55% 48% 52% 45%;
+  }
+  25% {
+    transform: translate3d(300px, 200px, 0) scale(1.2) rotate(90deg);
+    border-radius: 37% 63% 46% 54% / 48% 55% 45% 52%;
+  }
+  50% {
+    transform: translate3d(500px, 400px, 0) scale(1.4) rotate(180deg);
+    border-radius: 54% 46% 37% 63% / 52% 45% 55% 48%;
+  }
+  75% {
+    transform: translate3d(250px, 550px, 0) scale(1.1) rotate(270deg);
+    border-radius: 46% 54% 63% 37% / 45% 52% 48% 55%;
+  }
+  100% {
+    transform: translate3d(0, 0, 0) scale(1) rotate(360deg);
+    border-radius: 63% 37% 54% 46% / 55% 48% 52% 45%;
+  }
+}
+
+/* Lava Lamp Blob 2 */
+.lavaBlob2 {
+  position: absolute;
+  width: 900px;
+  height: 900px;
+  bottom: -400px;
+  right: -350px;
+  background: radial-gradient(
+    circle,
+    rgba(16, 185, 129, 0.6) 0%,
+    rgba(5, 150, 105, 0.35) 30%,
+    transparent 70%
+  );
+  border-radius: 41% 59% 58% 42% / 45% 60% 40% 55%;
+  filter: blur(100px);
+  animation: lavaBlob2 45s ease-in-out infinite;
+  z-index: 2;
+  will-change: transform, border-radius;
+  transform: translate3d(0, 0, 0);
+  pointer-events: none;
+}
+
+@keyframes lavaBlob2 {
+  0% {
+    transform: translate3d(0, 0, 0) scale(1) rotate(0deg);
+    border-radius: 41% 59% 58% 42% / 45% 60% 40% 55%;
+  }
+  25% {
+    transform: translate3d(-250px, -300px, 0) scale(1.15) rotate(-90deg);
+    border-radius: 59% 41% 42% 58% / 60% 45% 55% 40%;
+  }
+  50% {
+    transform: translate3d(-450px, -500px, 0) scale(1.3) rotate(-180deg);
+    border-radius: 58% 42% 59% 41% / 40% 55% 45% 60%;
+  }
+  75% {
+    transform: translate3d(-200px, -250px, 0) scale(1.05) rotate(-270deg);
+    border-radius: 42% 58% 41% 59% / 55% 40% 60% 45%;
+  }
+  100% {
+    transform: translate3d(0, 0, 0) scale(1) rotate(-360deg);
+    border-radius: 41% 59% 58% 42% / 45% 60% 40% 55%;
+  }
+}
+
+/* Lava Lamp Blob 3 */
+.lavaBlob3 {
+  position: absolute;
+  width: 700px;
+  height: 700px;
+  top: 50%;
+  left: 50%;
+  background: radial-gradient(
+    circle,
+    rgba(4, 120, 87, 0.55) 0%,
+    rgba(6, 95, 70, 0.3) 30%,
+    transparent 70%
+  );
+  border-radius: 48% 52% 35% 65% / 57% 43% 57% 43%;
+  filter: blur(85px);
+  animation: lavaBlob3 42s ease-in-out infinite;
+  z-index: 2;
+  will-change: transform, border-radius;
+  transform: translate3d(-50%, -50%, 0);
+  pointer-events: none;
+}
+
+@keyframes lavaBlob3 {
+  0% {
+    transform: translate3d(-50%, -50%, 0) scale(1) rotate(0deg);
+    border-radius: 48% 52% 35% 65% / 57% 43% 57% 43%;
+  }
+  33% {
+    transform: translate3d(-45%, -55%, 0) scale(1.3) rotate(120deg);
+    border-radius: 52% 48% 65% 35% / 43% 57% 43% 57%;
+  }
+  66% {
+    transform: translate3d(-55%, -45%, 0) scale(1.5) rotate(240deg);
+    border-radius: 35% 65% 52% 48% / 57% 43% 57% 43%;
+  }
+  100% {
+    transform: translate3d(-50%, -50%, 0) scale(1) rotate(360deg);
+    border-radius: 48% 52% 35% 65% / 57% 43% 57% 43%;
+  }
+}
+
+/* Lava Lamp Blob 4 */
+.lavaBlob4 {
+  position: absolute;
+  width: 750px;
+  height: 750px;
+  top: 15%;
+  right: 5%;
+  background: radial-gradient(
+    circle,
+    rgba(5, 150, 105, 0.5) 0%,
+    rgba(4, 120, 87, 0.25) 30%,
+    transparent 70%
+  );
+  border-radius: 55% 45% 61% 39% / 47% 62% 38% 53%;
+  filter: blur(95px);
+  animation: lavaBlob4 48s ease-in-out infinite;
+  z-index: 2;
+  will-change: transform, border-radius;
+  transform: translate3d(0, 0, 0);
+  pointer-events: none;
+}
+
+@keyframes lavaBlob4 {
+  0% {
+    transform: translate3d(0, 0, 0) scale(1) rotate(0deg);
+    border-radius: 55% 45% 61% 39% / 47% 62% 38% 53%;
+  }
+  25% {
+    transform: translate3d(-150px, 200px, 0) scale(1.2) rotate(85deg);
+    border-radius: 45% 55% 39% 61% / 62% 47% 53% 38%;
+  }
+  50% {
+    transform: translate3d(-300px, 400px, 0) scale(1.4) rotate(170deg);
+    border-radius: 61% 39% 55% 45% / 38% 53% 47% 62%;
+  }
+  75% {
+    transform: translate3d(-100px, 250px, 0) scale(1.1) rotate(255deg);
+    border-radius: 39% 61% 45% 55% / 53% 38% 62% 47%;
+  }
+  100% {
+    transform: translate3d(0, 0, 0) scale(1) rotate(340deg);
+    border-radius: 55% 45% 61% 39% / 47% 62% 38% 53%;
+  }
+}
+
+/* Content wrapper to ensure content appears above animated layers */
+.contentWrapper {
+  position: relative;
+  z-index: 10;
+}
+
+/* Scrolling Categories Animation */
+.scrollContainer {
+  display: flex;
+  overflow: hidden;
+  width: 100%;
+  height: 100%;
+}
+
+.scrollContent {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  animation: scroll 30s linear infinite;
+  will-change: transform;
+}
+
+.scrollContentReverse {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  animation: scrollReverse 50s linear infinite;
+  will-change: transform;
+}
+
+@keyframes scroll {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+@keyframes scrollReverse {
+  0% {
+    transform: translateX(-50%);
+  }
+  100% {
+    transform: translateX(0);
+  }
+}
+
+/* Pause animation on hover */
+.scrollContainer:hover .scrollContent,
+.scrollContainer:hover .scrollContentReverse {
+  animation-play-state: paused;
+}

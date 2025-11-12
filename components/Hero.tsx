@@ -1,12 +1,43 @@
 // components/Hero.tsx
 'use client'
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '../contexts/AuthContext'
 import { openAuth } from './AuthModal'
 import dynamic from 'next/dynamic'
+import styles from './Hero.module.css'
 
 const HeroMapPreview = dynamic(() => import('./HeroMapPreview'), { ssr: false })
+
+// Emergency scenarios for typing effect
+const EMERGENCY_SCENARIOS = [
+  'Water pump broken?',
+  'Kitchen flooded?',
+  'Flat tire?',
+  'Power outage?',
+  'Pipe burst?',
+  'AC not working?',
+  'Heater broken?',
+  'Toilet clogged?',
+  'Lock broken?',
+]
+
+// Emergency categories for scrolling banner
+const EMERGENCY_CATEGORIES = [
+  { label: 'Plumbing', href: '/post-job?category=Plumber&urgent=1' },
+  { label: 'Electrical', href: '/post-job?category=Electrician&urgent=1' },
+  { label: 'HVAC', href: '/post-job?category=HVAC&urgent=1' },
+  { label: 'Roof Leak', href: '/post-job?category=Roofer&urgent=1' },
+  { label: 'Water Damage', href: '/post-job?category=Water%20Damage%20Restoration&urgent=1' },
+  { label: 'Locksmith', href: '/post-job?category=Locksmith&urgent=1' },
+  { label: 'Appliance Repair', href: '/post-job?category=Appliance%20Repair&urgent=1' },
+  { label: 'Jump Start', href: '/post-job?category=Auto%20Battery&urgent=1' },
+  { label: 'Flat Tire', href: '/post-job?category=Auto%20Tire&urgent=1' },
+  { label: 'Car Lockout', href: '/post-job?category=Auto%20Lockout&urgent=1' },
+  { label: 'Towing', href: '/post-job?category=Tow&urgent=1' },
+  { label: 'Fuel Delivery', href: '/post-job?category=Fuel%20Delivery&urgent=1' },
+  { label: 'Mobile Mechanic', href: '/post-job?category=Mobile%20Mechanic&urgent=1' },
+]
 
 // Category mapping based on keywords
 const CATEGORY_KEYWORDS: Record<string, string[]> = {
@@ -37,7 +68,42 @@ export default function Hero(){
 
   const [searchQuery, setSearchQuery] = useState('')
   const [location, setLocation] = useState('')
+  const [searchCenter, setSearchCenter] = useState<[number, number]>([40.7128, -74.006]) // Default NYC
   const [loadingLocation, setLoadingLocation] = useState(false)
+  const [placeholderText, setPlaceholderText] = useState('')
+  const [currentScenarioIndex, setCurrentScenarioIndex] = useState(0)
+  const [isDeleting, setIsDeleting] = useState(false)
+
+  // Typing animation effect
+  useEffect(() => {
+    const currentScenario = EMERGENCY_SCENARIOS[currentScenarioIndex]
+    const typingSpeed = isDeleting ? 50 : 100
+    const pauseAfterComplete = 2000
+    const pauseAfterDelete = 500
+
+    const timer = setTimeout(() => {
+      if (!isDeleting) {
+        // Typing
+        if (placeholderText.length < currentScenario.length) {
+          setPlaceholderText(currentScenario.slice(0, placeholderText.length + 1))
+        } else {
+          // Finished typing, pause then start deleting
+          setTimeout(() => setIsDeleting(true), pauseAfterComplete)
+        }
+      } else {
+        // Deleting
+        if (placeholderText.length > 0) {
+          setPlaceholderText(placeholderText.slice(0, -1))
+        } else {
+          // Finished deleting, move to next scenario
+          setIsDeleting(false)
+          setCurrentScenarioIndex((prev) => (prev + 1) % EMERGENCY_SCENARIOS.length)
+        }
+      }
+    }, typingSpeed)
+
+    return () => clearTimeout(timer)
+  }, [placeholderText, isDeleting, currentScenarioIndex])
 
   // Get user's location and convert to ZIP
   const getUserLocation = async () => {
@@ -69,10 +135,13 @@ export default function Hero(){
             } else {
               setLocation(`${latitude.toFixed(4)}, ${longitude.toFixed(4)}`)
             }
+            // Update search center for map
+            setSearchCenter([latitude, longitude])
           }
         } catch (error) {
           console.error('Error reverse geocoding:', error)
           setLocation(`${latitude.toFixed(4)}, ${longitude.toFixed(4)}`)
+          setSearchCenter([latitude, longitude])
         }
 
         setLoadingLocation(false)
@@ -85,16 +154,46 @@ export default function Hero(){
     )
   }
 
-  const onFindPro = (e: React.FormEvent)=>{
+  const onFindPro = async (e: React.FormEvent)=>{
     e.preventDefault()
     if(!user){
       openAuth('signup')
       return
     }
 
+    // If location is empty and geolocation is available, try to get it
+    let finalLocation = location.trim()
+    if (!finalLocation && navigator.geolocation) {
+      setLoadingLocation(true)
+      try {
+        const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+          navigator.geolocation.getCurrentPosition(resolve, reject)
+        })
+
+        const { latitude, longitude } = position.coords
+        const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN
+
+        if (MAPBOX_TOKEN) {
+          const response = await fetch(
+            `https://api.mapbox.com/geocoding/v5/mapbox.places/${longitude},${latitude}.json?access_token=${MAPBOX_TOKEN}&types=postcode`
+          )
+          const data = await response.json()
+
+          if (data.features && data.features.length > 0) {
+            finalLocation = data.features[0].text
+            setLocation(finalLocation)
+            localStorage.setItem('housecall.defaultZip', finalLocation)
+          }
+        }
+      } catch (error) {
+        console.error('Error getting location:', error)
+      }
+      setLoadingLocation(false)
+    }
+
     // Extract zip code from location or search query
-    const zipMatch = (location + ' ' + searchQuery).match(/\b\d{5}\b/)
-    const zip = zipMatch ? zipMatch[0] : location.trim()
+    const zipMatch = (finalLocation + ' ' + searchQuery).match(/\b\d{5}\b/)
+    const zip = zipMatch ? zipMatch[0] : finalLocation
 
     if (zip && typeof window !== 'undefined') {
       try { localStorage.setItem('housecall.defaultZip', zip) } catch {}
@@ -111,8 +210,18 @@ export default function Hero(){
   }
 
   return (
-    <section className="relative -mx-4 sm:-mx-6 lg:-mx-8 bg-gradient-to-br from-emerald-800 via-emerald-700 to-teal-800 min-h-[520px] lg:min-h-[580px]">
-      <div className="relative container-max px-4 sm:px-6 md:px-10 lg:px-16 py-6 md:py-8 lg:py-16 h-full flex items-end">
+    <section className={`relative min-h-[520px] lg:min-h-[580px] ${styles.gradientContainer}`}>
+      {/* Animated gradient layers */}
+      <div className={styles.waveLayer1}></div>
+      <div className={styles.waveLayer2}></div>
+      <div className={styles.waveLayer3}></div>
+      <div className={styles.brightWave}></div>
+      <div className={styles.lavaBlob1}></div>
+      <div className={styles.lavaBlob2}></div>
+      <div className={styles.lavaBlob3}></div>
+      <div className={styles.lavaBlob4}></div>
+
+      <div className={`relative container-max px-4 sm:px-6 md:px-10 lg:px-16 py-6 md:py-8 lg:py-16 h-full flex items-end ${styles.contentWrapper}`}>
         <div className="grid lg:grid-cols-2 gap-8 lg:gap-12 w-full items-end pb-0">
           {/* Left Column - Content */}
           <div className="text-white space-y-3 lg:space-y-4 flex flex-col justify-center pt-8 lg:pt-12">
@@ -126,72 +235,110 @@ export default function Hero(){
               Upfront pricing and no hidden fees.
             </p>
 
-            {/* Search Form */}
-            <form onSubmit={onFindPro} className="flex flex-col gap-2 max-w-xl">
-              {/* Search input - full width on all devices */}
-              <div className="w-full">
+            {/* Search Form - Single unified field */}
+            <form onSubmit={onFindPro} className="max-w-4xl">
+              <div className="relative flex items-center bg-white rounded-lg shadow-lg">
+                {/* Search input */}
                 <input
                   type="text"
-                  placeholder="What emergency do you need? (e.g., plumber, electrician)"
+                  placeholder={placeholderText}
                   value={searchQuery}
                   onChange={e => setSearchQuery(e.target.value)}
-                  className="w-full px-4 py-3 rounded-lg text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-400 text-sm"
+                  className="flex-1 px-4 py-3.5 rounded-l-lg text-gray-900 placeholder-gray-500 focus:outline-none text-sm border-r border-gray-200"
                 />
-              </div>
 
-              {/* Location and Submit - horizontal row */}
-              <div className="flex items-center gap-2">
-                <div className="flex-1 min-w-0 relative">
-                  <input
-                    type="text"
-                    placeholder="ZIP Code"
-                    value={location}
-                    onChange={e => setLocation(e.target.value)}
-                    className="w-full pl-4 pr-10 py-3 rounded-lg text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-400 text-sm"
-                  />
-                  <button
-                    type="button"
-                    onClick={getUserLocation}
-                    disabled={loadingLocation}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 hover:bg-gray-100 rounded-md transition-colors disabled:opacity-50"
-                    title="Use my location"
-                  >
-                    {loadingLocation ? (
-                      <img
-                        src="https://jtrxdcccswdwlritgstp.supabase.co/storage/v1/object/public/contractor-logos/RushrLogoAnimation.gif"
-                        alt="Loading..."
-                        className="w-5 h-5 object-contain"
-                      />
-                    ) : (
-                      <svg className="h-5 w-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                      </svg>
-                    )}
-                  </button>
-                </div>
+                {/* ZIP Code */}
+                <input
+                  type="text"
+                  placeholder="ZIP"
+                  value={location}
+                  onChange={e => setLocation(e.target.value)}
+                  className="w-24 px-3 py-3.5 text-gray-900 placeholder-gray-500 focus:outline-none text-sm border-r border-gray-200"
+                />
+
+                {/* Location button */}
+                <button
+                  type="button"
+                  onClick={getUserLocation}
+                  disabled={loadingLocation}
+                  className="px-2 py-3.5 hover:bg-gray-50 transition-colors disabled:opacity-50 border-r border-gray-200"
+                  title="Use my location"
+                >
+                  {loadingLocation ? (
+                    <img
+                      src="https://jtrxdcccswdwlritgstp.supabase.co/storage/v1/object/public/contractor-logos/RushrLogoAnimation.gif"
+                      alt="Loading..."
+                      className="w-5 h-5 object-contain"
+                    />
+                  ) : (
+                    <svg className="h-5 w-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                  )}
+                </button>
+
+                {/* Find a Pro button */}
                 <button
                   type="submit"
-                  className="flex-shrink-0 px-6 py-3 bg-gray-900 hover:bg-black text-white font-semibold rounded-lg transition-colors whitespace-nowrap text-sm"
+                  disabled={loadingLocation}
+                  className="px-6 py-3.5 bg-gray-900 hover:bg-black text-white font-semibold rounded-r-lg transition-colors whitespace-nowrap text-sm disabled:opacity-50"
                 >
                   Find a Pro
                 </button>
               </div>
             </form>
 
-            {/* Trust Indicators */}
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-emerald-50">
-              <div className="flex items-center gap-2">
-                <span className="text-yellow-400">★★★★★</span>
-                <span className="font-semibold">4.5 average</span>
-                <span className="text-emerald-300">(10k+ jobs)</span>
+            {/* Animated Emergency Categories Scroll - Below search, constrained to search bar width */}
+            <div className="relative overflow-hidden" style={{ height: '40px', width: 'calc(100% - 120px)' }}>
+              <div className={styles.scrollContainer}>
+                <div className={styles.scrollContentReverse}>
+                  {/* First set of categories - only show 4 */}
+                  {EMERGENCY_CATEGORIES.slice(0, 4).map((cat, idx) => (
+                    <button
+                      key={`1-${idx}`}
+                      onClick={() => {
+                        if (!user) {
+                          openAuth('signup')
+                          return
+                        }
+                        router.push(cat.href)
+                      }}
+                      className="flex-shrink-0 px-4 py-2 backdrop-blur-md bg-white/10 border border-white/20 text-white rounded-full text-xs font-medium hover:bg-white/20 hover:border-white/30 transition-all cursor-pointer whitespace-nowrap shadow-lg"
+                      style={{ backdropFilter: 'blur(10px)' }}
+                    >
+                      {cat.label}
+                    </button>
+                  ))}
+                  {/* Duplicate set for seamless loop */}
+                  {EMERGENCY_CATEGORIES.slice(0, 4).map((cat, idx) => (
+                    <button
+                      key={`2-${idx}`}
+                      onClick={() => {
+                        if (!user) {
+                          openAuth('signup')
+                          return
+                        }
+                        router.push(cat.href)
+                      }}
+                      className="flex-shrink-0 px-4 py-2 backdrop-blur-md bg-white/10 border border-white/20 text-white rounded-full text-xs font-medium hover:bg-white/20 hover:border-white/30 transition-all cursor-pointer whitespace-nowrap shadow-lg"
+                      style={{ backdropFilter: 'blur(10px)' }}
+                    >
+                      {cat.label}
+                    </button>
+                  ))}
+                </div>
               </div>
-              <div className="flex items-center gap-2">
-                <svg className="w-5 h-5 text-emerald-300" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                </svg>
-                <span>Background-checked pros</span>
+            </div>
+
+            {/* Trust indicators - moved below bubbles */}
+            <div className="flex flex-wrap items-center gap-4 text-emerald-100 -mt-1 mb-1">
+              <div className="flex items-center gap-1">
+                <span className="text-lg">★★★★★</span>
+                <span className="text-sm ml-1">4.5 average</span>
               </div>
+              <span className="text-sm">(10k+ jobs)</span>
+              <span className="text-sm">Background-checked pros</span>
             </div>
 
             <div className="flex flex-wrap items-center gap-2">
@@ -211,8 +358,8 @@ export default function Hero(){
           </div>
 
           {/* Right Column - Live Map Preview */}
-          <div className="hidden lg:flex items-end justify-center self-end pb-0" style={{ marginBottom: '-80px' }}>
-            <HeroMapPreview />
+          <div className="hidden lg:flex items-start justify-end self-start pb-0 overflow-hidden" style={{ marginTop: '60px', marginBottom: '-460px', height: '500px', paddingRight: '0' }}>
+            <HeroMapPreview searchCenter={searchCenter} />
           </div>
         </div>
       </div>

@@ -24,6 +24,7 @@ module.exports = {
   	extend: {
   		fontFamily: {
   			sans: ['var(--font-satoshi)', 'Satoshi', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial', 'sans-serif'],
+  			satoshi: ['var(--font-satoshi)', 'Satoshi', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial', 'sans-serif'],
   		},
   		colors: {
   			primary: {

@@ -372,23 +372,23 @@ function PopularEmergencies() {
     Array<{ name: string; href: string; icon: React.ReactNode; hint?: string }>
   > = {
     Home: [
-      { name: 'Plumbing', href: '/find-pro?category=Plumbing&urgent=1', icon: <ShowerHead className="h-6 w-6" />, hint: 'Leaks, clogs, burst pipes' },
-      { name: 'Electrical', href: '/find-pro?category=Electrical&urgent=1', icon: <Lightbulb className="h-6 w-6" />, hint: 'No power, breakers, outlets' },
-      { name: 'HVAC', href: '/find-pro?category=HVAC&urgent=1', icon: <Wind className="h-6 w-6" />, hint: 'No-cool, no-heat' },
-      { name: 'Roof leak', href: '/find-pro?category=Roofing&urgent=1', icon: <HomeIcon className="h-6 w-6" />, hint: 'Active leak, tarp' },
-      { name: 'Water damage', href: '/find-pro?category=Water%20Damage&urgent=1', icon: <Droplets className="h-6 w-6" />, hint: 'Dry-out, mitigation' },
-      { name: 'Locksmith', href: '/find-pro?category=Locksmith&urgent=1', icon: <Lock className="h-6 w-6" />, hint: 'House lockout, rekey' },
-      { name: 'Appliance repair', href: '/find-pro?category=Appliance%20Repair&urgent=1', icon: <Wrench className="h-6 w-6" />, hint: 'Fridge, washer, oven' },
-      { name: 'Other', href: '/find-pro?category=Other&urgent=1', icon: <Hammer className="h-6 w-6" />, hint: 'Tell us what you need' },
+      { name: 'Plumbing', href: '/post-job?category=Plumber&urgent=1', icon: <ShowerHead className="h-6 w-6" />, hint: 'Leaks, clogs, burst pipes' },
+      { name: 'Electrical', href: '/post-job?category=Electrician&urgent=1', icon: <Lightbulb className="h-6 w-6" />, hint: 'No power, breakers, outlets' },
+      { name: 'HVAC', href: '/post-job?category=HVAC&urgent=1', icon: <Wind className="h-6 w-6" />, hint: 'No-cool, no-heat' },
+      { name: 'Roof leak', href: '/post-job?category=Roofer&urgent=1', icon: <HomeIcon className="h-6 w-6" />, hint: 'Active leak, tarp' },
+      { name: 'Water damage', href: '/post-job?category=Water%20Damage%20Restoration&urgent=1', icon: <Droplets className="h-6 w-6" />, hint: 'Dry-out, mitigation' },
+      { name: 'Locksmith', href: '/post-job?category=Locksmith&urgent=1', icon: <Lock className="h-6 w-6" />, hint: 'House lockout, rekey' },
+      { name: 'Appliance repair', href: '/post-job?category=Appliance%20Repair&urgent=1', icon: <Wrench className="h-6 w-6" />, hint: 'Fridge, washer, oven' },
+      { name: 'Other', href: '/post-job?category=Other&urgent=1', icon: <Hammer className="h-6 w-6" />, hint: 'Tell us what you need' },
     ],
     Auto: [
-      { name: 'Jump start', href: '/find-pro?category=Auto%20Battery&urgent=1', icon: <Battery className="h-6 w-6" />, hint: 'Dead battery' },
-      { name: 'Tire change', href: '/find-pro?category=Auto%20Tire&urgent=1', icon: <Wrench className="h-6 w-6" />, hint: 'Flat, spare install' },
-      { name: 'Lockout', href: '/find-pro?category=Auto%20Lockout&urgent=1', icon: <KeyRound className="h-6 w-6" />, hint: 'Keys inside' },
-      { name: 'Tow request', href: '/find-pro?category=Tow&urgent=1', icon: <Car className="h-6 w-6" />, hint: 'Local tow' },
-      { name: 'Fuel delivery', href: '/find-pro?category=Fuel%20Delivery&urgent=1', icon: <Siren className="h-6 w-6" />, hint: 'Out of gas' },
-      { name: 'Mobile mechanic', href: '/find-pro?category=Mobile%20Mechanic&urgent=1', icon: <Settings className="h-6 w-6" />, hint: 'On-site diagnosis' },
-      { name: 'Other', href: '/find-pro?category=Auto%20Other&urgent=1', icon: <Sparkles className="h-6 w-6" />, hint: 'Tell us what you need' },
+      { name: 'Jump start', href: '/post-job?category=Auto%20Battery&urgent=1', icon: <Battery className="h-6 w-6" />, hint: 'Dead battery' },
+      { name: 'Tire change', href: '/post-job?category=Auto%20Tire&urgent=1', icon: <Wrench className="h-6 w-6" />, hint: 'Flat, spare install' },
+      { name: 'Lockout', href: '/post-job?category=Auto%20Lockout&urgent=1', icon: <KeyRound className="h-6 w-6" />, hint: 'Keys inside' },
+      { name: 'Tow request', href: '/post-job?category=Tow&urgent=1', icon: <Car className="h-6 w-6" />, hint: 'Local tow' },
+      { name: 'Fuel delivery', href: '/post-job?category=Fuel%20Delivery&urgent=1', icon: <Siren className="h-6 w-6" />, hint: 'Out of gas' },
+      { name: 'Mobile mechanic', href: '/post-job?category=Mobile%20Mechanic&urgent=1', icon: <Settings className="h-6 w-6" />, hint: 'On-site diagnosis' },
+      { name: 'Other', href: '/post-job?category=Auto%20Other&urgent=1', icon: <Sparkles className="h-6 w-6" />, hint: 'Tell us what you need' },
     ],
   }
 

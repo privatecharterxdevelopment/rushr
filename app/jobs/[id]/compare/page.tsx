@@ -41,11 +41,14 @@ export default function CompareBids() {
       if (!user || !id) return
 
       try {
+        // Check if ID is a number (job_number) or UUID
+        const isJobNumber = /^\d+$/.test(id)
+
         // Fetch job details
         const { data: jobData, error: jobError } = await supabase
           .from('homeowner_jobs')
           .select('id, title, description')
-          .eq('id', id)
+          .eq(isJobNumber ? 'job_number' : 'id', id)
           .eq('homeowner_id', user.id)
           .single()
 
@@ -57,11 +60,11 @@ export default function CompareBids() {
 
         setJob(jobData)
 
-        // Fetch all bids for this job
+        // Fetch all bids for this job (use the actual UUID from jobData.id)
         const { data: bidsData, error: bidsError } = await supabase
           .from('job_bids')
           .select('*')
-          .eq('job_id', id)
+          .eq('job_id', jobData.id)
           .eq('homeowner_id', user.id)
           .order('bid_amount', { ascending: true })
 
@@ -188,7 +191,7 @@ export default function CompareBids() {
     return (
       <div className="container mx-auto px-4 py-8 max-w-6xl">
         <div className="flex items-center justify-between mb-6">
-          <h1 className="text-3xl font-bold text-slate-900">Compare Bids</h1>
+          <h1 className="text-3xl font-bold text-slate-900">See Bids</h1>
           <Link href="/dashboard/homeowner" className="px-4 py-2 text-emerald-600 hover:text-emerald-700 font-medium">
             Back to Dashboard
           </Link>
@@ -205,7 +208,7 @@ export default function CompareBids() {
       <div className="container mx-auto px-4 py-8 max-w-6xl">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h1 className="text-3xl font-bold text-slate-900">Compare Bids</h1>
+            <h1 className="text-3xl font-bold text-slate-900">See Bids</h1>
             <p className="text-slate-600 mt-1">{job?.title}</p>
           </div>
           <Link href="/dashboard/homeowner" className="px-4 py-2 text-emerald-600 hover:text-emerald-700 font-medium">

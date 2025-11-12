@@ -765,7 +765,7 @@ export default function FindProPage() {
                     Clear All Filters
                   </button>
                   <Link
-                    href="/get-help-now"
+                    href="/post-job"
                     className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-semibold transition-colors"
                   >
                     Post a Job Instead

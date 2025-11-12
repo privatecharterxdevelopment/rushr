@@ -16,10 +16,10 @@ export default function LoadingSpinner({
   color = 'blue'
 }: LoadingSpinnerProps) {
   const sizeClasses = {
-    sm: 'w-12 h-12',
-    md: 'w-20 h-20',
-    lg: 'w-32 h-32',
-    xl: 'w-40 h-40'
+    sm: 'w-8 h-8',
+    md: 'w-12 h-12',
+    lg: 'w-16 h-16',
+    xl: 'w-24 h-24'
   }
 
   const textSizes = {

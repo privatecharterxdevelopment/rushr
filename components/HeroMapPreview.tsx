@@ -14,7 +14,11 @@ const ProMapInner = dynamic(() => import('./ProMapInner'), {
   )
 })
 
-export default function HeroMapPreview() {
+type HeroMapPreviewProps = {
+  searchCenter?: [number, number]
+}
+
+export default function HeroMapPreview({ searchCenter }: HeroMapPreviewProps) {
   const [contractors, setContractors] = useState<any[]>([])
 
   useEffect(() => {
@@ -54,14 +58,13 @@ export default function HeroMapPreview() {
       }}
       className="relative"
       style={{
-        filter: 'drop-shadow(0 30px 60px rgba(0,0,0,0.4))',
-        width: '240px',
-        height: '500px',
+        width: '380px',
+        height: '820px',
       }}
     >
       {/* iPhone-style frame */}
       <div
-        className="relative bg-black rounded-[3rem] p-2.5 h-full"
+        className="relative bg-black rounded-[3rem] p-3.5 h-full"
       >
         {/* iPhone notch */}
         <div className="absolute top-0 left-1/2 -translate-x-1/2 bg-black rounded-b-3xl w-32 h-6 z-10" />
@@ -71,7 +74,7 @@ export default function HeroMapPreview() {
           <ProMapInner
             items={contractors}
             hideSidebar={true}
-            searchCenter={[40.7128, -74.006]} // Show NYC center as user location
+            searchCenter={searchCenter || [40.7128, -74.006]} // Use prop or default to NYC
             radiusMiles={5}
           />
         </div>

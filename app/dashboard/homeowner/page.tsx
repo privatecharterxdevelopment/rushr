@@ -162,6 +162,7 @@ export default function HomeownerDashboardPage() {
   // Direct Offers state
   const [directOffers, setDirectOffers] = useState<any[]>([])
   const [offersLoading, setOffersLoading] = useState(true)
+  const [offersByJobId, setOffersByJobId] = useState<Record<string, any>>({})
 
   // Payment method state
   const [hasPaymentMethod, setHasPaymentMethod] = useState(false)
@@ -565,6 +566,15 @@ export default function HomeownerDashboardPage() {
       )
 
       setDirectOffers(enrichedOffers)
+
+      // Create a map of job_id -> offer for quick lookup
+      const offerMap: Record<string, any> = {}
+      enrichedOffers.forEach(offer => {
+        if (offer.job_id) {
+          offerMap[offer.job_id] = offer
+        }
+      })
+      setOffersByJobId(offerMap)
     } catch (error) {
       console.error('Failed to fetch direct offers:', error)
     } finally {
@@ -577,6 +587,14 @@ export default function HomeownerDashboardPage() {
       fetchDirectOffers()
     }
   }, [user])
+
+  // Force refresh stats when component mounts or user changes
+  useEffect(() => {
+    if (user && refreshStats) {
+      console.log('[DASHBOARD] Forcing stats refresh on mount')
+      refreshStats()
+    }
+  }, [user, refreshStats])
 
   // NOW SAFE TO HAVE CONDITIONAL RETURNS AFTER ALL HOOKS
   // Show loading while auth is being determined
@@ -608,11 +626,11 @@ export default function HomeownerDashboardPage() {
     saved: stats?.trusted_contractors || 0
   }
 
-  // Show loading if user exists but profile is still loading
-  if (!userProfile) {
+  // Show loading while profile OR stats are loading
+  if (!userProfile || statsLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <LoadingSpinner size="lg" text="Setting up your profile..." color="emerald" />
+        <LoadingSpinner size="md" text="Loading your dashboard..." color="emerald" />
       </div>
     )
   }
@@ -736,7 +754,13 @@ export default function HomeownerDashboardPage() {
           <div className="p-6">
             {activeJobs.length > 0 ? (
               <div className="space-y-4">
-                {activeJobs.map(job => (
+                {activeJobs.map(job => {
+                  // Check if this job has a direct offer and its status
+                  const directOffer = offersByJobId[job.uuid]
+                  const isDirectOffer = job.requested_contractor_id || directOffer
+                  const offerStatus = directOffer?.contractor_response || directOffer?.status
+
+                  return (
                   <div key={job.id} className="border border-red-200 rounded-lg p-4 bg-red-50">
                     <div className="flex items-start justify-between gap-4">
                       <div className="flex-1">
@@ -758,9 +782,18 @@ export default function HomeownerDashboardPage() {
                               }`}>
                                 {job.status}
                               </span>
-                              {job.requested_contractor_id && (
-                                <span className="bg-blue-100 text-blue-800 text-xs font-semibold px-2 py-1 rounded-full">
-                                  ⭐ DIRECT OFFER
+                              {isDirectOffer && (
+                                <span className={`text-xs font-semibold px-2 py-1 rounded-full ${
+                                  offerStatus === 'accepted' || offerStatus === 'agreement_reached'
+                                    ? 'bg-green-100 text-green-800'
+                                    : offerStatus === 'counter_bid'
+                                    ? 'bg-purple-100 text-purple-800'
+                                    : 'bg-blue-100 text-blue-800'
+                                }`}>
+                                  {offerStatus === 'accepted' ? '✅ OFFER ACCEPTED' :
+                                   offerStatus === 'agreement_reached' ? '✅ AGREEMENT REACHED' :
+                                   offerStatus === 'counter_bid' ? '🔄 COUNTER BID' :
+                                   '⭐ DIRECT OFFER'}
                                 </span>
                               )}
                             </div>
@@ -839,7 +872,8 @@ export default function HomeownerDashboardPage() {
                       </div>
                     </div>
                   </div>
-                ))}
+                  )
+                })}
               </div>
             ) : (
               <div className="text-center py-8">

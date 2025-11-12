@@ -72,9 +72,7 @@ function MessagesContent() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }
 
-  useEffect(() => {
-    scrollToBottom()
-  }, [messages])
+  // Removed auto-scroll to allow manual scrolling
 
   // Fetch conversations with real data
   useEffect(() => {
@@ -339,7 +337,14 @@ function MessagesContent() {
 
     setSending(true)
     try {
-      const { error } = await supabase
+      console.log('[SEND MESSAGE] Attempting to send:', {
+        conversation_id: conversationId,
+        sender_id: user.id,
+        sender_type: 'homeowner',
+        content_length: newMessage.trim().length
+      })
+
+      const { data, error } = await supabase
         .from('messages')
         .insert({
           conversation_id: conversationId,
@@ -347,11 +352,18 @@ function MessagesContent() {
           sender_type: 'homeowner',
           content: newMessage.trim()
         })
+        .select()
 
       if (error) {
-        console.error('Failed to send message:', error)
-        alert('Failed to send message. Please try again.')
+        console.error('[SEND MESSAGE] Database error:', {
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+          code: error.code
+        })
+        alert(`Failed to send message: ${error.message}`)
       } else {
+        console.log('[SEND MESSAGE] Success:', data)
         setNewMessage('')
 
         // Stop typing indicator
@@ -360,7 +372,7 @@ function MessagesContent() {
         }
       }
     } catch (error) {
-      console.error('Failed to send message:', error)
+      console.error('[SEND MESSAGE] Unexpected error:', error)
       alert('Failed to send message. Please try again.')
     } finally {
       setSending(false)
@@ -421,7 +433,7 @@ function MessagesContent() {
   }
 
   return (
-    <div className="h-screen flex flex-col bg-gray-50">
+    <div className="flex flex-col bg-gray-50" style={{ height: 'calc(100vh - 80px)' }}>
       {/* Header */}
       <div className="bg-white border-b border-gray-200 px-6 py-4">
         <div className="flex items-center gap-4">
