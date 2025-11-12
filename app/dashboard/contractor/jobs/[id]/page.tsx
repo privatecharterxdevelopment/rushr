@@ -168,7 +168,13 @@ export default function ContractorJobDetailsPage() {
 
       if (error) {
         console.error('Error submitting bid:', error)
-        setSuccessMessage('Failed to submit bid. Please try again.')
+
+        // Check if it's a duplicate bid error
+        if (error.message.includes('duplicate key') || error.message.includes('job_bids_job_id_contractor_id_key')) {
+          setSuccessMessage('You have already submitted a bid for this job. Your bid is awaiting approval from the homeowner. You can message them in the Messages section.')
+        } else {
+          setSuccessMessage('Failed to submit bid. Please try again.')
+        }
         setShowSuccessModal(true)
       } else {
         setSuccessMessage(`Bid of $${parseFloat(bidAmount).toFixed(2)} submitted successfully! The homeowner will be notified.`)
@@ -178,9 +184,16 @@ export default function ContractorJobDetailsPage() {
           router.push('/dashboard/contractor/jobs?tab=my-jobs')
         }, 2000)
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error submitting bid:', err)
-      setSuccessMessage('Failed to submit bid. Please try again.')
+
+      // Check if it's a duplicate bid error
+      const errorMsg = err?.message || ''
+      if (errorMsg.includes('duplicate key') || errorMsg.includes('job_bids_job_id_contractor_id_key')) {
+        setSuccessMessage('You have already submitted a bid for this job. Your bid is awaiting approval from the homeowner. You can message them in the Messages section.')
+      } else {
+        setSuccessMessage('Failed to submit bid. Please try again.')
+      }
       setShowSuccessModal(true)
     } finally {
       setSubmittingBid(false)
