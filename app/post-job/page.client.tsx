@@ -726,6 +726,9 @@ export default function PostJobInner({ userId }: Props) {
   }
 
   function submit() {
+    console.log('[SUBMIT] Button clicked!')
+    console.log('[SUBMIT] Form values:', { address, phone, category, emergencyType, issueTitle, sendAll, picked })
+
     // Mark all fields as touched to show validation errors
     setTouched({
       address: true,
@@ -737,11 +740,15 @@ export default function PostJobInner({ userId }: Props) {
 
     // Validate all mandatory fields
     const isValid = validateForm()
+    console.log('[SUBMIT] Validation result:', isValid)
+    console.log('[SUBMIT] Errors:', errors)
 
     if (!isValid) {
+      console.error('[SUBMIT] VALIDATION FAILED! Errors:', errors)
       // Scroll to the first error
       const firstError = document.querySelector('[aria-invalid="true"]')
       if (firstError) {
+        console.log('[SUBMIT] Scrolling to first error')
         firstError.scrollIntoView({ behavior: 'smooth', block: 'center' })
       }
       return
@@ -749,10 +756,12 @@ export default function PostJobInner({ userId }: Props) {
 
     // If selecting specific contractor, ensure one is picked
     if (!sendAll && !picked) {
+      console.error('[SUBMIT] No contractor selected')
       alert('Please select a contractor or choose "Alert All Nearby" option.')
       return
     }
 
+    console.log('[SUBMIT] Opening confirmation modal')
     setConfirmOpen(true)
   }
 
