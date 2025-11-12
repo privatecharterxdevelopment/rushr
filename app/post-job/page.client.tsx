@@ -467,8 +467,8 @@ export default function PostJobInner({ userId }: Props) {
       case 'issueTitle':
         if (!value.trim()) {
           newErrors.issueTitle = 'Please describe your emergency'
-        } else if (value.trim().length < 10) {
-          newErrors.issueTitle = 'Please provide more details (at least 10 characters)'
+        } else if (value.trim().length < 3) {
+          newErrors.issueTitle = 'Please provide more details (at least 3 characters)'
         } else {
           delete newErrors.issueTitle
         }
