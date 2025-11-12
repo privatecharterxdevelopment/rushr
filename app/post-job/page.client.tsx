@@ -314,8 +314,11 @@ export default function PostJobInner({ userId }: Props) {
   const [phone, setPhone] = useState('')
   const [category, setCategory] = useState('')
   const [emergencyType, setEmergencyType] = useState('')
-  const [issueTitle, setIssueTitle] = useState('')
   const [details, setDetails] = useState('')
+
+  // Multi-step form state
+  const [currentStep, setCurrentStep] = useState(1)
+  const totalSteps = 5
   const [photos, setPhotos] = useState<File[]>([])
   const [userLocation, setUserLocation] = useState<[number, number] | null>(null)
 
@@ -464,15 +467,7 @@ export default function PostJobInner({ userId }: Props) {
         }
         break
 
-      case 'issueTitle':
-        if (!value.trim()) {
-          newErrors.issueTitle = 'Please describe your emergency'
-        } else if (value.trim().length < 3) {
-          newErrors.issueTitle = 'Please provide more details (at least 3 characters)'
-        } else {
-          delete newErrors.issueTitle
-        }
-        break
+      // issueTitle removed - auto-generated from emergency type
     }
 
     setErrors(newErrors)
@@ -484,9 +479,8 @@ export default function PostJobInner({ userId }: Props) {
     const isPhoneValid = validateField('phone', phone)
     const isCategoryValid = validateField('category', category)
     const isEmergencyTypeValid = validateField('emergencyType', emergencyType)
-    const isIssueTitleValid = validateField('issueTitle', issueTitle)
 
-    return isAddressValid && isPhoneValid && isCategoryValid && isEmergencyTypeValid && isIssueTitleValid
+    return isAddressValid && isPhoneValid && isCategoryValid && isEmergencyTypeValid
   }
 
   const handleFieldBlur = (field: string, value: string) => {
@@ -750,7 +744,7 @@ export default function PostJobInner({ userId }: Props) {
 
   function submit() {
     console.log('[SUBMIT] Button clicked!')
-    console.log('[SUBMIT] Form values:', { address, phone, category, emergencyType, issueTitle, sendAll, picked })
+    console.log('[SUBMIT] Form values:', { address, phone, category, emergencyType, sendAll, picked })
 
     // Mark all fields as touched to show validation errors
     setTouched({
@@ -758,7 +752,6 @@ export default function PostJobInner({ userId }: Props) {
       phone: true,
       category: true,
       emergencyType: true,
-      issueTitle: true,
     })
 
     // Validate all mandatory fields
@@ -800,10 +793,22 @@ export default function PostJobInner({ userId }: Props) {
 
       console.log({ supabase })
 
+      // Auto-generate title from emergency type
+      const emergencyTypeLabels: Record<string, string> = {
+        'plumbing': 'Plumbing Emergency',
+        'electrical': 'Electrical Emergency',
+        'hvac': 'HVAC Emergency',
+        'roofing': 'Roof Emergency',
+        'water-damage': 'Water Damage Emergency',
+        'locksmith': 'Lockout Emergency',
+        'appliance': 'Appliance Emergency',
+      }
+      const autoTitle = emergencyTypeLabels[emergencyType] || `${category} Emergency`
+
       // Prepare job data
       const jobData = {
-        title: issueTitle,
-        description: details || issueTitle,
+        title: autoTitle,
+        description: details || autoTitle,
         category: emergencyType || category,
         priority: 'emergency', // All post-job submissions are emergency
         status: 'pending', // Waiting for contractors to accept
@@ -992,16 +997,7 @@ export default function PostJobInner({ userId }: Props) {
                 </Field>
               )}
 
-              <Field label="Emergency Description" required helper="Be specific about the problem. Example: 'Water pouring from ceiling in kitchen'">
-                <input
-                  className="w-full px-4 py-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
-                  placeholder="Brief, clear description of the emergency"
-                  value={issueTitle}
-                  onChange={(e) => setIssueTitle(e.target.value)}
-                />
-              </Field>
-
-              <Field label="Additional Details">
+              <Field label="Additional Details (Optional)">
                 <textarea
                   className="w-full px-4 py-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 min-h-[100px]"
                   placeholder="Any additional details that might help the professional..."
