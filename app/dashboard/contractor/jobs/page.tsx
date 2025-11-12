@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { useProAuth } from '../../../../contexts/ProAuthContext'
 import { supabase } from '../../../../lib/supabaseClient'
 import LoadingSpinner from '../../../../components/LoadingSpinner'
@@ -45,7 +46,8 @@ interface MyJob extends Job {
 }
 
 export default function ContractorJobsPage() {
-  const { user, contractorProfile } = useProAuth()
+  const router = useRouter()
+  const { user, contractorProfile, loading: authLoading } = useProAuth()
   const searchParams = useSearchParams()
   const tabParam = searchParams.get('tab') as 'available' | 'my-jobs' | null
   const [activeTab, setActiveTab] = useState<'available' | 'my-jobs'>(tabParam || 'available')
@@ -54,6 +56,23 @@ export default function ContractorJobsPage() {
   const [jobs, setJobs] = useState<Job[]>([])
   const [myJobs, setMyJobs] = useState<MyJob[]>([])
   const [loading, setLoading] = useState(true)
+
+  // Restrict access to contractors only
+  useEffect(() => {
+    if (authLoading) return // Wait for auth to load
+
+    // If no user, redirect to pro login
+    if (!user) {
+      router.push('/pro/login')
+      return
+    }
+
+    // If user exists but no contractor profile, redirect to homeowner dashboard
+    if (!contractorProfile) {
+      router.push('/dashboard/homeowner')
+      return
+    }
+  }, [user, contractorProfile, authLoading, router])
 
   // Filters for available jobs
   const [q, setQ] = useState('')
@@ -342,7 +361,8 @@ export default function ContractorJobsPage() {
     }
   }
 
-  if (loading) {
+  // Show loading while checking auth or if redirecting
+  if (authLoading || loading || !contractorProfile) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <LoadingSpinner />
