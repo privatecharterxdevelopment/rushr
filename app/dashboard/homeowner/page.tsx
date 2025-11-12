@@ -342,9 +342,10 @@ export default function HomeownerDashboardPage() {
   }, [displayJobs, completeness])
 
 
-  // Fetch bids for all jobs
+  // Fetch bids for all jobs - DISABLED (causes page to hang)
   useEffect(() => {
     if (!user || !realJobs || realJobs.length === 0) return
+    return // DISABLED - bid fetching breaks the page
 
     const fetchBidsForJobs = async () => {
       try {
