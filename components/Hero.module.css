@@ -9,8 +9,8 @@
     #065f46 70%,
     #064e3b 100%
   );
-  background-size: 400% 400%;
-  animation: gradientFlow 25s ease-in-out infinite;
+  background-size: 200% 200%;
+  animation: gradientFlow 40s ease-in-out infinite;
   overflow: hidden;
   will-change: background-position;
   transform: translateZ(0);
@@ -64,7 +64,7 @@
     transparent 70%
   );
   filter: blur(80px);
-  animation: waveFloat1 30s ease-in-out infinite;
+  animation: waveFloat1 50s ease-in-out infinite;
   z-index: 2;
   will-change: transform;
   transform: translate3d(0, 0, 0);
@@ -93,7 +93,7 @@
     transparent 65%
   );
   filter: blur(75px);
-  animation: waveFloat2 35s ease-in-out infinite;
+  animation: waveFloat2 55s ease-in-out infinite;
   z-index: 2;
   will-change: transform;
   transform: translate3d(0, 0, 0);

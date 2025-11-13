@@ -406,20 +406,15 @@ function PopularEmergencies() {
   }, [isInView, hasAnimated])
 
   return (
-    <section ref={ref} className="mx-auto max-w-7xl px-6 py-10">
+    <section ref={ref} className="mx-auto max-w-7xl px-6 py-8">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
         transition={{ duration: 0.5 }}
         className="mx-auto max-w-3xl text-center"
       >
-        <h2 className="text-2xl font-semibold text-gray-900">Popular emergencies</h2>
-        <p className="mt-2 text-gray-600">Pick a category and get matched fast.{' '}
-          <Link href="/find-pro?urgent=1" className="font-semibold text-emerald-700 hover:text-emerald-800 hover:underline transition-all">See all emergencies →</Link>
-        </p>
-
         {/* Enhanced Segmented control with smooth sliding animation */}
-        <div className="mt-6 flex justify-center">
+        <div className="flex justify-center">
           <div className="relative inline-flex rounded-2xl bg-gradient-to-b from-slate-50 to-slate-100 p-1.5 shadow-lg shadow-slate-200/50 border border-slate-200/60">
             {/* Single sliding pill background */}
             <motion.div
@@ -469,13 +464,11 @@ function PopularEmergencies() {
               <Card className="relative h-full overflow-hidden border-emerald-200/60 bg-white/85 p-3 transition-all duration-300 hover:shadow-lg hover:scale-105 hover:-translate-y-1">
                 <GradientBorder emerald />
                 <div className="flex items-center gap-2">
-                  <motion.div
-                    whileHover={{ rotate: 360 }}
-                    transition={{ duration: 0.5 }}
+                  <div
                     className={`flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-50 ${homeText} group-hover:bg-emerald-100 transition-colors`}
                   >
                     {c.icon}
-                  </motion.div>
+                  </div>
                   <div className="min-w-0">
                     <div className="truncate text-sm font-semibold text-slate-900 group-hover:text-emerald-700 transition-colors">{c.name}</div>
                     <div className="truncate text-[11px] text-slate-500">{c.hint ?? '\u00A0'}</div>
