@@ -69,7 +69,7 @@ export default function HomePage() {
                   <div className="flex gap-2">
                     <div className="w-3 h-3 bg-red-400 rounded-full"></div>
                     <div className="w-3 h-3 bg-yellow-400 rounded-full"></div>
-                    <div className="w-3 h-3 bg-green-400 rounded-full"></div>
+                    <div className="w-3 h-3 bg-emerald-600 rounded-full"></div>
                   </div>
                 </div>
                 

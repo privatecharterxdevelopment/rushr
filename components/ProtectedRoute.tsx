@@ -7,7 +7,7 @@ import { useAuth } from '../contexts/AuthContext'
 interface ProtectedRouteProps {
   children: React.ReactNode
   requireRole?: 'homeowner' | 'contractor'
-  requireSubscription?: 'free' | 'pro' | 'signals'
+  requireSubscription?: 'free' | 'pro' | 'proplus'
   redirectTo?: string
 }
 
@@ -38,7 +38,7 @@ export default function ProtectedRoute({
 
         // Check subscription requirement
         if (requireSubscription) {
-          const subscriptionLevels = { free: 0, pro: 1, signals: 2 }
+          const subscriptionLevels = { free: 0, pro: 1, proplus: 2 }
           const userLevel = subscriptionLevels[userProfile.subscription_type] || 0
           const requiredLevel = subscriptionLevels[requireSubscription] || 0
 
@@ -81,7 +81,7 @@ export default function ProtectedRoute({
     }
 
     if (requireSubscription) {
-      const subscriptionLevels = { free: 0, pro: 1, signals: 2 }
+      const subscriptionLevels = { free: 0, pro: 1, proplus: 2 }
       const userLevel = subscriptionLevels[userProfile.subscription_type] || 0
       const requiredLevel = subscriptionLevels[requireSubscription] || 0
 

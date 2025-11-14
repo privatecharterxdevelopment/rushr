@@ -84,7 +84,7 @@ export default function ProHome() {
       <GradientMesh />
       <Hero />
       <HowItWorks />
-      <SignalsMiniMap />
+      <OpportunityMap />
       <Demo />
       <ProductTour />
       <ProTools />
@@ -104,7 +104,7 @@ export default function ProHome() {
    HERO with Live Preview Tabs
 -------------------------------------------- */
 function Hero() {
-  const [tab, setTab] = useState<"signals" | "chat" | "board">("signals")
+  const [tab, setTab] = useState<"jobs" | "chat" | "board">("jobs")
   return (
     <section className="relative">
       <div className="mx-auto grid max-w-7xl grid-cols-1 items-center gap-10 px-6 pt-16 pb-10 md:grid-cols-2 md:pt-24">
@@ -125,7 +125,7 @@ function Hero() {
             transition={{ duration: 0.6, delay: 0.1 }}
             className="mt-4 max-w-xl text-lg text-gray-600"
           >
-            Rushr Pro gives you real-time Signals, direct chat with homeowners, and a pipeline that closes.
+            Rushr Pro gives you real-time job alerts, direct chat with homeowners, and a pipeline that closes.
           </motion.p>
 
           <motion.div
@@ -188,7 +188,7 @@ function Hero() {
           <Card className="relative overflow-hidden border-blue-200/70 bg-white/80 shadow-xl backdrop-blur">
             <div className="flex items-center gap-2 border-b bg-white/70 px-3 py-2">
               {[
-                { id: "signals", label: "Signals" },
+                { id: "jobs", label: "Jobs" },
                 { id: "chat", label: "Chat" },
                 { id: "board", label: "Pipeline" },
               ].map((t) => (
@@ -204,7 +204,7 @@ function Hero() {
               ))}
             </div>
             <CardContent className="relative p-4">
-              {tab === "signals" && <PreviewSignals />}
+              {tab === "jobs" && <PreviewJobs />}
               {tab === "chat" && <PreviewChat />}
               {tab === "board" && <PreviewBoard />}
               <div className="pointer-events-none absolute inset-0 rounded-2xl ring-1 ring-blue-200/70" />
@@ -217,11 +217,11 @@ function Hero() {
   )
 }
 
-function PreviewSignals() {
+function PreviewJobs() {
   const items = [
-    { t: "Electrical permit filed", s: "Upper West Side • 1.2mi", m: "2m ago" },
-    { t: "DOB violation posted", s: "Bushwick • 4.8mi", m: "9m ago" },
-    { t: "Plumbing rough-in", s: "Astoria • 2.3mi", m: "15m ago" },
+    { t: "Emergency electrical repair", s: "Upper West Side • 1.2mi", m: "2m ago" },
+    { t: "Water heater replacement", s: "Bushwick • 4.8mi", m: "9m ago" },
+    { t: "Bathroom plumbing install", s: "Astoria • 2.3mi", m: "15m ago" },
   ]
   return (
     <div className="space-y-3">
@@ -240,7 +240,7 @@ function PreviewSignals() {
         </div>
       ))}
       <div className="mt-3 flex items-center justify-between rounded-xl border bg-[color:rgb(219_234_254_/_0.6)] p-3">
-        <div className="text-sm text-[color:rgb(30_64_175)]">Sign in to unlock full Signals in your area</div>
+        <div className="text-sm text-[color:rgb(30_64_175)]">Sign in to unlock all job opportunities in your area</div>
         <Lock className={proText + " h-4 w-4"} />
       </div>
     </div>
@@ -312,9 +312,9 @@ function HowItWorks() {
   const steps = [
     {
       n: 1,
-      title: "Signals find work for you",
+      title: "Get matched with local jobs",
       desc:
-        "We track permits, violations, and activity in your area and surface opportunities in real time—before they hit public lists.",
+        "We connect you with homeowners posting jobs in your area in real time—so you can respond fast and win more work.",
       icon: <Zap className={`h-6 w-6 ${proText}`} />,
     },
     {
@@ -335,9 +335,7 @@ function HowItWorks() {
     <section className="mx-auto max-w-7xl px-6 py-10 md:py-14">
       <div className="mx-auto max-w-3xl text-center">
         <h2 className="text-3xl font-semibold text-gray-900">How Rushr Pro works</h2>
-<p className="mt-2 text-gray-600">Be first in the customer&apos;s inbox every time. Let AI quote instantly and win jobs before your competitors even open the text.</p>
-
-        <p className="mt-2 text-gray-600">From signal to signed job in three simple steps.</p>
+        <p className="mt-2 text-gray-600">Connect with homeowners instantly, respond faster than competitors, and close more jobs with our streamlined platform.</p>
       </div>
       <div className="mt-8 grid items-stretch gap-6 md:grid-cols-3">
         {steps.map((s, i) => (
@@ -373,16 +371,16 @@ function HowItWorks() {
 /* -------------------------------------------
    TARGET THE RIGHT NEIGHBORHOODS (radius-only filtering)
 -------------------------------------------- */
-function SignalsMiniMap() {
+function OpportunityMap() {
   const [radiusMi, setRadiusMi] = useState(35)
 
   const pins = [
-    { left: 18, top: 24, title: "Electrical permit filed", meta: "Upper West Side • Panel upgrade", time: "3m" },
-    { left: 42, top: 62, title: "DOB violation posted", meta: "Bushwick • Reinspection", time: "11m" },
-    { left: 70, top: 38, title: "Plumbing rough-in", meta: "Astoria • 2-bath layout", time: "16m" },
+    { left: 18, top: 24, title: "Electrical repair needed", meta: "Upper West Side • Panel upgrade", time: "3m" },
+    { left: 42, top: 62, title: "Emergency plumbing", meta: "Bushwick • Water heater", time: "11m" },
+    { left: 70, top: 38, title: "Bathroom remodel", meta: "Astoria • 2-bath layout", time: "16m" },
     { left: 60, top: 18, title: "HVAC replacement", meta: "LIC • 3-ton condenser", time: "27m" },
     { left: 34, top: 48, title: "Roofing repair", meta: "Greenpoint • Flashing", time: "31m" },
-    { left: 52, top: 35, title: "Gas line inspection", meta: "Williamsburg • Pressure test", time: "42m" },
+    { left: 52, top: 35, title: "Gas line work", meta: "Williamsburg • Installation", time: "42m" },
   ]
 
   // map 1–100mi => ~8–45% of container radius (visual only)
@@ -406,7 +404,7 @@ function SignalsMiniMap() {
         <div>
           <h3 className="text-2xl font-semibold text-gray-900">Target the right neighborhoods</h3>
           <p className="mt-2 max-w-xl text-gray-600">
-            Set a custom radius. We’ll surface Signals <b>inside</b> your area in real time so you can be first to respond.
+            Set a custom radius. We'll show you job opportunities <b>inside</b> your area in real time so you can be first to respond.
           </p>
 
           <div className="mt-6">
@@ -473,9 +471,9 @@ function SignalsMiniMap() {
 
           {/* live list */}
           <div className="mt-4 rounded-xl border bg-white/85 p-3">
-            <div className="mb-2 text-sm font-semibold text-gray-800">Signals in radius: {visiblePins.length}</div>
+            <div className="mb-2 text-sm font-semibold text-gray-800">Jobs in radius: {visiblePins.length}</div>
             {visiblePins.length === 0 ? (
-              <div className="text-sm text-gray-600">No signals in this radius. Increase the radius to see more.</div>
+              <div className="text-sm text-gray-600">No jobs in this radius. Increase the radius to see more.</div>
             ) : (
               <ul className="space-y-2 text-sm">
                 {visiblePins.map((p, i) => (
@@ -501,22 +499,22 @@ function SignalsMiniMap() {
 }
 
 /* -------------------------------------------
-   LIVE SIGNALS DEMO
+   LIVE JOB FEED DEMO
 -------------------------------------------- */
 function Demo() {
   const items = [
-    { title: "New electrical permit", meta: "Upper West Side • 1.2mi", time: "3m ago", scope: "Panel upgrade • 100A→200A", est: "$1.8k–$2.4k" },
-    { title: "DOB violation cleared", meta: "Bushwick • 4.8mi", time: "12m ago", scope: "Reinspection scheduled", est: "—" },
-    { title: "Plumbing rough-in", meta: "Astoria • 2.3mi", time: "18m ago", scope: "2-bath layout • PEX", est: "$3.2k–$4.1k" },
+    { title: "Emergency electrical repair", meta: "Upper West Side • 1.2mi", time: "3m ago", scope: "Panel upgrade • 100A→200A", est: "$1.8k–$2.4k" },
+    { title: "Water heater replacement", meta: "Bushwick • 4.8mi", time: "12m ago", scope: "50-gallon unit", est: "$1.2k–$1.8k" },
+    { title: "Bathroom plumbing", meta: "Astoria • 2.3mi", time: "18m ago", scope: "2-bath layout • PEX", est: "$3.2k–$4.1k" },
     { title: "Roofing repair", meta: "Long Island City • 3.0mi", time: "22m ago", scope: "Flashing & patch", est: "$900–$1.4k" },
     { title: "HVAC replacement", meta: "Bed-Stuy • 5.5mi", time: "33m ago", scope: "3-ton condenser", est: "$4.5k–$6.2k" },
-    { title: "Gas line inspection", meta: "Williamsburg • 6.1mi", time: "41m ago", scope: "Pressure test", est: "$350–$600" },
+    { title: "Gas line installation", meta: "Williamsburg • 6.1mi", time: "41m ago", scope: "New appliance hookup", est: "$800–$1.2k" },
   ]
   return (
     <section id="demo" className="relative border-y bg-gradient-to-b from-white to-gray-100">
       <div className="mx-auto max-w-7xl px-6 py-16">
         <div className="mb-6 flex items-center justify-between">
-          <h2 className="text-2xl font-bold text-gray-900 md:text-3xl">Live Signals demo</h2>
+          <h2 className="text-2xl font-bold text-gray-900 md:text-3xl">Live job feed demo</h2>
           <div className="flex items-center gap-2 text-sm text-gray-500">
             <BellRing className={`${proText} h-4 w-4`} />
             <span>Preview feed (locked)</span>
@@ -571,7 +569,7 @@ function Demo() {
         <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
           <Link href="/pro/contractor-signup">
             <Button size="lg" className={`${proBg} text-white ${proRing} hover:bg-blue-700`}>
-  Unlock full Signals
+  Unlock all job opportunities
 </Button>
 
           </Link>
@@ -739,7 +737,7 @@ function ProTools() {
 -------------------------------------------- */
 function Comparison() {
   const rows = [
-    { label: "Real-time Signals", housecall: true, old: false },
+    { label: "Real-time job alerts", housecall: true, old: false },
     { label: "Direct homeowner chat", housecall: true, old: false },
     { label: "Zip & radius targeting", housecall: true, old: false },
     { label: "Transparent pipeline", housecall: true, old: false },
@@ -807,7 +805,7 @@ function Comparison() {
 -------------------------------------------- */
 function WhySwitch() {
   const items = [
-    { title: "Respond first, win more", desc: "Pros close more when they’re first in the door. Signals + chat make that easy.", stat: "2–3× faster replies" },
+    { title: "Respond first, win more", desc: "Pros close more when they're first in the door. Real-time alerts + chat make that easy.", stat: "2–3× faster replies" },
     { title: "Target work you want", desc: "Dial in your area and trade, cut the noise, and focus on profitable jobs.", stat: "Fewer dead leads" },
     { title: "Keep every bid moving", desc: "Simple board view keeps owners & crews aligned, from new to won.", stat: "+28% first-week close" },
   ]
@@ -874,7 +872,7 @@ function TradesWeServe() {
 function Testimonials() {
   const quotes = [
     {
-      quote: "Signals pinged me right after a permit posted. I messaged, quoted, and booked the same day.",
+      quote: "Got an alert for a job in my area. I messaged, quoted, and booked the same day.",
       name: "Mike R.",
       role: "Licensed Electrician",
     },
@@ -941,8 +939,8 @@ function Testimonials() {
 -------------------------------------------- */
 function FAQ() {
   const faqs = [
-    { q: "Do I pay per lead or monthly", a: "Start free to explore. Upgrade for advanced Signals, targeting, and higher volume." },
-    { q: "How fast are Signals", a: "Signals are real time. Many contractors reply within minutes and win same-day jobs." },
+    { q: "Do I pay per lead or monthly", a: "Start free to explore. Upgrade for advanced job alerts, targeting, and higher volume." },
+    { q: "How fast are job notifications", a: "Job alerts are real time. Many contractors reply within minutes and win same-day jobs." },
     { q: "Can my team use it", a: "Yes. Invite techs and coordinators with roles and internal notes." },
     { q: "Do I need to change my current process", a: "No. Rushr fits in cleanly. Use chat, keep your pipeline updated, and export data when needed." },
   ]
@@ -1007,7 +1005,7 @@ function MobileStickyCTA() {
         <div className="flex items-center justify-between gap-2">
           <div className="text-left">
             <div className={`text-xs font-semibold ${proText}`}>Rushr Pro</div>
-            <div className="text-sm text-gray-700">Signals + Chat + Pipeline</div>
+            <div className="text-sm text-gray-700">Job Alerts + Chat + Pipeline</div>
           </div>
           <Link href="/pro/contractor-signup">
            <Button className={`${proBg} text-white ${proRing} hover:bg-blue-700`}>Start</Button>

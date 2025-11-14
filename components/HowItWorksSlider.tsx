@@ -10,9 +10,9 @@ const homeowner: Slide[] = [
 ]
 
 const contractor: Slide[] = [
-  { Icon: IconSearch,       title: 'See local demand',     desc: 'Jobs filtered by your services and area.' },
-  { Icon: IconPaperPlane,   title: 'Bid in seconds',       desc: 'Templates and rate guard for fast quotes.' },
-  { Icon: IconActivity,     title: 'Signals advantage',    desc: 'Live license/permit/inspection events.' },
+  { Icon: IconBell,         title: 'Get instant alerts',           desc: 'Receive push notifications for urgent jobs in your area the moment they are posted.' },
+  { Icon: IconZap,          title: 'Respond in seconds',           desc: 'Send professional quotes with templates and win jobs before competitors even see them.' },
+  { Icon: IconDollar,       title: 'Grow your business',           desc: 'Access high-value emergency work with motivated homeowners ready to hire immediately.' },
 ]
 
 export default function HowItWorksSlider() {
@@ -109,6 +109,28 @@ function IconActivity(props: React.SVGProps<SVGSVGElement>) {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" {...props}>
       <path strokeWidth="2" d="M3 12h4l2 7 4-14 2 7h4" />
+    </svg>
+  )
+}
+function IconBell(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" {...props}>
+      <path strokeWidth="2" d="M18 8a6 6 0 00-12 0c0 7-3 9-3 9h18s-3-2-3-9" />
+      <path strokeWidth="2" d="M13.73 21a2 2 0 01-3.46 0" />
+    </svg>
+  )
+}
+function IconZap(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" {...props}>
+      <path d="M13 2L3 14h8l-2 8 10-12h-8l2-8z" />
+    </svg>
+  )
+}
+function IconDollar(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" {...props}>
+      <path strokeWidth="2" d="M12 1v22M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6" />
     </svg>
   )
 }

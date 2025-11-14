@@ -19,7 +19,7 @@ export default function Terms(){
         <p className="mt-2 text-sm">You are responsible for your account credentials and all activity under your account.</p>
 
         <h2 className="mt-4 font-semibold text-ink">4. Payments</h2>
-        <p className="mt-2 text-sm">Pricing for Pro/Signals is posted on the <Link className="underline" href="/pricing">Pricing</Link> page and may change. Taxes may apply.</p>
+        <p className="mt-2 text-sm">Pricing for Pro and Pro Plus is posted on the <Link className="underline" href="/pricing">Pricing</Link> page and may change. Taxes may apply.</p>
 
         <h2 className="mt-4 font-semibold text-ink">5. User Conduct</h2>
         <ul className="mt-2 text-sm list-disc pl-5 space-y-1">

@@ -101,7 +101,7 @@ export default function ContactPage() {
               Contact Rushr
             </h1>
             <p className="mt-2 text-sm text-slate-600">
-              Questions about quotes, accounts, or Signals? Send us a note and we will get right back.
+              Questions about quotes, accounts, or features? Send us a note and we will get right back.
             </p>
           </div>
         </div>
@@ -168,7 +168,7 @@ export default function ContactPage() {
                     <input
                       value={subject}
                       onChange={e => setSubject(e.target.value)}
-                      placeholder="Account question, quoting help, Signals, etc."
+                      placeholder="Account question, quoting help, features, etc."
                       className="w-full rounded-md border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-emerald-200"
                     />
                   }
@@ -248,7 +248,7 @@ export default function ContactPage() {
               </div>
               <ul className="mt-2 space-y-2 text-sm">
                 <li><Link className="text-emerald-700 hover:text-emerald-800" href="/how-it-works">How it works</Link></li>
-                <li><Link className="text-emerald-700 hover:text-emerald-800" href="/signals">About Signals</Link></li>
+                <li><Link className="text-emerald-700 hover:text-emerald-800" href="/pro">For professionals</Link></li>
                 <li><Link className="text-emerald-700 hover:text-emerald-800" href="/pricing">Pricing</Link></li>
                 <li><Link className="text-emerald-700 hover:text-emerald-800" href="/about#faq">FAQ</Link></li>
               </ul>

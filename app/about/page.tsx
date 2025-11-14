@@ -24,13 +24,13 @@ export default function AboutPage(){
             <p className="mt-3 max-w-2xl text-slate-700 dark:text-slate-300">
               Rushr connects homeowners with vetted emergency service pros — fast, urgent, and reliable.
               Post your emergency in minutes, get immediate quotes, and hire contractors ready for same-day service.
-              Pros get Signals to respond to emergencies first.
+              Pros get real-time alerts to respond to emergencies first.
             </p>
 
             <div className="mt-6 flex flex-wrap gap-2">
               <Link href="/post-job" className="btn-primary">Post a job</Link>
               <Link href="/rushrmap" className="btn btn-outline">Find a pro</Link>
-              <Link href="/signals" className="btn btn-ghost">Signals for pros</Link>
+              <Link href="/pro" className="btn btn-ghost">For professionals</Link>
             </div>
           </div>
 
@@ -48,44 +48,114 @@ export default function AboutPage(){
             <div>
               <h2 className="text-2xl font-semibold text-ink dark:text-white">Our mission</h2>
               <p className="mt-2 text-slate-700 dark:text-slate-300">
-                Make home projects simple and transparent for everyone. Rushr reduces
-                back-and-forth, standardizes quotes, and gives pros the tools to respond fast.
+                When emergencies strike, every minute matters. Rushr connects homeowners with verified local professionals instantly—no waiting, no endless calls, just fast help when you need it most.
               </p>
 
               <div className="mt-5 grid gap-3 sm:grid-cols-2">
-                <ValueItem icon={<IconLightning className="h-5 w-5 text-emerald-700" />} title="Speed with substance">
-                  Post in minutes, quote in minutes — without losing detail.
+                <ValueItem icon={<IconClock className="h-5 w-5 text-emerald-700" />} title="Lightning-fast response">
+                  Average 4-minute response time. Get help when emergencies can't wait.
                 </ValueItem>
-                <ValueItem icon={<IconScale className="h-5 w-5 text-emerald-700" />} title="Fairness for both sides">
-                  Homeowners pay 0. Pros pay a small success fee only when they win.
+                <ValueItem icon={<IconShieldCheck className="h-5 w-5 text-emerald-700" />} title="Verified professionals">
+                  Background-checked, licensed pros ready for same-day service.
                 </ValueItem>
-                <ValueItem icon={<IconLock className="h-5 w-5 text-emerald-700" />} title="Privacy by default">
-                  Your contact details stay private until you choose to share.
+                <ValueItem icon={<IconUsers className="h-5 w-5 text-emerald-700" />} title="Built for emergencies">
+                  24/7 availability with pros trained to handle urgent situations.
                 </ValueItem>
-                <ValueItem icon={<IconTarget className="h-5 w-5 text-emerald-700" />} title="No junk leads">
-                  Signals and filters keep noise out so pros focus on fit.
+                <ValueItem icon={<IconHeart className="h-5 w-5 text-emerald-700" />} title="Transparent pricing">
+                  Clear quotes upfront. Homeowners post free, pros pay only on success.
                 </ValueItem>
               </div>
             </div>
 
             <div className="relative">
-              <div className="mx-auto max-w-md rounded-2xl border bg-white p-4 shadow-soft dark:bg-slate-900 dark:border-slate-800">
-                <div className="rounded-lg border bg-slate-50 p-3 dark:bg-slate-800 dark:border-slate-700">
-                  <div className="flex items-center justify-between">
-                    <div className="text-xs font-semibold text-slate-500">Quotes</div>
-                    <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">Demo</span>
+              <div className="mx-auto max-w-md">
+                <div className="rounded-2xl border bg-gradient-to-br from-white to-slate-50 p-5 shadow-lg dark:from-slate-900 dark:to-slate-900 dark:border-slate-800">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-2">
+                      <div className="h-8 w-8 rounded-full bg-red-100 flex items-center justify-center">
+                        <IconClock className="h-4 w-4 text-red-600" />
+                      </div>
+                      <div>
+                        <div className="text-sm font-bold text-ink dark:text-white">Burst Pipe Emergency</div>
+                        <div className="text-xs text-slate-500">Posted 4 min ago</div>
+                      </div>
+                    </div>
+                    <span className="rounded-full bg-red-100 px-2.5 py-1 text-[10px] font-bold text-red-700">URGENT</span>
                   </div>
-                  <div className="mt-3 space-y-2">
-                    <div className="h-10 rounded-md bg-white ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-700" />
-                    <div className="h-10 rounded-md bg-white ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-700" />
-                    <div className="h-10 rounded-md bg-white ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-700" />
+
+                  <div className="space-y-2.5">
+                    {/* Quote 1 - Winner */}
+                    <div className="rounded-lg bg-white p-3.5 ring-2 ring-emerald-500 shadow-sm dark:bg-slate-800">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-center gap-2.5 flex-1 min-w-0">
+                          <div className="h-10 w-10 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700 font-bold text-sm flex-shrink-0">JM</div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-1.5">
+                              <div className="text-sm font-bold text-ink dark:text-white">Mike's Plumbing</div>
+                              <span className="text-xs">⭐</span>
+                              <span className="text-xs font-semibold text-slate-700">4.9</span>
+                            </div>
+                            <div className="text-xs text-slate-500">Licensed • 2.1 mi away</div>
+                            <div className="mt-1 text-xs text-slate-600 dark:text-slate-400">"On my way. Can be there in 15 minutes."</div>
+                          </div>
+                        </div>
+                        <div className="text-right flex-shrink-0">
+                          <div className="text-base font-bold text-emerald-700">$285</div>
+                          <div className="text-[10px] font-semibold text-emerald-600 bg-emerald-50 rounded px-1.5 py-0.5 mt-0.5">15 MIN ETA</div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Quote 2 */}
+                    <div className="rounded-lg bg-white p-3 ring-1 ring-slate-200 shadow-sm dark:bg-slate-800 dark:ring-slate-700">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div className="h-9 w-9 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-bold text-sm">AP</div>
+                          <div>
+                            <div className="flex items-center gap-1">
+                              <div className="text-sm font-semibold text-ink dark:text-white">AllPro Services</div>
+                              <span className="text-xs">⭐ 4.7</span>
+                            </div>
+                            <div className="text-xs text-slate-500">3.8 mi away</div>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-sm font-bold text-slate-700">$320</div>
+                          <div className="text-xs text-slate-500">30 min</div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Quote 3 */}
+                    <div className="rounded-lg bg-white p-3 ring-1 ring-slate-200 shadow-sm dark:bg-slate-800 dark:ring-slate-700">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div className="h-9 w-9 rounded-full bg-purple-100 flex items-center justify-center text-purple-700 font-bold text-sm">RR</div>
+                          <div>
+                            <div className="flex items-center gap-1">
+                              <div className="text-sm font-semibold text-ink dark:text-white">Rapid Repair</div>
+                              <span className="text-xs">⭐ 5.0</span>
+                            </div>
+                            <div className="text-xs text-slate-500">5.2 mi away</div>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-sm font-bold text-slate-700">$350</div>
+                          <div className="text-xs text-slate-500">45 min</div>
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                  <div className="mt-3 flex items-center justify-end">
-                    <span className="inline-flex items-center gap-1 rounded-md bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white">Compare</span>
+
+                  <div className="mt-4 pt-3 border-t border-slate-200 dark:border-slate-700">
+                    <div className="text-center">
+                      <div className="text-xs font-semibold text-emerald-700">Average response time: 4 minutes</div>
+                    </div>
                   </div>
                 </div>
               </div>
-              <div className="pointer-events-none absolute -left-6 -top-6 h-36 w-36 rounded-full bg-emerald-100/60 blur-2xl" />
+              <div className="pointer-events-none absolute -left-8 -top-8 h-40 w-40 rounded-full bg-emerald-100/50 blur-3xl" />
+              <div className="pointer-events-none absolute -right-6 -bottom-6 h-32 w-32 rounded-full bg-red-100/40 blur-2xl" />
             </div>
           </div>
         </div>
@@ -94,10 +164,7 @@ export default function AboutPage(){
 {/* ===== How it works (exact pill slider) ===== */}
 <section className="bg-white">
   <div className="container-max py-10 md:py-14">
-    <h2 className="text-center text-2xl font-semibold text-ink dark:text-white">How it works</h2>
-    <div className="mt-4">
-      <HowItWorksSlider />
-    </div>
+    <HowItWorksSlider />
   </div>
 </section>
 
@@ -161,52 +228,11 @@ export default function AboutPage(){
         </div>
       </section>
 
-      {/* ===== Business model (aligned checks/bullets) ===== */}
-      <section className="relative">
-        <div className="absolute inset-0 -z-10 bg-gradient-to-b from-white to-emerald-50/40" />
-        <div className="container-max py-10 md:py-14">
-          <h3 className="text-center text-2xl font-semibold text-ink dark:text-white">How we make money</h3>
-          <p className="mx-auto mt-2 max-w-2xl text-center text-sm text-slate-700 dark:text-slate-300">
-            Rushr is free for homeowners. Contractors use the platform for free and pay a small success fee after a completed job.
-            Signals is an optional subscription for instant alerts.
-          </p>
-
-          <div className="mx-auto mt-6 max-w-3xl overflow-hidden rounded-2xl border bg-white shadow-soft dark:bg-slate-900 dark:border-slate-800">
-            <div className="grid grid-cols-2 text-sm">
-              <div className="p-5">
-                <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-emerald-50 px-2.5 py-1 text-[12px] font-semibold text-emerald-700">
-                  <IconHome className="h-4 w-4" /> Homeowners
-                </div>
-                <AlignedList
-                  items={[
-                    { good: true,  label: 'Post jobs, message, hire' },
-                    { good: true,  label: 'No fees for posting or hiring' },
-                    { good: false, label: 'Optional tips for great work' },
-                  ]}
-                />
-              </div>
-              <div className="border-l p-5 dark:border-slate-800">
-                <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-emerald-50 px-2.5 py-1 text-[12px] font-semibold text-emerald-700">
-                  <IconBriefcase className="h-4 w-4" /> Contractors
-                </div>
-                <AlignedList
-                  items={[
-                    { good: true,  label: 'Quote free, chat free' },
-                    { good: true,  label: 'Success fee only when you win' },
-                    { good: false, label: 'Signals optional subscription' },
-                  ]}
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
       {/* ===== Testimonials (scroll) ===== */}
       <section className="section">
         <div className="card p-6 md:p-8">
-          <h2 className="text-lg font-semibold text-ink dark:text-white">What people say</h2>
-          <div className="mt-4 flex gap-4 overflow-x-auto snap-x pb-2">
+          <h2 className="text-lg font-semibold text-ink dark:text-white text-center">What people say</h2>
+          <div className="mt-4 flex gap-4 overflow-x-auto snap-x pb-2 justify-center">
             {TESTIMONIALS.map(t => (
               <Testimonial key={t.id} quote={t.quote} name={t.name} role={t.role} />
             ))}
@@ -217,7 +243,7 @@ export default function AboutPage(){
       {/* ===== Contact (wide slab) ===== */}
 <section className="section">
   <div className="rounded-2xl border bg-gradient-to-br from-emerald-50 via-white to-white p-6 md:p-8 shadow-soft dark:from-emerald-900/20 dark:via-slate-900 dark:to-slate-900 dark:border-slate-800">
-    <div className="flex flex-col items-start gap-4 md:flex-row md:items-center md:justify-between">
+    <div className="flex flex-col items-center gap-4 text-center">
       <div>
         <div className="inline-flex items-center gap-2 rounded-full bg-emerald-100 px-2.5 py-1 text-[12px] font-semibold text-emerald-800">
           <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor">
@@ -226,13 +252,13 @@ export default function AboutPage(){
           </svg>
           Contact us
         </div>
-        <h3 className="mt-2 text-xl font-semibold text-ink dark:text-white">We’re here to help</h3>
+        <h3 className="mt-2 text-xl font-semibold text-ink dark:text-white">We're here to help</h3>
         <p className="mt-1 text-sm text-slate-700 dark:text-slate-300">
           Questions about a job, quotes, or Signals? Reach the team directly.
         </p>
       </div>
 
-      <div className="flex flex-col items-start gap-2 text-sm">
+      <div className="flex flex-col items-center gap-2 text-sm">
         <a href="mailto:hello@userushr.com" className="inline-flex items-center gap-2 rounded-md border bg-white px-3 py-2 hover:bg-emerald-50 dark:bg-slate-900 dark:border-slate-800">
           <svg viewBox="0 0 24 24" className="h-4 w-4 text-emerald-700" fill="none" stroke="currentColor">
             <circle cx="12" cy="12" r="9" strokeWidth="2"/>
@@ -256,15 +282,44 @@ export default function AboutPage(){
 
       {/* ===== Full FAQ ===== */}
       <section className="section" id="faq">
-        <div className="card p-6 md:p-8">
-          <h2 className="text-lg font-semibold text-ink dark:text-white">FAQ</h2>
-          <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
+        <div className="text-center mb-8">
+          <h2 className="text-2xl font-semibold text-ink dark:text-white">Frequently Asked Questions</h2>
+          <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
             Need more help? <Link href="/contact" className="text-emerald-700 font-semibold hover:text-emerald-800">Contact support</Link>.
           </p>
-          <div className="mt-4 grid gap-2 md:grid-cols-2">
-            {FAQ_ITEMS.map((it) => (
-              <FAQ key={it.q} q={it.q}>{it.a}</FAQ>
-            ))}
+        </div>
+
+        <div className="mx-auto max-w-6xl">
+          <div className="grid lg:grid-cols-2 gap-4">
+            {/* Homeowner Pillar */}
+            <div className="rounded-2xl border bg-white p-6 shadow-soft dark:bg-slate-900 dark:border-slate-800">
+              <div className="flex items-center gap-2 mb-4">
+                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-100">
+                  <IconHome className="h-4 w-4 text-emerald-700" />
+                </div>
+                <h3 className="text-base font-semibold text-emerald-700">For Homeowners</h3>
+              </div>
+              <div className="space-y-2">
+                {HOMEOWNER_FAQ.map((it) => (
+                  <FAQ key={it.q} q={it.q}>{it.a}</FAQ>
+                ))}
+              </div>
+            </div>
+
+            {/* Contractor Pillar */}
+            <div className="rounded-2xl border bg-white p-6 shadow-soft dark:bg-slate-900 dark:border-slate-800">
+              <div className="flex items-center gap-2 mb-4">
+                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-blue-100">
+                  <IconBriefcase className="h-4 w-4 text-blue-700" />
+                </div>
+                <h3 className="text-base font-semibold text-blue-700">For Contractors</h3>
+              </div>
+              <div className="space-y-2">
+                {CONTRACTOR_FAQ.map((it) => (
+                  <FAQ key={it.q} q={it.q}>{it.a}</FAQ>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
       </section>
@@ -273,15 +328,14 @@ export default function AboutPage(){
       <section className="section">
         <div className="card p-8 md:p-10 text-center">
           <h3 className="text-xl md:text-2xl font-semibold text-ink dark:text-white">
-            Ready to try Rushr?
+            Ready to get help fast?
           </h3>
           <p className="mt-2 text-slate-700 dark:text-slate-300">
-            Post your project or start winning jobs with Signals.
+            Post your emergency or start winning jobs as a verified pro.
           </p>
           <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
-            <Link href="/post-job" className="btn-primary">Post a job</Link>
-            <Link href="/jobs" className="btn btn-outline">Browse jobs</Link>
-            <Link href="/signals" className="btn btn-ghost">Signals for pros</Link>
+            <Link href="/post-job" className="btn-primary">Post an emergency</Link>
+            <Link href="/pro" className="btn btn-outline">For professionals</Link>
           </div>
         </div>
       </section>
@@ -332,11 +386,11 @@ function ValueItem({ icon, title, children }:{
   children: React.ReactNode
 }){
   return (
-    <div className="flex items-start gap-3 rounded-xl border p-3 bg-white dark:bg-slate-900 dark:border-slate-800">
-      <div className="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-50">
+    <div className="flex items-start gap-3 rounded-xl border p-4 bg-white dark:bg-slate-900 dark:border-slate-800">
+      <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-emerald-50 ring-2 ring-emerald-100">
         {icon}
       </div>
-      <div>
+      <div className="flex-1 min-w-0">
         <div className="text-sm font-semibold text-ink dark:text-white">{title}</div>
         <div className="text-sm text-slate-600 dark:text-slate-300">{children}</div>
       </div>
@@ -509,13 +563,22 @@ function IconShieldCheck(props: React.SVGProps<SVGSVGElement>) {
   return (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" {...props}><path strokeWidth="2" d="M12 3l8 4v5c0 5-3.4 8.6-8 9-4.6-.4-8-4-8-9V7l8-4z"/><path strokeWidth="2" d="M9 12l2 2 4-4"/></svg>)
 }
 function IconHome(props: React.SVGProps<SVGSVGElement>) {
-  return (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" {...props}><path strokeWidth="2" d="M3 12l9-7 9 7"/><path strokeWidth="2" d="M9 21V9h6v12"/></svg>)
+  return (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" {...props}><path strokeWidth="2" d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path strokeWidth="2" d="M9 22V12h6v10"/></svg>)
 }
 function IconBriefcase(props: React.SVGProps<SVGSVGElement>) {
   return (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" {...props}><rect x="3" y="7" width="18" height="12" rx="2" strokeWidth="2"/><path strokeWidth="2" d="M9 7V5a2 2 0 012-2h2a2 2 0 012 2v2"/><path strokeWidth="2" d="M3 12h18"/></svg>)
 }
 function IconCheck(props: React.SVGProps<SVGSVGElement>) {
   return (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" {...props}><path strokeWidth="2" d="M20 6L9 17l-5-5"/></svg>)
+}
+function IconClock(props: React.SVGProps<SVGSVGElement>) {
+  return (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" {...props}><circle cx="12" cy="12" r="9" strokeWidth="2"/><path strokeWidth="2" d="M12 7v5l3 3"/></svg>)
+}
+function IconUsers(props: React.SVGProps<SVGSVGElement>) {
+  return (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" {...props}><path strokeWidth="2" d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4" strokeWidth="2"/><path strokeWidth="2" d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>)
+}
+function IconHeart(props: React.SVGProps<SVGSVGElement>) {
+  return (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" {...props}><path strokeWidth="2" d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>)
 }
 
 /* ===== Data ===== */
@@ -532,25 +595,36 @@ const PRO_STEPS = [
   { title: 'Pay on success', body: 'No pay to bid. Fee only when you win.' },
 ]
 
-const FAQ_ITEMS = [
-  { q: 'What is Rushr?', a: 'Rushr connects homeowners with local, verified contractors. Post your job, compare quotes, and manage everything in one place.' },
-  { q: 'Is Rushr free to use for homeowners?', a: 'Yes. Posting jobs, chatting with pros, and receiving quotes is 100 percent free.' },
-  { q: 'How do pros get work on Rushr?', a: 'Contractors can browse jobs in their trade and service area, or get matched instantly when homeowners post a job.' },
-  { q: 'How do I know contractors are trustworthy?', a: 'Every pro maintains a public profile with ratings, past work photos, and verification badges. You can review before you hire.' },
-  { q: 'Can I share photos or videos of my project?', a: 'Yes. Attach them in messages to help pros quote more accurately and save time on site.' },
-  { q: 'What is Rushr Signals?', a: 'Signals is our real time alert system. Contractors get notified about permits, violations, or inspections in their area before anyone else.' },
-  { q: 'Do I have to accept the first quote I get?', a: 'No. You can accept, decline, or request changes. You are always in control.' },
-  { q: 'How do contractors pay for Rushr?', a: 'Contractors do not pay per lead. Rushr charges a small success fee only when work is secured through the platform.' },
-  { q: 'How quickly will I get quotes?', a: 'Many homeowners see first responses within minutes. For urgent jobs, use the Emergency tag to alert nearby pros.' },
-  { q: 'Can I hire a pro outside of Rushr?', a: 'We strongly encourage keeping the project on platform. It keeps your messages, quotes, and agreements organized, and helps keep the service free for homeowners.' },
-  { q: 'How does Rushr handle my personal data?', a: 'Your contact details stay private. Pros message you directly through the platform until you choose to share more.' },
-  { q: 'Can pros filter jobs by type and location?', a: 'Yes. Contractors set their trade, service radius, and preferences to only see relevant leads.' },
-  { q: 'What if a job does not go as planned?', a: 'Use the built in messaging and quote history as a record. We encourage transparent communication and can provide support if issues arise.' },
-  { q: 'How do ratings work?', a: 'After each job, homeowners leave a 1 to 5 star rating and optional review. Higher rated pros appear more prominently in search and featured lists.' },
+const HOMEOWNER_FAQ = [
+  { q: 'What is Rushr?', a: 'Rushr is an emergency response platform that connects you with verified local professionals when you need help fast. We average a 4-minute response time and operate 24/7 for urgent situations like burst pipes, lockouts, electrical issues, and more.' },
+  { q: 'How fast will I actually get help?', a: 'Most homeowners see their first response within minutes—many in under 60 seconds. Our pros receive instant push notifications when you post, so help is on the way almost immediately.' },
+  { q: 'Is this really available 24/7?', a: 'Yes! We have verified professionals ready to respond to emergencies around the clock, including nights, weekends, and holidays. When you have a 2am burst pipe, we have pros ready to help.' },
+  { q: 'What types of emergencies do you cover?', a: 'We handle urgent home situations like plumbing leaks, gas odors, electrical hazards, no heat or AC in extreme weather, lockouts, storm damage, and more. If it cannot wait, we are here to help.' },
+  { q: 'Does Rushr cost anything for homeowners?', a: 'Nope! Rushr is completely free for homeowners. You can post jobs, chat with pros, compare quotes, and hire—all at no cost to you.' },
+  { q: 'How do I know the pros are qualified and safe?', a: 'Every professional on Rushr is verified and background-checked. You can view their licenses, ratings from other homeowners, past work, and verification badges before deciding who to hire.' },
+  { q: 'What happens right after I post my emergency?', a: 'The moment you post, nearby pros who specialize in your type of emergency get instant notifications. They will start responding with their availability, quotes, and estimated arrival times within minutes.' },
+  { q: 'Can I see who is responding before I hire?', a: 'Absolutely. You will see each pro profile, star rating, distance from you, estimated arrival time, and their quote. You are in complete control of who you choose.' },
+  { q: 'Do I need to pay anything upfront?', a: 'No. Payment is only processed after the work is completed to your satisfaction. You will never be charged before the job is done.' },
+  { q: 'Can I just hire the pro directly and pay them off the platform?', a: 'No—all transactions must happen through Rushr for your protection. If you take things off-platform, we cannot help with disputes, refunds, or any issues that arise. Staying on-platform keeps you safe.' },
+  { q: 'What if something goes wrong with the job?', a: 'If you kept everything on-platform, we have your back. We can review messages, quotes, and work documentation to help resolve disputes or process refunds. Off-platform transactions leave you without any protection or recourse.' },
+]
+
+const CONTRACTOR_FAQ = [
+  { q: 'How do I get emergency job leads on Rushr?', a: 'You will receive real-time push notifications the moment a job is posted that matches your trade and service area. The faster you respond, the better your chances of winning the work.' },
+  { q: 'How much does Rushr cost for contractors?', a: 'It is free to browse jobs and send quotes. We only charge a small success fee when you win and complete work through the platform—no upfront costs or subscription fees.' },
+  { q: 'Do I have to be available 24/7 to use Rushr?', a: 'Not at all. You set your own hours and availability. That said, pros who offer 24/7 emergency service tend to get priority placement and win more high-value jobs.' },
+  { q: 'How quickly should I respond to job alerts?', a: 'Speed matters. Our top-performing pros respond in under 2 minutes. Homeowners are in crisis mode and often hire the first qualified pro who responds with confidence.' },
+  { q: 'How do I get started on Rushr?', a: 'Sign up, complete your profile with your trade, licenses, and service area, then start browsing jobs or wait for emergency alerts. The verification process is quick and we will have you up and running fast.' },
+  { q: 'Can I set my own service area and rates?', a: 'Absolutely. You control your service radius, the types of jobs you take, and your pricing. Rushr gives you the tools to run your business your way while connecting you with urgent work.' },
+  { q: 'How do I get paid for completed jobs?', a: 'All payments are processed securely through Rushr after you complete the job. This protects both you and the homeowner and ensures a smooth transaction.' },
+  { q: 'Can I ask the homeowner to pay me directly off-platform?', a: 'No. Taking payment off-platform is strictly prohibited and violates our terms of service. It also removes all dispute protection and platform support if anything goes wrong.' },
+  { q: 'What happens if I accept off-platform payment?', a: 'Your account will be suspended, you will lose access to all platform protections, and you will have no support if disputes arise. We take this seriously to protect both pros and homeowners.' },
+  { q: 'What types of emergency work can I get through Rushr?', a: 'We cover plumbing emergencies, electrical hazards, HVAC failures, lockouts, storm damage, roadside assistance, and more. If it is urgent and cannot wait, it is on Rushr.' },
+  { q: 'How does the rating system work?', a: 'After each job, homeowners rate you from 1 to 5 stars and can leave a review. Higher ratings mean better visibility in search results, more job offers, and higher earnings potential.' },
 ]
 
 const TESTIMONIALS = [
   { id:'t1', quote:'We had three quotes within an hour and picked the winner that afternoon.', name:'Lindsey R.', role:'Homeowner • Austin, TX' },
-  { id:'t2', quote:'Signals is the difference between saw it late and won it.', name:'Marco D.', role:'HVAC Pro • Jersey City, NJ' },
+  { id:'t2', quote:'The instant alerts are the difference between being first or being too late.', name:'Marco D.', role:'HVAC Pro • Jersey City, NJ' },
   { id:'t3', quote:'Clear scope templates saved us so much back and forth.', name:'Priya K.', role:'Homeowner • Seattle, WA' },
 ]

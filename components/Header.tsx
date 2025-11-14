@@ -303,7 +303,7 @@ export default function Header() {
 
   // "Active" underline only applies to local sections
   const findProActive = ['/post-job', '/find-pro', '/how-it-works'].some(isActive)
-  const findWorkActive = ['/jobs', '/find-work', '/signals'].some(isActive)
+  const findWorkActive = ['/jobs', '/find-work', '/pro'].some(isActive)
   const moreActive = ['/about', '/contact', '/pricing'].some(isActive)
   const messagesActive = pathname.includes('/messages')
 

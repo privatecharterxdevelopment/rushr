@@ -5,7 +5,7 @@ import Link from 'next/link'
 export default function PricingPage(){
   const [annual, setAnnual] = useState(true)
 
-  // Signals is the only paid subscription; homeowners & pros are free (success fee after completion)
+  // Pro Plus is the only paid subscription; homeowners & pros are free (success fee after completion)
   const price = (monthly:number)=> annual ? Math.round(monthly * 12 * 0.83) : monthly
   const per = annual ? '/yr' : '/mo'
   const saveTag = annual ? 'Save ~17%' : undefined
@@ -19,10 +19,10 @@ export default function PricingPage(){
             Homeowners and Pros use Rushr for <span className="font-semibold">free</span>.
             Pros pay a <span className="font-semibold">success fee</span> only after a completed job.
             <br className="hidden md:block" />
-            Upgrade with <span className="font-semibold">Signals</span> to get first shot at new opportunities.
+            Upgrade to <span className="font-semibold">Pro Plus</span> for priority access and advanced features.
           </p>
 
-          {/* Billing toggle for Signals */}
+          {/* Billing toggle for Pro Plus */}
           <div className="mt-4 flex items-center gap-3">
             <span className={!annual ? 'font-semibold text-ink' : ''}>Monthly</span>
             <button
@@ -81,9 +81,9 @@ export default function PricingPage(){
             </div>
           </div>
 
-          {/* Signals (Paid add-on) */}
+          {/* Pro Plus (Paid add-on) */}
           <div className="card p-6 h-full flex flex-col">
-            <div className="text-sm font-semibold text-emerald-700">Signals</div>
+            <div className="text-sm font-semibold text-emerald-700">Pro Plus</div>
             <div className="mt-1 flex items-end gap-2">
               <h3 className="text-xl font-semibold text-ink">
                 ${price(99)}
@@ -91,17 +91,16 @@ export default function PricingPage(){
               </h3>
             </div>
             <p className="text-sm text-slate-700 mt-1">
-              Be first to new opportunities from permits, inspections, and licenses.
+              Get priority access to new job opportunities and advanced professional tools.
             </p>
             <ul className="mt-4 text-sm space-y-2">
-              <li>• Real-time events & alerts</li>
-              <li>• Jurisdiction & keyword rules</li>
-              <li>• CSV export</li>
+              <li>• Priority job notifications</li>
+              <li>• Advanced search filters</li>
+              <li>• Analytics dashboard</li>
               <li>• Priority support</li>
             </ul>
-            <div className="mt-auto pt-4 flex gap-2">
-              <Link href="/signals" className="btn btn-outline w-full text-center">Learn more</Link>
-              <Link href="/signals/dashboard" className="btn-primary w-full text-center">Open Signals</Link>
+            <div className="mt-auto pt-4">
+              <Link href="/pro" className="btn-primary w-full text-center">Upgrade to Pro Plus</Link>
             </div>
           </div>
         </div>

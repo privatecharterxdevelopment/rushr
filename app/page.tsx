@@ -60,9 +60,6 @@ export default function HomePage() {
       {/* GEO */}
       <GeoBanner />
 
-      {/* FEATURED PROS */}
-      <FeaturedPros />
-
       {/* TRUST & SAFETY */}
       <TrustAndSafetyEqual />
 
@@ -162,7 +159,7 @@ function HeroHome() {
                 <Button
                   size="lg"
                   variant="outline"
-                  className="border-[var(--home)] text-[var(--home)] hover:bg-[color:rgb(16_185_129_/_0.08)] focus-visible:ring-[var(--home)]"
+                  className="border-[var(--home)] text-[var(--home)] hover:bg-[color:rgb(5_150_105_/_0.08)] focus-visible:ring-[var(--home)]"
                 >
                   Browse local pros
                 </Button>
@@ -277,7 +274,7 @@ function StackedPreview() {
       </motion.div>
 
       {/* subtle glow */}
-      <div className="pointer-events-none absolute -right-10 -top-10 h-40 w-40 rounded-full bg-[color:rgb(16_185_129_/_0.15)] blur-3xl" />
+      <div className="pointer-events-none absolute -right-10 -top-10 h-40 w-40 rounded-full bg-[color:rgb(5_150_105_/_0.15)] blur-3xl" />
     </div>
   )
 }
@@ -418,7 +415,7 @@ function PopularEmergencies() {
           <div className="relative inline-flex rounded-2xl bg-gradient-to-b from-slate-50 to-slate-100 p-1.5 shadow-lg shadow-slate-200/50 border border-slate-200/60">
             {/* Single sliding pill background */}
             <motion.div
-              className="absolute top-1.5 bottom-1.5 w-[calc(50%-6px)] rounded-xl bg-gradient-to-br from-emerald-600 to-emerald-700 shadow-lg shadow-emerald-500/40"
+              className="absolute top-1.5 bottom-1.5 w-[calc(50%-6px)] rounded-xl bg-gradient-to-br from-emerald-600 to-emerald-700 shadow-lg shadow-emerald-600/40"
               initial={false}
               animate={{
                 x: group === 'Home' ? 6 : 'calc(100% + 6px)'
@@ -518,9 +515,6 @@ function useGridCols() {
    HOW IT WORKS — emergency flow
 -------------------------------------------- */
 function HowItWorksHome() {
-  const ref = useRef(null)
-  const isInView = useInView(ref, { once: true, margin: "-100px" })
-
   const steps = [
     {
       title: 'Request help',
@@ -539,42 +533,26 @@ function HowItWorksHome() {
     },
   ]
   return (
-    <section ref={ref} className="mx-auto max-w-7xl px-6 py-10 md:py-14">
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
-        transition={{ duration: 0.5 }}
-        className="mx-auto max-w-3xl text-center"
-      >
+    <section className="mx-auto max-w-7xl px-6 py-10 md:py-14">
+      <div className="mx-auto max-w-3xl text-center">
         <h2 className="text-2xl font-semibold text-gray-900">How it works</h2>
         <p className="mt-1 text-gray-600">Simple, fast, and transparent for urgent jobs.</p>
-      </motion.div>
+      </div>
       <div className="mt-8 grid items-stretch gap-6 md:grid-cols-3">
         {steps.map((s, i) => (
-          <motion.div
-            key={i}
-            initial={{ opacity: 0, y: 40 }}
-            animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 40 }}
-            transition={{ duration: 0.5, delay: 0.2 + i * 0.15, ease: [0.22, 1, 0.36, 1] }}
-          >
-            <TiltCard>
-              <Card className="relative flex h-full flex-col overflow-hidden border-emerald-200/60 bg-white/85 shadow-sm hover:shadow-xl transition-all duration-300">
-                <GradientBorder emerald />
-                <CardHeader className="flex flex-row items-center gap-3">
-                  <motion.div
-                    whileHover={{ scale: 1.1, rotate: 5 }}
-                    className="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-50 ring-1 ring-emerald-200"
-                  >
-                    {s.icon}
-                  </motion.div>
-                  <CardTitle className="text-gray-900">{s.title}</CardTitle>
-                </CardHeader>
-                <CardContent className="pb-6">
-                  <p className="text-gray-600">{s.desc}</p>
-                </CardContent>
-              </Card>
-            </TiltCard>
-          </motion.div>
+          <div key={i}>
+            <Card className="flex h-full flex-col border-gray-200 bg-white">
+              <CardHeader className="flex flex-row items-center gap-3">
+                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-50">
+                  {s.icon}
+                </div>
+                <CardTitle className="text-gray-900">{s.title}</CardTitle>
+              </CardHeader>
+              <CardContent className="pb-6">
+                <p className="text-gray-600">{s.desc}</p>
+              </CardContent>
+            </Card>
+          </div>
         ))}
       </div>
     </section>
@@ -638,65 +616,6 @@ function GeoBanner() {
             )
           })}
         </div>
-      </div>
-    </section>
-  )
-}
-
-/* -------------------------------------------
-   FEATURED PROS — compact, equal height, with badges
--------------------------------------------- */
-function FeaturedPros() {
-  const pros = [
-    { id: 'p1', name: 'Manny’s HVAC', trade: 'HVAC', rating: 4.9, jobs: 320, city: 'Queens, NY', since: 2017 },
-    { id: 'p2', name: 'Skyline Roofing', trade: 'Roofing', rating: 4.8, jobs: 180, city: 'Brooklyn, NY', since: 2019 },
-    { id: 'p3', name: 'BrightSpark Electric', trade: 'Electrical', rating: 5.0, jobs: 260, city: 'New York, NY', since: 2016 },
-    { id: 'p4', name: 'PureFlow Plumbing', trade: 'Plumbing', rating: 4.9, jobs: 210, city: 'Bronx, NY', since: 2018 },
-  ]
-
-  return (
-    <section className="mx-auto max-w-7xl px-6 py-10">
-      <div className="mb-3 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <ShieldCheck className="h-5 w-5 text-emerald-700" />
-          <h2 className="text-lg font-semibold text-slate-900">Featured pros</h2>
-        </div>
-        <Link href="/find-pro?urgent=1" className="text-sm text-emerald-700 hover:text-emerald-800">Browse all →</Link>
-      </div>
-
-      <div className="grid items-stretch gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        {pros.map((p) => (
-          <TiltCard key={p.id}>
-            <Link href={`/pro/${p.id}`} className="group flex h-full min-h-[140px] flex-col justify-between rounded-2xl border bg-white p-3 transition hover:shadow-sm">
-              <div className="flex items-center gap-2">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-100 font-semibold text-emerald-700">
-                  {p.name.split(' ').map((s) => s[0]).join('').slice(0, 2)}
-                </div>
-                <div className="min-w-0">
-                  <div className="truncate font-semibold text-slate-900">{p.name}</div>
-                  <div className="text-[11px] text-slate-600">{p.trade} • {p.city}</div>
-                </div>
-              </div>
-
-              <div className="mt-2 flex items-center justify-between">
-                <Stars rating={p.rating} />
-                <div className="text-xs text-slate-500">{p.jobs.toLocaleString()} jobs</div>
-              </div>
-
-              <div className="mt-2 flex flex-wrap gap-1">
-                <span className="rounded-md bg-emerald-50 px-1.5 py-0.5 text-[10px] font-medium text-emerald-700">
-                  <span className="mr-1 inline-block align-[-2px]">✔</span> Verified
-                </span>
-                {p.rating >= 4.9 && (
-                  <span className="rounded-md bg-yellow-50 px-1.5 py-0.5 text-[10px] font-medium text-yellow-700">⭐ Top rated</span>
-                )}
-                {p.jobs >= 200 && (
-                  <span className="rounded-md bg-sky-50 px-1.5 py-0.5 text-[10px] font-medium text-sky-700">⚡ Fast reply</span>
-                )}
-              </div>
-            </Link>
-          </TiltCard>
-        ))}
       </div>
     </section>
   )

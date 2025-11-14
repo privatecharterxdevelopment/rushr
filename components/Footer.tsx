@@ -114,7 +114,7 @@ export default function Footer() {
             <li><FLink href="/find-pro">Search For A Pro</FLink></li>
             <li><FLink href="/dashboard/contractor/jobs">Find Jobs (Contractors)</FLink></li>
             <li><FLink href="/post-job">Post a Job</FLink></li>
-            <li><FLink href="/pro/signals">Signals</FLink></li>
+            <li><FLink href="/rushrmap">Browse Professionals</FLink></li>
           </ul>
         </div>
 
