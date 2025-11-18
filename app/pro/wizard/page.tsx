@@ -83,6 +83,8 @@ export default function ContractorSignup() {
   const [busy, setBusy] = useState(false)
   const [geocoding, setGeocoding] = useState(false)
   const [locationError, setLocationError] = useState<string | null>(null)
+  const [locationForZips, setLocationForZips] = useState('')
+  const [fetchingZips, setFetchingZips] = useState(false)
 
   /* ---------------- Draft load + URL sync ---------------- */
   useEffect(()=>{
@@ -182,6 +184,61 @@ export default function ContractorSignup() {
       },
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
     )
+  }
+
+  /* ---------------- Fetch ZIPs by Location ---------------- */
+  async function fetchZipsByLocation() {
+    if (!locationForZips.trim()) return
+
+    setFetchingZips(true)
+    try {
+      const MAPBOX_TOKEN = 'pk.eyJ1IjoicnVzaHJhZG1pbiIsImEiOiJjbWdiaTlobmcwdHc3MmtvbHhhOTJjNnJvIn0.st2PXkQQtqnh3tHrjp9pzw'
+
+      // Geocode the location to get bounding box
+      const geoUrl = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(locationForZips)}.json?access_token=${MAPBOX_TOKEN}&types=place,locality,postcode&limit=1`
+      const geoResponse = await fetch(geoUrl)
+      const geoData = await geoResponse.json()
+
+      if (!geoData.features || geoData.features.length === 0) {
+        toast.error('Location not found. Try a city or state name.')
+        setFetchingZips(false)
+        return
+      }
+
+      const feature = geoData.features[0]
+      const bbox = feature.bbox || feature.geometry.coordinates
+
+      // Use ZipCodeAPI or similar service to get ZIPs in area
+      // For now, we'll use Mapbox to search for postcodes in the area
+      const [minLng, minLat, maxLng, maxLat] = bbox.length === 4 ? bbox : [bbox[0] - 0.5, bbox[1] - 0.5, bbox[0] + 0.5, bbox[1] + 0.5]
+
+      // Search for postcodes in the bounding box
+      const zipUrl = `https://api.mapbox.com/geocoding/v5/mapbox.places/postcode.json?access_token=${MAPBOX_TOKEN}&bbox=${minLng},${minLat},${maxLng},${maxLat}&types=postcode&limit=50`
+      const zipResponse = await fetch(zipUrl)
+      const zipData = await zipResponse.json()
+
+      if (zipData.features && zipData.features.length > 0) {
+        const newZips = zipData.features
+          .map((f: any) => f.text)
+          .filter((z: string) => /^\d{5}$/.test(z))
+          .filter((z: string) => !form.extraZips.includes(z) && z !== form.baseZip)
+
+        if (newZips.length > 0) {
+          set('extraZips', [...form.extraZips, ...newZips])
+          toast.success(`Added ${newZips.length} ZIP codes from ${feature.place_name}`)
+          setLocationForZips('')
+        } else {
+          toast.error('No new ZIP codes found in this area')
+        }
+      } else {
+        toast.error('No ZIP codes found. Try a more specific location.')
+      }
+    } catch (error) {
+      console.error('Error fetching ZIPs:', error)
+      toast.error('Failed to fetch ZIP codes. Please try again.')
+    } finally {
+      setFetchingZips(false)
+    }
   }
 
   /* ---------------- Validation ---------------- */
@@ -758,10 +815,40 @@ async function submitAll(e?: React.FormEvent) {
 
                 <div className="md:col-span-2" data-err="extraZips">
                   <label className="block text-sm font-medium text-gray-700 mb-1">Additional ZIPs</label>
+
+                  {/* Fetch ZIPs by Location */}
+                  <div className="mb-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                    <label className="block text-xs font-medium text-blue-900 mb-2">Quick Add: Fetch all ZIPs from a location</label>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={locationForZips}
+                        onChange={(e) => setLocationForZips(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault()
+                            fetchZipsByLocation()
+                          }
+                        }}
+                        placeholder="e.g., Brooklyn, Manhattan, New York"
+                        className="flex-1 px-3 py-2 border border-blue-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      />
+                      <button
+                        type="button"
+                        onClick={fetchZipsByLocation}
+                        disabled={fetchingZips || !locationForZips.trim()}
+                        className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap text-sm font-medium"
+                      >
+                        {fetchingZips ? 'Fetching...' : 'Get ZIPs'}
+                      </button>
+                    </div>
+                    <p className="text-xs text-blue-700 mt-2">Enter a city or area name to automatically add all ZIP codes. You can remove unwanted ZIPs below.</p>
+                  </div>
+
                   <TagInput
                     values={form.extraZips}
                     onChange={(vals)=>set('extraZips', vals)}
-                    placeholder="Type ZIP and press Enter (or comma)…"
+                    placeholder="Or type individual ZIPs and press Enter…"
                     allowComma
                     allowEnter
                     inputMode="numeric"
@@ -1210,10 +1297,40 @@ async function submitAll(e?: React.FormEvent) {
                 </div>
                 <div className="md:col-span-2" data-err="extraZips">
                   <label className="block text-sm font-medium text-gray-700 mb-1">Additional ZIPs</label>
+
+                  {/* Fetch ZIPs by Location */}
+                  <div className="mb-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                    <label className="block text-xs font-medium text-blue-900 mb-2">Quick Add: Fetch all ZIPs from a location</label>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={locationForZips}
+                        onChange={(e) => setLocationForZips(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault()
+                            fetchZipsByLocation()
+                          }
+                        }}
+                        placeholder="e.g., Brooklyn, Manhattan, New York"
+                        className="flex-1 px-3 py-2 border border-blue-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      />
+                      <button
+                        type="button"
+                        onClick={fetchZipsByLocation}
+                        disabled={fetchingZips || !locationForZips.trim()}
+                        className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap text-sm font-medium"
+                      >
+                        {fetchingZips ? 'Fetching...' : 'Get ZIPs'}
+                      </button>
+                    </div>
+                    <p className="text-xs text-blue-700 mt-2">Enter a city or area name to automatically add all ZIP codes. You can remove unwanted ZIPs below.</p>
+                  </div>
+
                   <TagInput
                     values={form.extraZips}
                     onChange={(vals)=>set('extraZips', vals)}
-                    placeholder="Type ZIP and press Enter (or comma)…"
+                    placeholder="Or type individual ZIPs and press Enter…"
                     allowComma
                     allowEnter
                     inputMode="numeric"
