@@ -91,6 +91,16 @@ export default function ContractorCard({ c, variant = 'default' }: ContractorCar
   const bio = c.bio || c.description || 'Professional contractor'
   const logoUrl = c.logo_url || c.avatar_url
 
+  // Pricing structure
+  const rateType = c.rate_type || 'Hourly'
+  const hourlyRate = c.hourly_rate
+  const peakRate = c.peak_rate
+  const offPeakRate = c.off_peak_rate
+  const surgeRate = c.surge_rate
+  const flatRateMin = c.flat_rate_min
+  const visitFee = c.visit_fee
+  const diagnosticFee = c.diagnostic_fee
+
   return (
     <div className={shell}>
       <div className="flex items-start justify-between gap-2">
@@ -160,6 +170,57 @@ export default function ContractorCard({ c, variant = 'default' }: ContractorCar
             {category}
           </span>
         ))}
+      </div>
+
+      {/* Pricing Display */}
+      <div className="mt-3 p-3 bg-slate-50 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700">
+        <div className="text-xs font-semibold text-slate-700 dark:text-slate-300 mb-2">Pricing</div>
+        <div className="space-y-1 text-xs text-slate-600 dark:text-slate-400">
+          {rateType === 'Hourly' && hourlyRate && (
+            <>
+              <div className="flex justify-between">
+                <span>Base hourly:</span>
+                <span className="font-medium text-slate-900 dark:text-white">${hourlyRate}/hr</span>
+              </div>
+              {peakRate && (
+                <div className="flex justify-between">
+                  <span>Peak hourly:</span>
+                  <span className="font-medium text-slate-900 dark:text-white">${peakRate}/hr</span>
+                </div>
+              )}
+              {offPeakRate && (
+                <div className="flex justify-between">
+                  <span>Off-peak hourly:</span>
+                  <span className="font-medium text-slate-900 dark:text-white">${offPeakRate}/hr</span>
+                </div>
+              )}
+              {surgeRate && (
+                <div className="flex justify-between">
+                  <span>Surge hourly:</span>
+                  <span className="font-medium text-red-600 dark:text-red-400">${surgeRate}/hr</span>
+                </div>
+              )}
+            </>
+          )}
+          {rateType === 'Flat' && flatRateMin && (
+            <div className="flex justify-between">
+              <span>Flat rate (typical):</span>
+              <span className="font-medium text-slate-900 dark:text-white">${flatRateMin}</span>
+            </div>
+          )}
+          {visitFee && (
+            <div className="flex justify-between">
+              <span>Visit fee:</span>
+              <span className="font-medium text-slate-900 dark:text-white">${visitFee}</span>
+            </div>
+          )}
+          {diagnosticFee && (
+            <div className="flex justify-between">
+              <span>Diagnostic fee:</span>
+              <span className="font-medium text-slate-900 dark:text-white">${diagnosticFee}</span>
+            </div>
+          )}
+        </div>
       </div>
 
       <div className="mt-3 flex gap-2">

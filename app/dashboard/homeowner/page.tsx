@@ -1470,20 +1470,9 @@ export default function HomeownerDashboardPage() {
                   }
                 }}
                 disabled={!addressForm.address.trim() || saving}
-                className="px-6 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white rounded-lg transition-colors font-medium flex items-center gap-2"
+                className="px-6 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white rounded-lg transition-colors font-medium"
               >
-                {saving ? (
-                  <>
-                    <img
-                      src="https://jtrxdcccswdwlritgstp.supabase.co/storage/v1/object/public/contractor-logos/RushrLogoAnimation.gif"
-                      alt="Loading..."
-                      className="w-4 h-4 object-contain"
-                    />
-                    Saving...
-                  </>
-                ) : (
-                  'Save Address'
-                )}
+                {saving ? 'Saving...' : 'Save Address'}
               </button>
             </div>
           </div>

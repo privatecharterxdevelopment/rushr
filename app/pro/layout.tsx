@@ -12,7 +12,7 @@ export const viewport: Viewport = {
 export default function ProLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="pro-backdrop min-h-screen bg-white text-slate-900">
-      <main className="p-6">{children}</main>
+      <main>{children}</main>
     </div>
   )
 }

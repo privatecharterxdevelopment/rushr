@@ -908,17 +908,8 @@ export default function ContractorJobsPage() {
                       disabled={bidding === selectedJobForBid.id}
                       className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white font-medium py-3 px-4 rounded-lg transition-colors flex items-center justify-center gap-2"
                     >
-                      {bidding === selectedJobForBid.id ? (
-                        <>
-                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                          Submitting...
-                        </>
-                      ) : (
-                        <>
-                          <Send className="h-4 w-4" />
-                          Submit Bid
-                        </>
-                      )}
+                      <Send className="h-4 w-4" />
+                      {bidding === selectedJobForBid.id ? 'Submitting...' : 'Submit Bid'}
                     </button>
                     <button
                       onClick={() => {

@@ -22,9 +22,9 @@ type FormDataT = {
   baseZip: string; address: string; latitude: number | null; longitude: number | null; radiusMiles: number; extraZips: string[]
   categories: string[]; specialties: string[]
   emergency: boolean; hours: Hours
-  licenseNumber: string; licenseType: string; licenseState: string; licenseExpires: string
+  licenseNumber: string; licenseType: string; licenseState: string; licensedStates: string; licenseExpires: string
   insuranceCarrier: string; insurancePolicy: string; insuranceExpires: string
-  rateType: RateType; hourlyRate: string; flatMin: string; visitFee: string; freeEstimates: boolean
+  rateType: RateType; hourlyRate: string; peakRate: string; offPeakRate: string; surgeRate: string; flatMin: string; visitFee: string; diagnosticFee: string; freeEstimates: boolean
   // payments removed - handled by Stripe Connect
   instagram: string; facebook: string; yelp: string; google: string
   logo: File | null; portfolio: File[]; licenseProof: File | null; insuranceProof: File | null
@@ -65,9 +65,9 @@ export default function ContractorSignup() {
     baseZip:'', address:'', latitude:null, longitude:null, radiusMiles:10, extraZips:[],
     categories:[], specialties:[],
     emergency:false, hours:{...EMPTY_HOURS},
-    licenseNumber:'', licenseType:'', licenseState:'', licenseExpires:'',
+    licenseNumber:'', licenseType:'', licenseState:'', licensedStates:'', licenseExpires:'',
     insuranceCarrier:'', insurancePolicy:'', insuranceExpires:'',
-    rateType:'Hourly', hourlyRate:'', flatMin:'', visitFee:'', freeEstimates:true,
+    rateType:'Hourly', hourlyRate:'', peakRate:'', offPeakRate:'', surgeRate:'', flatMin:'', visitFee:'', diagnosticFee:'', freeEstimates:true,
     instagram:'', facebook:'', yelp:'', google:'',
     logo:null, portfolio:[], licenseProof:null, insuranceProof:null,
     agreeTerms:false, certifyAccuracy:false,
@@ -224,9 +224,15 @@ export default function ContractorSignup() {
     const e: Record<string,string> = {}
     const openAny = DAYS.some(d=>f.hours[d].enabled)
     if (!openAny) e.hours = 'Enable at least one day'
-    if (f.rateType==='Hourly' && !f.hourlyRate.trim()) e.hourlyRate = 'Add hourly rate'
-    if (f.rateType==='Flat'   && !f.flatMin.trim())   e.flatMin   = 'Add a typical flat amount'
-    if (f.rateType==='Visit fee' && !f.visitFee.trim()) e.visitFee = 'Add a visit/diagnostic fee'
+    if (f.rateType==='Hourly') {
+      if (!f.hourlyRate.trim()) e.hourlyRate = 'Add base hourly rate'
+      if (!f.peakRate.trim()) e.peakRate = 'Add peak hourly rate'
+      if (!f.offPeakRate.trim()) e.offPeakRate = 'Add off-peak hourly rate'
+      if (!f.surgeRate.trim()) e.surgeRate = 'Add surge hourly rate'
+    }
+    if (f.rateType==='Flat' && !f.flatMin.trim()) e.flatMin = 'Add a typical flat amount'
+    if (!f.visitFee.trim()) e.visitFee = 'Add visit fee'
+    if (!f.diagnosticFee.trim()) e.diagnosticFee = 'Add diagnostic fee'
     return e
   }
   const validateReview = (f: FormDataT) => {
@@ -330,6 +336,7 @@ async function submitAll(e?: React.FormEvent) {
         phone: form.phone,
         license_number: form.licenseNumber,
         license_state: form.licenseState,
+        licensed_states: form.licensedStates,
         insurance_carrier: form.insuranceCarrier,
         insurance_policy: form.insurancePolicy,
         categories: form.categories,
@@ -342,6 +349,9 @@ async function submitAll(e?: React.FormEvent) {
         emergency_service: form.emergency,
         business_hours: form.hours,
         hourly_rate: form.hourlyRate ? parseFloat(form.hourlyRate.replace(/[^0-9.]/g, '')) : null,
+        peak_rate: form.peakRate ? parseFloat(form.peakRate.replace(/[^0-9.]/g, '')) : null,
+        off_peak_rate: form.offPeakRate ? parseFloat(form.offPeakRate.replace(/[^0-9.]/g, '')) : null,
+        surge_rate: form.surgeRate ? parseFloat(form.surgeRate.replace(/[^0-9.]/g, '')) : null,
         rate_type: form.rateType,
         free_estimates: form.freeEstimates,
         years_in_business: form.yearsInBusiness ? parseInt(form.yearsInBusiness) : null,
@@ -354,6 +364,7 @@ async function submitAll(e?: React.FormEvent) {
         specialties: form.specialties,
         flat_rate_min: form.flatMin ? parseFloat(form.flatMin.replace(/[^0-9.]/g, '')) : null,
         visit_fee: form.visitFee ? parseFloat(form.visitFee.replace(/[^0-9.]/g, '')) : null,
+        diagnostic_fee: form.diagnosticFee ? parseFloat(form.diagnosticFee.replace(/[^0-9.]/g, '')) : null,
         instagram: form.instagram,
         facebook: form.facebook,
         yelp: form.yelp,
@@ -811,6 +822,11 @@ async function submitAll(e?: React.FormEvent) {
                   <input className={`w-full px-3 py-2 border rounded-md ${badgeErr('licenseState')}`} value={form.licenseState} onChange={e=>set('licenseState', e.target.value)} placeholder="NY (DOB), NJ (DCA), etc." />
                   {hintErr('licenseState')}
                 </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">States licensed in</label>
+                  <input className="w-full px-3 py-2 border rounded-md" value={form.licensedStates} onChange={e=>set('licensedStates', e.target.value)} placeholder="NY, NJ, CT" />
+                  <div className="mt-1 text-xs text-slate-500">Comma-separated list of states</div>
+                </div>
                 <div data-err="licenseExpires">
                   <label className="block text-sm font-medium text-gray-700 mb-1">License expires *</label>
                   <input type="date" className={`w-full px-3 py-2 border rounded-md ${badgeErr('licenseExpires')}`} value={form.licenseExpires} onChange={e=>set('licenseExpires', e.target.value)} />
@@ -874,7 +890,7 @@ async function submitAll(e?: React.FormEvent) {
                 <div>
                   <SectionTitle>Pricing</SectionTitle>
                   <div className="flex flex-wrap gap-2">
-                    {(['Hourly','Flat','Visit fee'] as RateType[]).map(rt=>(
+                    {(['Hourly','Flat'] as RateType[]).map(rt=>(
                       <button
                         key={rt}
                         type="button"
@@ -889,10 +905,29 @@ async function submitAll(e?: React.FormEvent) {
                   </div>
 
                   {form.rateType==='Hourly' && (
-                    <div className="mt-2" data-err="hourlyRate">
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Hourly rate *</label>
-                      <input className={`w-full px-3 py-2 border rounded-md ${badgeErr('hourlyRate')}`} value={form.hourlyRate} onChange={e=>set('hourlyRate', e.target.value)} placeholder="$120" />
-                      {hintErr('hourlyRate')}
+                    <div className="mt-3 space-y-3">
+                      <div className="grid md:grid-cols-2 gap-3">
+                        <div data-err="hourlyRate">
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Base hourly rate *</label>
+                          <input className={`w-full px-3 py-2 border rounded-md ${badgeErr('hourlyRate')}`} value={form.hourlyRate} onChange={e=>set('hourlyRate', e.target.value)} placeholder="$120" />
+                          {hintErr('hourlyRate')}
+                        </div>
+                        <div data-err="peakRate">
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Peak hourly rate *</label>
+                          <input className={`w-full px-3 py-2 border rounded-md ${badgeErr('peakRate')}`} value={form.peakRate} onChange={e=>set('peakRate', e.target.value)} placeholder="$150" />
+                          {hintErr('peakRate')}
+                        </div>
+                        <div data-err="offPeakRate">
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Off-peak hourly rate *</label>
+                          <input className={`w-full px-3 py-2 border rounded-md ${badgeErr('offPeakRate')}`} value={form.offPeakRate} onChange={e=>set('offPeakRate', e.target.value)} placeholder="$100" />
+                          {hintErr('offPeakRate')}
+                        </div>
+                        <div data-err="surgeRate">
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Surge hourly rate *</label>
+                          <input className={`w-full px-3 py-2 border rounded-md ${badgeErr('surgeRate')}`} value={form.surgeRate} onChange={e=>set('surgeRate', e.target.value)} placeholder="$200" />
+                          {hintErr('surgeRate')}
+                        </div>
+                      </div>
                     </div>
                   )}
                   {form.rateType==='Flat' && (
@@ -902,15 +937,21 @@ async function submitAll(e?: React.FormEvent) {
                       {hintErr('flatMin')}
                     </div>
                   )}
-                  {form.rateType==='Visit fee' && (
-                    <div className="mt-2" data-err="visitFee">
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Visit/diagnostic fee *</label>
+
+                  <div className="mt-3 grid md:grid-cols-2 gap-3">
+                    <div data-err="visitFee">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Visit fee *</label>
                       <input className={`w-full px-3 py-2 border rounded-md ${badgeErr('visitFee')}`} value={form.visitFee} onChange={e=>set('visitFee', e.target.value)} placeholder="$89" />
                       {hintErr('visitFee')}
                     </div>
-                  )}
+                    <div data-err="diagnosticFee">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Diagnostic fee *</label>
+                      <input className={`w-full px-3 py-2 border rounded-md ${badgeErr('diagnosticFee')}`} value={form.diagnosticFee} onChange={e=>set('diagnosticFee', e.target.value)} placeholder="$75" />
+                      {hintErr('diagnosticFee')}
+                    </div>
+                  </div>
 
-                  <label className="mt-2 flex items-center gap-2">
+                  <label className="mt-3 flex items-center gap-2">
                     <input type="checkbox" checked={form.freeEstimates} onChange={e=>set('freeEstimates', e.target.checked)} />
                     Offer free estimates
                   </label>
@@ -918,10 +959,6 @@ async function submitAll(e?: React.FormEvent) {
 
                 <div>
                   <SectionTitle>Availability & Hours</SectionTitle>
-                  <label className="flex items-center gap-2">
-                    <input type="checkbox" checked={form.emergency} onChange={e=>set('emergency', e.target.checked)} />
-                    Offer emergency service (after-hours / same-day)
-                  </label>
 
                   <div className={`mt-3 rounded-xl border p-3 ${badgeErr('hours')}`} data-err="hours">
                     <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">

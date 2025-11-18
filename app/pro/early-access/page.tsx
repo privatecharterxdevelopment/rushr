@@ -97,11 +97,17 @@ export default function EarlyAccessPage() {
   return (
     <>
       <Toaster position="top-center" />
+      <style jsx global>{`
+        body {
+          margin: 0;
+          padding: 0;
+        }
+      `}</style>
 
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50">
         {/* Header */}
         <header className="border-b border-slate-200 bg-white/80 backdrop-blur-sm sticky top-0 z-50">
-          <div className="w-full px-4 md:px-6 lg:px-8 py-0 flex items-center justify-between gap-4">
+          <div className="w-full px-4 py-0 flex items-center justify-between gap-4">
             <Link href="/pro" className="flex items-center gap-2 flex-shrink-0">
               <img
                 src="/rushr-contractor-header.jpeg"
@@ -119,7 +125,7 @@ export default function EarlyAccessPage() {
         </header>
 
         {/* Hero Section */}
-        <section className="w-full px-4 md:px-6 lg:px-8 py-8 md:py-16 lg:py-24">
+        <section className="w-full px-4 py-8 md:py-16 lg:py-24">
           <div className="max-w-5xl mx-auto">
             <div className="grid lg:grid-cols-2 gap-8 md:gap-12 items-center">
 
@@ -250,7 +256,7 @@ export default function EarlyAccessPage() {
         </section>
 
         {/* Features Preview */}
-        <section className="w-full px-4 md:px-6 lg:px-8 py-12 md:py-16 lg:py-20">
+        <section className="w-full px-4 py-12 md:py-16 lg:py-20">
           <div className="max-w-5xl mx-auto">
             <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold text-slate-900 text-center mb-3 md:mb-4">
               What You'll Get Access To
@@ -305,7 +311,7 @@ export default function EarlyAccessPage() {
 
         {/* Footer CTA */}
         <section className="w-full bg-gradient-to-br from-blue-600 to-indigo-600 py-12 md:py-16">
-          <div className="w-full px-4 md:px-6 lg:px-8 text-center">
+          <div className="w-full px-4 text-center">
             <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold text-white mb-3 md:mb-4">
               Ready to Transform Your Business?
             </h2>
@@ -317,7 +323,7 @@ export default function EarlyAccessPage() {
 
         {/* Footer */}
         <footer className="w-full border-t border-slate-200 bg-white py-8">
-          <div className="w-full px-4 md:px-6 lg:px-8">
+          <div className="w-full px-4">
             <div className="flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-slate-600">
               <p>&copy; 2025 Rushr. All rights reserved.</p>
               <div className="flex gap-6">

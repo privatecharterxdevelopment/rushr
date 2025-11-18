@@ -404,17 +404,8 @@ export default function ContractorJobDetailsPage() {
               disabled={submittingBid || !bidAmount}
               className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white font-medium py-3 px-4 rounded-lg transition-colors flex items-center justify-center gap-2"
             >
-              {submittingBid ? (
-                <>
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  Submitting Bid...
-                </>
-              ) : (
-                <>
-                  <Send className="h-4 w-4" />
-                  Submit Bid
-                </>
-              )}
+              <Send className="h-4 w-4" />
+              {submittingBid ? 'Submitting Bid...' : 'Submit Bid'}
             </button>
           </div>
         </div>
@@ -505,17 +496,8 @@ export default function ContractorJobDetailsPage() {
               disabled={markingComplete}
               className="px-6 py-3 bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white font-semibold rounded-lg transition-colors flex items-center gap-2"
             >
-              {markingComplete ? (
-                <>
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  Marking...
-                </>
-              ) : (
-                <>
-                  <CheckCircle className="h-5 w-5" />
-                  Mark as Complete
-                </>
-              )}
+              <CheckCircle className="h-5 w-5" />
+              {markingComplete ? 'Marking...' : 'Mark as Complete'}
             </button>
           </div>
         </div>

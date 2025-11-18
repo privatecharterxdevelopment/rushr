@@ -541,21 +541,8 @@ export default function ContractorSettingsPage() {
             disabled={loading}
             className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 transition-colors"
           >
-            {loading ? (
-              <>
-                <img
-                src="https://jtrxdcccswdwlritgstp.supabase.co/storage/v1/object/public/contractor-logos/RushrLogoAnimation.gif"
-                alt="Loading..."
-                className="w-4 h-4 object-contain"
-              />
-                Saving...
-              </>
-            ) : (
-              <>
-                <Save className="h-4 w-4" />
-                Save Settings
-              </>
-            )}
+            <Save className="h-4 w-4" />
+            {loading ? 'Saving...' : 'Save Settings'}
           </button>
         </div>
       </div>

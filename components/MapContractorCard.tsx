@@ -71,6 +71,51 @@ export default function MapContractorCard({ contractor, distance, rating }: MapC
         </div>
       )}
 
+      {/* Pricing Display */}
+      <div className="mb-2 p-2 bg-slate-50 rounded border border-slate-200">
+        <div className="text-xs font-semibold text-slate-700 mb-1">Pricing</div>
+        <div className="space-y-0.5 text-xs text-slate-600">
+          {contractor?.rate_type === 'Hourly' && contractor?.hourly_rate && (
+            <>
+              <div className="flex justify-between">
+                <span>Base:</span>
+                <span className="font-medium">${contractor.hourly_rate}/hr</span>
+              </div>
+              {contractor?.peak_rate && (
+                <div className="flex justify-between">
+                  <span>Peak:</span>
+                  <span className="font-medium">${contractor.peak_rate}/hr</span>
+                </div>
+              )}
+              {contractor?.surge_rate && (
+                <div className="flex justify-between">
+                  <span>Surge:</span>
+                  <span className="font-medium text-red-600">${contractor.surge_rate}/hr</span>
+                </div>
+              )}
+            </>
+          )}
+          {contractor?.rate_type === 'Flat' && contractor?.flat_rate_min && (
+            <div className="flex justify-between">
+              <span>Flat rate:</span>
+              <span className="font-medium">${contractor.flat_rate_min}</span>
+            </div>
+          )}
+          {contractor?.visit_fee && (
+            <div className="flex justify-between">
+              <span>Visit:</span>
+              <span className="font-medium">${contractor.visit_fee}</span>
+            </div>
+          )}
+          {contractor?.diagnostic_fee && (
+            <div className="flex justify-between">
+              <span>Diagnostic:</span>
+              <span className="font-medium">${contractor.diagnostic_fee}</span>
+            </div>
+          )}
+        </div>
+      </div>
+
       {/* Action Buttons */}
       <div className="flex gap-2 mt-2">
         <button
