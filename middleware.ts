@@ -17,10 +17,14 @@ export async function middleware(req: NextRequest) {
     // Continue with normal middleware flow but skip public route restrictions
   }
 
-  // PUBLIC ROUTES - Only these routes are accessible without authentication (production only)
+  // PUBLIC ROUTES - Accessible without authentication (production only)
   const publicRoutes = [
     '/pro/early-access',
     '/pro/early-access/success',
+    '/pro/wizard', // Contractor signup/onboarding flow
+    '/pro/sign-in', // Contractor sign-in page
+    '/pro/how-it-works', // Contractor info page
+    '/pro/page', // Contractor landing page (if exists as /pro/page.tsx)
     '/api/send-early-access-confirmation',
   ]
 
@@ -91,7 +95,8 @@ export async function middleware(req: NextRequest) {
 
   // Define route protection rules
   const homeownerOnlyRoutes = ['/dashboard/homeowner', '/post-job', '/my-jobs']
-  const contractorOnlyRoutes = ['/dashboard/contractor', '/pro/dashboard', '/pro/wizard']
+  const contractorOnlyRoutes = ['/dashboard/contractor', '/pro/dashboard']
+  // NOTE: /pro/wizard is intentionally NOT in contractorOnlyRoutes because it should be accessible without login (it's the signup flow)
 
   // Check if this path needs protection
   const needsHomeownerCheck = homeownerOnlyRoutes.some(route => pathname.startsWith(route))
