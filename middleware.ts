@@ -27,11 +27,14 @@ export async function middleware(req: NextRequest) {
     '/api/send-early-access-confirmation',
   ]
 
+  // Special case: /pro landing page (exact match only, not subpaths)
+  const isProLandingPage = pathname === '/pro'
+
   // CONTRACTOR-ONLY PUBLIC ROUTES - No auth required, but homeowners are blocked
   const contractorPublicRoutes = ['/pro/wizard']
 
   // Check if the current path is a public route
-  const isPublicRoute = publicRoutes.some(route => pathname.startsWith(route))
+  const isPublicRoute = publicRoutes.some(route => pathname.startsWith(route)) || isProLandingPage
   const isContractorPublicRoute = contractorPublicRoutes.some(route => pathname.startsWith(route))
 
   // Handle subdomain rewrites

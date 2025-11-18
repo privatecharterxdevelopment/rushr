@@ -50,16 +50,16 @@ export default function ProHome() {
   const { user, contractorProfile, loading } = useProAuth()
   const router = useRouter()
 
-  // Redirect authenticated Pro users to their dashboard
+  // Redirect authenticated CONTRACTOR users to their dashboard
+  // Do NOT redirect homeowners - they can view the marketing page
   useEffect(() => {
-    if (!loading && user) {
-      // Use setTimeout to avoid blocking the initial render
+    if (!loading && user && contractorProfile) {
+      // Only redirect if user is actually a contractor
       setTimeout(() => {
-        // Always redirect to dashboard - KYC flow handled within dashboard
         router.push('/dashboard/contractor')
       }, 100)
     }
-  }, [user, loading, router])
+  }, [user, contractorProfile, loading, router])
 
   // Show loading state while checking auth
   if (loading) {
@@ -70,13 +70,13 @@ export default function ProHome() {
     )
   }
 
-  // Only show the marketing page if user is not authenticated
-  if (user) {
+  // Only show redirect spinner if user is a contractor
+  if (user && contractorProfile) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <LoadingSpinner size="lg" text="Redirecting to dashboard..." color="blue" />
       </div>
-    ) // Will be redirected by useEffect
+    )
   }
 
   return (
