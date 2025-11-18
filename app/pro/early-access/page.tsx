@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '../../../lib/supabaseClient'
 import toast, { Toaster } from 'react-hot-toast'
-import { CheckCircle, Zap, TrendingUp, Users } from 'lucide-react'
+import { CheckCircle, Zap, TrendingUp, Users, X } from 'lucide-react'
 
 export default function EarlyAccessPage() {
   const router = useRouter()
@@ -13,6 +13,7 @@ export default function EarlyAccessPage() {
   const [email, setEmail] = useState('')
   const [phone, setPhone] = useState('')
   const [loading, setLoading] = useState(false)
+  const [showTerms, setShowTerms] = useState(false)
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -327,7 +328,7 @@ export default function EarlyAccessPage() {
             <div className="flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-slate-600">
               <p>&copy; 2025 Rushr. All rights reserved.</p>
               <div className="flex gap-6">
-                <Link href="/terms" className="hover:text-slate-900">Terms</Link>
+                <button onClick={() => setShowTerms(true)} className="hover:text-slate-900">Terms</button>
                 <Link href="/privacy" className="hover:text-slate-900">Privacy</Link>
                 <a href="mailto:hello@userushr.com" className="hover:text-slate-900">hello@userushr.com</a>
               </div>
@@ -335,6 +336,81 @@ export default function EarlyAccessPage() {
           </div>
         </footer>
       </div>
+
+      {/* Terms Modal */}
+      {showTerms && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[80vh] overflow-y-auto">
+            <div className="sticky top-0 bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between">
+              <h2 className="text-xl font-bold text-slate-900">Terms of Service</h2>
+              <button onClick={() => setShowTerms(false)} className="p-2 hover:bg-slate-100 rounded-full">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="px-6 py-6 space-y-4 text-sm text-slate-700">
+              <section>
+                <h3 className="font-semibold text-base text-slate-900 mb-2">1. Early Access Program</h3>
+                <p>By joining the Rushr Pro Early Access waitlist, you acknowledge that:</p>
+                <ul className="list-disc ml-6 mt-2 space-y-1">
+                  <li>Early access is subject to availability and approval</li>
+                  <li>Features and pricing may change during the beta period</li>
+                  <li>The 3-month free access promotion is valid only for approved early access members</li>
+                </ul>
+              </section>
+
+              <section>
+                <h3 className="font-semibold text-base text-slate-900 mb-2">2. Contractor Requirements</h3>
+                <p>To qualify for Rushr Pro, contractors must:</p>
+                <ul className="list-disc ml-6 mt-2 space-y-1">
+                  <li>Maintain valid business licenses and insurance</li>
+                  <li>Provide accurate and truthful information</li>
+                  <li>Comply with all applicable laws and regulations</li>
+                  <li>Complete jobs professionally and in a timely manner</li>
+                </ul>
+              </section>
+
+              <section>
+                <h3 className="font-semibold text-base text-slate-900 mb-2">3. Payment Terms</h3>
+                <p>After the 3-month free access period:</p>
+                <ul className="list-disc ml-6 mt-2 space-y-1">
+                  <li>Standard subscription pricing will apply</li>
+                  <li>You will be notified 14 days before the free period ends</li>
+                  <li>You may cancel at any time without penalty</li>
+                  <li>Payments are processed through Stripe Connect</li>
+                </ul>
+              </section>
+
+              <section>
+                <h3 className="font-semibold text-base text-slate-900 mb-2">4. Account Suspension</h3>
+                <p>Rushr reserves the right to suspend or terminate accounts for:</p>
+                <ul className="list-disc ml-6 mt-2 space-y-1">
+                  <li>Violations of terms of service</li>
+                  <li>Fraudulent activity or misrepresentation</li>
+                  <li>Poor customer service or multiple complaints</li>
+                  <li>Failure to maintain valid licenses or insurance</li>
+                </ul>
+              </section>
+
+              <section>
+                <h3 className="font-semibold text-base text-slate-900 mb-2">5. Privacy & Data</h3>
+                <p>By signing up, you agree to our collection and use of your information as described in our Privacy Policy. We will never sell your personal data to third parties.</p>
+              </section>
+
+              <section>
+                <h3 className="font-semibold text-base text-slate-900 mb-2">6. Contact</h3>
+                <p>For questions or concerns, contact us at <a href="mailto:hello@userushr.com" className="text-blue-600 hover:underline">hello@userushr.com</a></p>
+              </section>
+
+              <p className="text-xs text-slate-500 mt-6">Last updated: January 2025</p>
+            </div>
+            <div className="sticky bottom-0 bg-white border-t border-slate-200 px-6 py-4">
+              <button onClick={() => setShowTerms(false)} className="w-full px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium">
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   )
 }
