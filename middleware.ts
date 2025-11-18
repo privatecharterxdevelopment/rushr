@@ -96,7 +96,6 @@ export async function middleware(req: NextRequest) {
   // Define route protection rules
   const homeownerOnlyRoutes = ['/dashboard/homeowner', '/post-job', '/my-jobs']
   const contractorOnlyRoutes = ['/dashboard/contractor', '/pro/dashboard']
-  // NOTE: /pro/wizard is intentionally NOT in contractorOnlyRoutes because it should be accessible without login (it's the signup flow)
 
   // Check if this path needs protection
   const needsHomeownerCheck = homeownerOnlyRoutes.some(route => pathname.startsWith(route))
@@ -134,16 +133,15 @@ export async function middleware(req: NextRequest) {
 
   console.log(`[MIDDLEWARE] User ${user.id.substring(0, 8)}: isContractor=${isContractor}, isHomeowner=${isHomeowner}, needsHomeownerCheck=${needsHomeownerCheck}, needsContractorCheck=${needsContractorCheck}`)
 
-  // PRIORITY: Contractors take precedence over homeowners if user has both profiles
-  // This handles cases where a homeowner signs up as a contractor
+  // BLOCK contractors from homeowner-only routes
   if (isContractor && needsHomeownerCheck) {
-    console.log(`[MIDDLEWARE] 🚫🚫🚫 BLOCKING CONTRACTOR from ${pathname} -> redirecting to /dashboard/contractor`)
+    console.log(`[MIDDLEWARE] 🚫 BLOCKING CONTRACTOR from ${pathname} -> redirecting to /dashboard/contractor`)
     return NextResponse.redirect(new URL('/dashboard/contractor', req.url))
   }
 
-  // BLOCK homeowners from contractor-only routes (only if NOT a contractor)
-  if (isHomeowner && !isContractor && needsContractorCheck) {
-    console.log(`[MIDDLEWARE] 🚫🚫🚫 BLOCKING HOMEOWNER from ${pathname} -> redirecting to /dashboard/homeowner`)
+  // BLOCK homeowners from contractor-only routes
+  if (isHomeowner && needsContractorCheck) {
+    console.log(`[MIDDLEWARE] 🚫 BLOCKING HOMEOWNER from ${pathname} -> redirecting to /dashboard/homeowner`)
     return NextResponse.redirect(new URL('/dashboard/homeowner', req.url))
   }
 
