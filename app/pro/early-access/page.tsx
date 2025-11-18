@@ -317,8 +317,11 @@ export default function EarlyAccessPage() {
             <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold text-white mb-3 md:mb-4">
               Ready to Transform Your Business?
             </h2>
-            <p className="text-base md:text-lg lg:text-xl text-blue-100 max-w-2xl mx-auto">
+            <p className="text-base md:text-lg lg:text-xl text-blue-100 max-w-2xl mx-auto mb-6">
               Join hundreds of contractors already on the waitlist for 3 months free access.
+            </p>
+            <p className="text-sm md:text-base text-blue-100">
+              Questions? <a href="mailto:hello@userushr.com" className="underline hover:text-white font-medium">Contact us →</a>
             </p>
           </div>
         </section>
