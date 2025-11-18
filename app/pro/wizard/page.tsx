@@ -843,7 +843,21 @@ async function submitAll(e?: React.FormEvent) {
 
                   {/* Fetch ZIPs by Location */}
                   <div className="mb-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                    <label className="block text-xs font-medium text-blue-900 mb-2">Quick Add: Fetch all ZIPs from a location</label>
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="block text-xs font-medium text-blue-900">Quick Add: Fetch all ZIPs from a location</label>
+                      {form.extraZips.length > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            set('extraZips', [])
+                            toast.success('All ZIP codes cleared')
+                          }}
+                          className="text-xs text-rose-600 hover:text-rose-700 underline font-medium"
+                        >
+                          Clear All ZIPs
+                        </button>
+                      )}
+                    </div>
                     <div className="flex gap-2">
                       <input
                         type="text"
@@ -1325,7 +1339,21 @@ async function submitAll(e?: React.FormEvent) {
 
                   {/* Fetch ZIPs by Location */}
                   <div className="mb-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                    <label className="block text-xs font-medium text-blue-900 mb-2">Quick Add: Fetch all ZIPs from a location</label>
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="block text-xs font-medium text-blue-900">Quick Add: Fetch all ZIPs from a location</label>
+                      {form.extraZips.length > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            set('extraZips', [])
+                            toast.success('All ZIP codes cleared')
+                          }}
+                          className="text-xs text-rose-600 hover:text-rose-700 underline font-medium"
+                        >
+                          Clear All ZIPs
+                        </button>
+                      )}
+                    </div>
                     <div className="flex gap-2">
                       <input
                         type="text"
