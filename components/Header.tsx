@@ -46,8 +46,8 @@ export default function Header() {
 
   const pathname = usePathname() || ''
 
-  // Hide header on early access pages
-  if (pathname.startsWith('/pro/early-access')) {
+  // Hide header on early access pages and admin panel
+  if (pathname.startsWith('/pro/early-access') || pathname.startsWith('/dashboard/admin')) {
     return null
   }
 

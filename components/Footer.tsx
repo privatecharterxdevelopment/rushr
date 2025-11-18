@@ -13,8 +13,8 @@ export default function Footer() {
   const { user: homeownerUser } = useAuth()
   const { user: proUser } = useProAuth()
 
-  // Hide footer on early access pages
-  if (pathname.startsWith('/pro/early-access')) {
+  // Hide footer on early access pages and admin panel
+  if (pathname.startsWith('/pro/early-access') || pathname.startsWith('/dashboard/admin')) {
     return null
   }
 

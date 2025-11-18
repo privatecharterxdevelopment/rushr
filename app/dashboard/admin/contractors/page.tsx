@@ -205,7 +205,6 @@ export default function ContractorApprovalsPage() {
         .update({
           status: 'rejected',
           rejection_reason: reason || 'Application rejected by admin',
-          rejected_at: new Date().toISOString(),
         })
         .eq('id', contractorId)
 
