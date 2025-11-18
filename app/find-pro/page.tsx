@@ -251,8 +251,9 @@ export default function FindProPage() {
         if (!matchesHours(c)) return false
 
         // LOCATION FILTER (radius)
-        const lat = Number(c?.loc?.lat)
-        const lng = Number(c?.loc?.lng)
+        // Support both loc.lat/lng format and direct latitude/longitude fields
+        const lat = Number(c?.loc?.lat ?? c?.latitude)
+        const lng = Number(c?.loc?.lng ?? c?.longitude)
         if (!isFinite(lat) || !isFinite(lng)) return false
 
         const d = distMiles(activeCenter, [lat, lng])

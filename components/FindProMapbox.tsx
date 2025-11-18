@@ -196,8 +196,9 @@ export default function FindProMapbox({
 
     // Add new markers
     items.forEach((item: any) => {
-      const lat = Number(item?.loc?.lat)
-      const lng = Number(item?.loc?.lng)
+      // Support both loc.lat/lng format and direct latitude/longitude fields
+      const lat = Number(item?.loc?.lat ?? item?.latitude)
+      const lng = Number(item?.loc?.lng ?? item?.longitude)
       if (!isFinite(lat) || !isFinite(lng)) return
 
       const svcs: string[] = Array.isArray(item?.services) ? item.services : []
