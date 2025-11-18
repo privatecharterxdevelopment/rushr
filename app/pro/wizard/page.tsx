@@ -208,15 +208,33 @@ export default function ContractorSignup() {
       const feature = geoData.features[0]
       const [lng, lat] = feature.center
 
-      // Determine search radius based on place type
+      // Extract location context to filter ZIPs
       const placeType = feature.place_type[0]
+      const locationContext: any = {}
+
+      // Parse context to get city, state, etc.
+      if (feature.context) {
+        feature.context.forEach((ctx: any) => {
+          if (ctx.id.startsWith('region.')) locationContext.state = ctx.text
+          if (ctx.id.startsWith('place.')) locationContext.city = ctx.text
+          if (ctx.id.startsWith('district.')) locationContext.district = ctx.text
+        })
+      }
+
+      // For place-level searches, use the place name
+      if (placeType === 'place') {
+        locationContext.city = feature.text
+      } else if (placeType === 'region') {
+        locationContext.state = feature.text
+      }
+
+      // Determine search radius based on place type
       let radius = 10 // default 10km
       if (placeType === 'region') radius = 100 // state-level
       else if (placeType === 'district') radius = 50 // district-level
       else if (placeType === 'place') radius = 20 // city-level
 
       // Use reverse geocoding with proximity to find nearby ZIP codes
-      // We'll search in a grid pattern around the center point
       const allZips = new Set<string>()
 
       // Create multiple search points in a grid
@@ -235,9 +253,30 @@ export default function ContractorSignup() {
             const zipData = await zipResponse.json()
 
             if (zipData.features && zipData.features.length > 0) {
-              const zip = zipData.features[0].text
+              const zipFeature = zipData.features[0]
+              const zip = zipFeature.text
+
               if (/^\d{5}$/.test(zip)) {
-                allZips.add(zip)
+                // CRITICAL: Validate ZIP belongs to the searched location
+                let isValidZip = false
+
+                if (placeType === 'region') {
+                  // For state searches, match state
+                  const zipState = zipFeature.context?.find((ctx: any) => ctx.id.startsWith('region.'))?.text
+                  isValidZip = zipState === locationContext.state
+                } else if (placeType === 'place') {
+                  // For city searches, match city name
+                  const zipCity = zipFeature.context?.find((ctx: any) => ctx.id.startsWith('place.'))?.text
+                  isValidZip = zipCity === locationContext.city
+                } else if (placeType === 'district') {
+                  // For district searches, match district
+                  const zipDistrict = zipFeature.context?.find((ctx: any) => ctx.id.startsWith('district.'))?.text
+                  isValidZip = zipDistrict === locationContext.district
+                }
+
+                if (isValidZip) {
+                  allZips.add(zip)
+                }
               }
             }
           } catch (err) {
