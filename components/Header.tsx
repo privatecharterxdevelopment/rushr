@@ -46,6 +46,11 @@ export default function Header() {
 
   const pathname = usePathname() || ''
 
+  // Hide header on early access pages
+  if (pathname.startsWith('/pro/early-access')) {
+    return null
+  }
+
   // Simple logic: determine if we're on a pro route
   const isProRoute = pathname.startsWith('/pro') || pathname.startsWith('/dashboard/contractor')
 

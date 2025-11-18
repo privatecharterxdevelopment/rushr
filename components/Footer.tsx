@@ -13,6 +13,11 @@ export default function Footer() {
   const { user: homeownerUser } = useAuth()
   const { user: proUser } = useProAuth()
 
+  // Hide footer on early access pages
+  if (pathname.startsWith('/pro/early-access')) {
+    return null
+  }
+
   // Determine current user and role
   const user = homeownerUser || proUser
   const userRole = homeownerUser ? 'HOMEOWNER' : proUser ? 'CONTRACTOR' : null

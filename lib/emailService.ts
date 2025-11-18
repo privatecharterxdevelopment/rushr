@@ -704,6 +704,74 @@ export async function sendWelcomeEmailContractor(params: {
 }
 
 /**
+ * Send early access waitlist confirmation email
+ */
+export async function sendEarlyAccessConfirmation(params: {
+  email: string
+  name: string
+}) {
+  const { email, name } = params
+
+  const subject = 'You're on the Rushr Pro Early Access List! 🎉'
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+      <div style="background: linear-gradient(135deg, #3B82F6 0%, #4F46E5 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+        <h1 style="margin: 0; font-size: 28px;">Welcome to Rushr Pro Early Access!</h1>
+        <p style="margin-top: 10px; font-size: 16px; opacity: 0.9;">3 Months Free</p>
+      </div>
+
+      <div style="background: #F9FAFB; padding: 30px; border-radius: 0 0 10px 10px;">
+        <p style="font-size: 16px;">Hi ${name},</p>
+
+        <p>Thank you for joining the Rushr Pro early access waitlist! You're now on the list to be among the first contractors to access our platform.</p>
+
+        <div style="background: white; border-left: 4px solid #3B82F6; padding: 20px; margin: 25px 0; border-radius: 5px;">
+          <h3 style="color: #3B82F6; margin-top: 0;">🎁 Your Early Access Benefits:</h3>
+          <ul style="line-height: 1.8; color: #374151;">
+            <li><strong>3 months free</strong> full access to Rushr Pro</li>
+            <li>Priority access when we launch</li>
+            <li>Exclusive founding member badge on your profile</li>
+            <li>Direct access to founders for feedback and support</li>
+          </ul>
+        </div>
+
+        <h3 style="color: #1F2937;">📧 What happens next?</h3>
+        <p>We'll send you an email with your exclusive early access link when Rushr Pro is ready to launch. You'll be among the first contractors to access the platform and start connecting with homeowners.</p>
+
+        <h3 style="color: #1F2937;">🚀 Coming Soon:</h3>
+        <ul style="line-height: 1.8; color: #374151;">
+          <li>Instant job matching with local homeowners</li>
+          <li>Smart pipeline to manage bids and proposals</li>
+          <li>Direct communication with potential clients</li>
+          <li>Secure payments and project tracking</li>
+        </ul>
+
+        <p style="margin-top: 30px;">Questions? Just reply to this email - we're here to help!</p>
+
+        <p style="margin-top: 25px;">Best regards,<br><strong>The Rushr Team</strong></p>
+      </div>
+
+      <div style="text-align: center; margin-top: 30px; color: #6B7280; font-size: 14px;">
+        <p>© ${new Date().getFullYear()} Rushr. All rights reserved.</p>
+        <p style="margin-top: 10px;">
+          <a href="${process.env.NEXT_PUBLIC_SITE_URL}/pro" style="color: #3B82F6; text-decoration: none;">Learn more about Rushr Pro</a>
+        </p>
+        <p style="margin-top: 10px;">
+          <a href="mailto:hello@userushr.com" style="color: #6B7280; text-decoration: none;">hello@userushr.com</a>
+        </p>
+      </div>
+    </div>
+  `
+
+  return sendEmail({
+    to: email,
+    subject,
+    html,
+    text: `Hi ${name}, Thank you for joining the Rushr Pro early access waitlist! You'll receive 3 months free access plus exclusive benefits when we launch. We'll email you with your access link soon. Questions? Reply to this email. - The Rushr Team`
+  })
+}
+
+/**
  * Notify contractor when homeowner sends them a custom job offer
  */
 export async function notifyCustomOffer(params: {

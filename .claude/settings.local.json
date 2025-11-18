@@ -11,7 +11,8 @@
       "Bash(netstat:*)",
       "Bash(findstr:*)",
       "Bash(tasklist:*)",
-      "Bash(taskkill:*)"
+      "Bash(taskkill:*)",
+      "Bash(open \"http://localhost:3001/pro/early-access\")"
     ],
     "deny": [],
     "ask": []
