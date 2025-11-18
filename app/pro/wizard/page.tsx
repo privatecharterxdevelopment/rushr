@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabaseClient'
 import AiRewriteBubble from '@/components/AiRewriteBubble'
 import TagInput from '@/components/TagInput'
+import toast, { Toaster } from 'react-hot-toast'
 
 /* ====================== Types ====================== */
 type Day = 'Mon'|'Tue'|'Wed'|'Thu'|'Fri'|'Sat'|'Sun'
@@ -266,7 +267,7 @@ async function submitAll(e?: React.FormEvent) {
   if (Object.keys(eobj).length) {
     console.log('[WIZARD] Validation errors:', Object.keys(eobj), eobj)
     scrollToFirstError(eobj)
-    alert(`Please fix the following errors: ${Object.keys(eobj).join(', ')}`)
+    toast.error(`Please fix: ${Object.keys(eobj).join(', ')}`, { duration: 4000 })
     return
   }
 
@@ -296,14 +297,14 @@ async function submitAll(e?: React.FormEvent) {
 
       if (signUpError) {
         console.error('[WIZARD] Signup error:', signUpError)
-        alert(`Signup error: ${signUpError.message}`)
+        toast.error(`Signup error: ${signUpError.message}`, { duration: 5000 })
         setBusy(false)
         return
       }
 
       session = signUpData.session
       if (!session) {
-        alert('Account created but could not sign in. Please sign in manually.')
+        toast.error('Account created but could not sign in. Please sign in manually.', { duration: 5000 })
         router.push('/pro/sign-in')
         setBusy(false)
         return
@@ -337,16 +338,26 @@ async function submitAll(e?: React.FormEvent) {
         longitude: form.longitude,
         base_zip: form.baseZip,
         service_area_zips: [form.baseZip, ...form.extraZips],
-        service_radius_miles: form.radiusMiles,
-        emergency_services: form.emergency,
+        radius_miles: form.radiusMiles,
+        emergency_service: form.emergency,
         business_hours: form.hours,
         hourly_rate: form.hourlyRate ? parseFloat(form.hourlyRate.replace(/[^0-9.]/g, '')) : null,
         rate_type: form.rateType,
         free_estimates: form.freeEstimates,
         years_in_business: form.yearsInBusiness ? parseInt(form.yearsInBusiness) : null,
         team_size: form.teamSize ? parseInt(form.teamSize) : null,
-        business_description: form.about,
+        about: form.about,
         website: form.website,
+        license_type: form.licenseType,
+        license_expires: form.licenseExpires,
+        insurance_expires: form.insuranceExpires,
+        specialties: form.specialties,
+        flat_rate_min: form.flatMin ? parseFloat(form.flatMin.replace(/[^0-9.]/g, '')) : null,
+        visit_fee: form.visitFee ? parseFloat(form.visitFee.replace(/[^0-9.]/g, '')) : null,
+        instagram: form.instagram,
+        facebook: form.facebook,
+        yelp: form.yelp,
+        google_business: form.google,
         status: 'pending_approval',
         kyc_status: 'in_progress'
       })
@@ -360,12 +371,53 @@ async function submitAll(e?: React.FormEvent) {
         details: profileError.details,
         hint: profileError.hint
       })
-      alert(`Database error: ${profileError.message}\n\nPlease check console for details.`)
+      toast.error(`Database error: ${profileError.message}`, {
+        duration: 5000,
+        position: 'top-center'
+      })
       setBusy(false)
       return
     }
 
     console.log('[WIZARD] Profile saved successfully:', upsertData)
+
+    // Upload logo if provided
+    let logoUrl: string | null = null
+    if (form.logo) {
+      console.log('[WIZARD] Uploading contractor logo...')
+      try {
+        const fileExt = form.logo.name.split('.').pop()
+        const fileName = `${session.user.id}-${Date.now()}.${fileExt}`
+        const filePath = `contractor-logos/${fileName}`
+
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from('contractor-logos')
+          .upload(filePath, form.logo, {
+            cacheControl: '3600',
+            upsert: true
+          })
+
+        if (uploadError) {
+          console.error('[WIZARD] Logo upload error:', uploadError)
+        } else {
+          const { data: { publicUrl } } = supabase.storage
+            .from('contractor-logos')
+            .getPublicUrl(filePath)
+
+          logoUrl = publicUrl
+          console.log('[WIZARD] Logo uploaded successfully:', logoUrl)
+
+          // Update contractor profile with logo URL
+          await supabase
+            .from('pro_contractors')
+            .update({ logo_url: logoUrl })
+            .eq('id', session.user.id)
+        }
+      } catch (logoError: any) {
+        console.error('[WIZARD] Logo upload failed:', logoError)
+        // Don't fail wizard if logo upload fails
+      }
+    }
 
     // Send welcome email to contractor (non-blocking - don't fail wizard if email fails)
     console.log('[WIZARD] Sending welcome email to contractor...')
@@ -412,7 +464,7 @@ async function submitAll(e?: React.FormEvent) {
 
       if (!stripeData.success) {
         console.error('[WIZARD] ❌ Stripe account creation failed:', stripeData.error)
-        alert(`⚠️ Stripe setup failed: ${stripeData.error}\n\nYou can complete payment setup later from your dashboard.`)
+        toast.error(`Stripe setup failed: ${stripeData.error}. Complete setup later from dashboard.`, { duration: 6000 })
         // Don't fail wizard - can complete Stripe setup later from dashboard
       } else {
         console.log('[WIZARD] ✅ Stripe Connect account created:', stripeData.accountId)
@@ -432,29 +484,29 @@ async function submitAll(e?: React.FormEvent) {
 
           if (onboardingData.success && onboardingData.url) {
             clearDraft()
-            alert('Welcome to Rushr Pro! Redirecting you to complete your payment and bank account setup with Stripe...')
+            toast.success('Redirecting to Stripe to complete payment setup...', { duration: 3000 })
             console.log('[WIZARD] ✅ Redirecting to Stripe onboarding:', onboardingData.url)
-            window.location.href = onboardingData.url
+            setTimeout(() => { window.location.href = onboardingData.url }, 1000)
             return // Exit here - Stripe will redirect back to dashboard
           } else {
             console.error('[WIZARD] ❌ Failed to get onboarding link:', onboardingData.error)
-            alert(`⚠️ Could not generate Stripe onboarding link: ${onboardingData.error}\n\nPlease complete payment setup from your dashboard.`)
+            toast.error(`Could not generate Stripe link: ${onboardingData.error}`, { duration: 6000 })
           }
         } catch (onboardingError: any) {
           console.error('[WIZARD] ❌ Onboarding link fetch error:', onboardingError)
-          alert(`⚠️ Network error getting Stripe link: ${onboardingError.message}\n\nPlease complete payment setup from your dashboard.`)
+          toast.error(`Network error: ${onboardingError.message}. Complete setup from dashboard.`, { duration: 6000 })
         }
       }
     } catch (stripeError: any) {
       console.error('[WIZARD] ❌ Stripe Connect fetch error:', stripeError)
-      alert(`⚠️ Network error contacting Stripe: ${stripeError.message}\n\nYou can complete payment setup later from your dashboard.`)
+      toast.error(`Network error: ${stripeError.message}. Complete setup from dashboard.`, { duration: 6000 })
       // Don't fail wizard - can complete Stripe setup later
     }
 
     // Fallback: If Stripe setup fails, still let them access dashboard
     clearDraft()
     setBusy(false) // IMPORTANT: Clear busy state BEFORE alert/redirect
-    alert('Welcome to Rushr Pro! Your profile has been submitted. Please complete your payment setup from the dashboard to receive payments.')
+    toast.success('Welcome to Rushr Pro! Complete payment setup from dashboard.', { duration: 5000 })
 
     console.log('[WIZARD] ========================================')
     console.log('[WIZARD] CONTRACTOR PROFILE CREATED SUCCESSFULLY')
@@ -479,7 +531,7 @@ async function submitAll(e?: React.FormEvent) {
     window.location.href = '/dashboard/contractor'
   } catch (err: any) {
     console.error('[WIZARD] Submit error:', err)
-    alert(`Error: ${err?.message || 'Could not submit right now. Check console for details.'}`)
+    toast.error(`Error: ${err?.message || 'Could not submit. Check console.'}`, { duration: 5000 })
     setBusy(false)
   }
 }
@@ -497,8 +549,10 @@ async function submitAll(e?: React.FormEvent) {
 
   /* ====================== Render ====================== */
   return (
-    <section className="section min-h-screen bg-gray-50 py-12">
-      <div className="container max-w-4xl mx-auto px-4">
+    <>
+      <Toaster position="top-center" />
+      <section className="section min-h-screen bg-gray-50 py-12">
+        <div className="container max-w-4xl mx-auto px-4">
         {/* Header row */}
         <div className="mb-5 flex items-center justify-between gap-3">
           <div>
@@ -891,14 +945,32 @@ async function submitAll(e?: React.FormEvent) {
             {step==='review' && (
               <div className="space-y-4">
                 <div className="rounded-xl border border-slate-200 p-4">
-                  <div className="text-sm font-semibold mb-2">Quick preview</div>
+                  <div className="text-sm font-semibold mb-3">Quick preview</div>
+
+                  {/* Logo Preview */}
+                  {form.logo && (
+                    <div className="mb-4 flex items-center gap-4 p-3 bg-slate-50 rounded-lg">
+                      <img
+                        src={URL.createObjectURL(form.logo)}
+                        alt="Business logo"
+                        className="h-20 w-20 object-contain rounded-lg border-2 border-slate-200 bg-white shadow-sm"
+                      />
+                      <div className="text-xs text-slate-600">
+                        <div className="font-medium text-slate-900">Your Logo</div>
+                        <div>This will appear on your profile</div>
+                      </div>
+                    </div>
+                  )}
+
                   <ul className="text-sm text-slate-700 space-y-1">
                     <li><b>{form.businessName || 'Your business name'}</b> — {form.categories.join(', ') || 'No categories selected'}</li>
                     <li>{form.baseZip ? `Base ZIP ${form.baseZip}` : 'No base ZIP'} • Radius {form.radiusMiles} mi</li>
                     <li>Extra ZIPs: {form.extraZips.length ? form.extraZips.join(', ') : '—'}</li>
-                    <li>License #{form.licenseNumber || '—'} • Ins: {form.insuranceCarrier || '—'}</li>
+                    <li>License #{form.licenseNumber || '—'} (Expires: {form.licenseExpires || '—'})</li>
+                    <li>Insurance: {form.insuranceCarrier || '—'} (Expires: {form.insuranceExpires || '—'})</li>
                     <li>Rate: {form.rateType} {form.rateType==='Hourly' ? form.hourlyRate : form.rateType==='Flat' ? form.flatMin : form.visitFee}</li>
                     <li>Specialties: {form.specialties.length ? form.specialties.join(', ') : '—'}</li>
+                    {form.website && <li>Website: <a href={form.website} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">{form.website}</a></li>}
                   </ul>
                 </div>
 
@@ -1294,14 +1366,32 @@ async function submitAll(e?: React.FormEvent) {
               <h2 className="text-xl font-semibold text-slate-900 mb-4 border-b pb-2">Review & Submit</h2>
               <div className="space-y-4">
                 <div className="rounded-xl border border-slate-200 p-4">
-                  <div className="text-sm font-semibold mb-2">Quick preview</div>
+                  <div className="text-sm font-semibold mb-3">Quick preview</div>
+
+                  {/* Logo Preview */}
+                  {form.logo && (
+                    <div className="mb-4 flex items-center gap-4 p-3 bg-slate-50 rounded-lg">
+                      <img
+                        src={URL.createObjectURL(form.logo)}
+                        alt="Business logo"
+                        className="h-20 w-20 object-contain rounded-lg border-2 border-slate-200 bg-white shadow-sm"
+                      />
+                      <div className="text-xs text-slate-600">
+                        <div className="font-medium text-slate-900">Your Logo</div>
+                        <div>This will appear on your profile</div>
+                      </div>
+                    </div>
+                  )}
+
                   <ul className="text-sm text-slate-700 space-y-1">
                     <li><b>{form.businessName || 'Your business name'}</b> — {form.categories.join(', ') || 'No categories selected'}</li>
                     <li>{form.baseZip ? `Base ZIP ${form.baseZip}` : 'No base ZIP'} • Radius {form.radiusMiles} mi</li>
                     <li>Extra ZIPs: {form.extraZips.length ? form.extraZips.join(', ') : '—'}</li>
-                    <li>License #{form.licenseNumber || '—'} • Ins: {form.insuranceCarrier || '—'}</li>
+                    <li>License #{form.licenseNumber || '—'} (Expires: {form.licenseExpires || '—'})</li>
+                    <li>Insurance: {form.insuranceCarrier || '—'} (Expires: {form.insuranceExpires || '—'})</li>
                     <li>Rate: {form.rateType} {form.rateType==='Hourly' ? form.hourlyRate : form.rateType==='Flat' ? form.flatMin : form.visitFee}</li>
                     <li>Specialties: {form.specialties.length ? form.specialties.join(', ') : '—'}</li>
+                    {form.website && <li>Website: <a href={form.website} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">{form.website}</a></li>}
                   </ul>
                 </div>
                 <div className="grid gap-2">
@@ -1334,6 +1424,7 @@ async function submitAll(e?: React.FormEvent) {
         )}
       </div>
     </section>
+    </>
   )
 }
 

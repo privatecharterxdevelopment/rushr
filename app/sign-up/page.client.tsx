@@ -19,6 +19,7 @@ export default function SignUpPage() {
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
   const [showModal, setShowModal] = useState(false)
+  const [agreedToTerms, setAgreedToTerms] = useState(false)
 
   // No auto-redirect - let users stay on the page if they want
 
@@ -57,6 +58,12 @@ export default function SignUpPage() {
     e.preventDefault()
     setError(null)
     setLoading(true)
+
+    if (!agreedToTerms) {
+      setError('You must agree to the Terms & Conditions and Privacy Policy to create an account')
+      setLoading(false)
+      return
+    }
 
     if (password.length < 8) {
       setError('Password must be at least 8 characters long')
@@ -158,9 +165,31 @@ export default function SignUpPage() {
             </p>
           </div>
 
+          {/* Terms & Conditions Checkbox */}
+          <div className="flex items-start gap-3 py-3 px-4 bg-gray-50 rounded-md border border-gray-200">
+            <input
+              type="checkbox"
+              id="agree-terms"
+              checked={agreedToTerms}
+              onChange={(e) => setAgreedToTerms(e.target.checked)}
+              className="mt-1 h-4 w-4 rounded border-gray-300 text-green-600 focus:ring-green-500 cursor-pointer"
+              required
+            />
+            <label htmlFor="agree-terms" className="text-sm text-gray-700 cursor-pointer select-none">
+              I agree to the{' '}
+              <Link href="/terms" target="_blank" className="text-green-600 hover:text-green-700 underline font-medium">
+                Terms & Conditions
+              </Link>
+              {' '}and{' '}
+              <Link href="/privacy" target="_blank" className="text-green-600 hover:text-green-700 underline font-medium">
+                Privacy Policy
+              </Link>
+            </label>
+          </div>
+
           <button
             className="w-full py-2 px-4 bg-[#059669] text-white rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50 transition-colors"
-            disabled={loading}
+            disabled={loading || !agreedToTerms}
           >
             {loading ? 'Creating Account…' : 'Create Account'}
           </button>
@@ -185,20 +214,6 @@ export default function SignUpPage() {
                 Sign in
               </button>
             </p>
-
-            <div className="mt-6 pt-6 border-t border-gray-200">
-              <p className="text-xs text-gray-500 text-center">
-                By creating an account you agree to our{' '}
-                <Link href="/terms" className="text-green-600 hover:text-green-500 underline">
-                  Terms
-                </Link>{' '}
-                and{' '}
-                <Link href="/privacy" className="text-green-600 hover:text-green-500 underline">
-                  Privacy Policy
-                </Link>
-                .
-              </p>
-            </div>
           </>
         )}
 

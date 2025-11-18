@@ -672,14 +672,24 @@ export default function FindProPage() {
             {filtered.map((c) => {
               const d = (c as any).__distance as number | undefined
               const svc: string[] = Array.isArray(c?.services) ? c.services : []
+              const logoUrl = c?.logo_url || c?.avatar_url
               return (
                 <div
                   key={String(c?.id ?? c?.name)}
                   className="rounded-xl border border-slate-200 p-2.5 transition hover:shadow-[0_1px_12px_rgba(2,6,23,.06)]"
                 >
                   <div className="flex items-start justify-between gap-2">
-                    <div className="truncate text-[14px] font-semibold text-slate-900">
-                      {c?.name || 'Contractor'}
+                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                      {logoUrl && (
+                        <img
+                          src={logoUrl}
+                          alt={c?.business_name || c?.name || 'Contractor'}
+                          className="h-10 w-10 rounded-lg object-contain border border-slate-200 bg-white flex-shrink-0"
+                        />
+                      )}
+                      <div className="truncate text-[14px] font-semibold text-slate-900">
+                        {c?.name || 'Contractor'}
+                      </div>
                     </div>
                     <div className="shrink-0 text-[11px] text-slate-500">
                       {typeof d === 'number' ? `${d.toFixed(1)} mi` : ''}

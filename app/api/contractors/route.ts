@@ -58,6 +58,7 @@ export async function GET(req: Request) {
     const contractors = (data || []).map((c: any) => ({
       id: c.id,
       name: c.name || c.business_name || 'Contractor',
+      business_name: c.business_name,
       services: c.categories || c.specialties || [],
       city: c.city,
       state: c.state,
@@ -67,6 +68,8 @@ export async function GET(req: Request) {
       emergency: c.emergency_service || false,
       twentyFourSeven: c.twenty_four_seven || false,
       loc: (c.latitude && c.longitude) ? { lat: c.latitude, lng: c.longitude } : null,
+      logo_url: c.logo_url,
+      avatar_url: c.avatar_url,
     }))
 
     return NextResponse.json({ contractors })

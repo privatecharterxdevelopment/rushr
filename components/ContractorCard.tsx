@@ -89,27 +89,38 @@ export default function ContractorCard({ c, variant = 'default' }: ContractorCar
   const rating = c.rating || c.housecallScore || 0
   const jobsCompleted = c.jobs_completed || 0
   const bio = c.bio || c.description || 'Professional contractor'
+  const logoUrl = c.logo_url || c.avatar_url
 
   return (
     <div className={shell}>
       <div className="flex items-start justify-between gap-2">
-        <div className="flex-1">
-          <div className="font-semibold text-ink dark:text-white">
-            {contractorName}
-            {businessName && (
-              <div className="text-xs text-slate-500 font-normal mt-0.5">
-                {businessName}
-              </div>
-            )}
-          </div>
-          <div className="text-xs text-slate-600 dark:text-slate-400 mt-1">
-            {categories.slice(0, 2).join(' • ')}
-            {serviceAreas.length > 0 && (
-              <span className="flex items-center gap-1 mt-1">
-                <MapPin className="h-3 w-3" />
-                {serviceAreas.slice(0, 2).join(', ')}
-              </span>
-            )}
+        <div className="flex items-start gap-3 flex-1">
+          {/* Logo */}
+          {logoUrl && (
+            <img
+              src={logoUrl}
+              alt={businessName || contractorName}
+              className="h-12 w-12 rounded-lg object-contain border border-slate-200 bg-white flex-shrink-0"
+            />
+          )}
+          <div className="flex-1 min-w-0">
+            <div className="font-semibold text-ink dark:text-white">
+              {contractorName}
+              {businessName && (
+                <div className="text-xs text-slate-500 font-normal mt-0.5">
+                  {businessName}
+                </div>
+              )}
+            </div>
+            <div className="text-xs text-slate-600 dark:text-slate-400 mt-1">
+              {categories.slice(0, 2).join(' • ')}
+              {serviceAreas.length > 0 && (
+                <span className="flex items-center gap-1 mt-1">
+                  <MapPin className="h-3 w-3" />
+                  {serviceAreas.slice(0, 2).join(', ')}
+                </span>
+              )}
+            </div>
           </div>
         </div>
         <div className="flex items-center gap-2">

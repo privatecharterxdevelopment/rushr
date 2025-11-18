@@ -149,6 +149,15 @@ export default function AuthModal() {
         className="relative w-full max-w-sm rounded-2xl border border-slate-200 bg-white p-5 shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
+        {/* Rushr Logo */}
+        <div className="mb-4">
+          <img
+            src="https://jtrxdcccswdwlritgstp.supabase.co/storage/v1/object/public/contractor-logos/Rushr%20Logo%20Vector.svg"
+            alt="Rushr"
+            className="h-10 w-auto"
+          />
+        </div>
+
         <div className="mb-3">
           <div className="flex items-center justify-between mb-2">
             <h2 className="text-lg font-semibold text-slate-900">{title}</h2>
@@ -332,6 +341,15 @@ function ForgotPasswordModal({ onClose }: { onClose: () => void }) {
         className="relative w-full max-w-sm rounded-2xl border border-slate-200 bg-white p-5 shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
+        {/* Rushr Logo */}
+        <div className="mb-4">
+          <img
+            src="https://jtrxdcccswdwlritgstp.supabase.co/storage/v1/object/public/contractor-logos/Rushr%20Logo%20Vector.svg"
+            alt="Rushr"
+            className="h-10 w-auto"
+          />
+        </div>
+
         <div className="mb-3">
           <div className="flex items-center justify-between mb-2">
             <h2 className="text-lg font-semibold text-slate-900">

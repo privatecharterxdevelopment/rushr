@@ -96,7 +96,7 @@ export default function ContractorProfilePage() {
             insurance_carrier: proContractor.insurance_carrier,
             verified: proContractor.kyc_status === 'completed',
             kyc_status: proContractor.kyc_status,
-            avatar_url: proContractor.avatar_url
+            avatar_url: proContractor.logo_url || proContractor.avatar_url
           })
         } else {
           setError('Contractor not found')
@@ -173,15 +173,19 @@ export default function ContractorProfilePage() {
         {/* Header Section */}
         <div className="bg-white dark:bg-slate-800 rounded-xl p-8 border border-slate-200 dark:border-slate-700 mb-6">
           <div className="flex flex-col md:flex-row gap-6">
-            {/* Avatar */}
+            {/* Logo/Avatar */}
             <div className="flex-shrink-0">
-              <div className="w-24 h-24 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center text-3xl font-bold text-blue-600 dark:text-blue-400">
-                {contractor.avatar_url ? (
-                  <img src={contractor.avatar_url} alt={contractor.name} className="w-24 h-24 rounded-full object-cover" />
-                ) : (
-                  contractor.name.charAt(0).toUpperCase()
-                )}
-              </div>
+              {contractor.avatar_url ? (
+                <img
+                  src={contractor.avatar_url}
+                  alt={contractor.business_name || contractor.name}
+                  className="w-24 h-24 rounded-xl object-contain border-2 border-slate-200 dark:border-slate-600 bg-white p-2"
+                />
+              ) : (
+                <div className="w-24 h-24 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center text-3xl font-bold text-blue-600 dark:text-blue-400">
+                  {contractor.name.charAt(0).toUpperCase()}
+                </div>
+              )}
             </div>
 
             {/* Info */}
