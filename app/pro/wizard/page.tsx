@@ -194,8 +194,8 @@ export default function ContractorSignup() {
     try {
       const MAPBOX_TOKEN = 'pk.eyJ1IjoicnVzaHJhZG1pbiIsImEiOiJjbWdiaTlobmcwdHc3MmtvbHhhOTJjNnJvIn0.st2PXkQQtqnh3tHrjp9pzw'
 
-      // Geocode the location to get bounding box
-      const geoUrl = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(locationForZips)}.json?access_token=${MAPBOX_TOKEN}&types=place,locality,postcode&limit=1`
+      // First, geocode the location to get coordinates and context
+      const geoUrl = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(locationForZips)}.json?access_token=${MAPBOX_TOKEN}&types=place,locality,region,district&limit=1&country=US`
       const geoResponse = await fetch(geoUrl)
       const geoData = await geoResponse.json()
 
@@ -206,32 +206,57 @@ export default function ContractorSignup() {
       }
 
       const feature = geoData.features[0]
-      const bbox = feature.bbox || feature.geometry.coordinates
+      const [lng, lat] = feature.center
 
-      // Use ZipCodeAPI or similar service to get ZIPs in area
-      // For now, we'll use Mapbox to search for postcodes in the area
-      const [minLng, minLat, maxLng, maxLat] = bbox.length === 4 ? bbox : [bbox[0] - 0.5, bbox[1] - 0.5, bbox[0] + 0.5, bbox[1] + 0.5]
+      // Determine search radius based on place type
+      const placeType = feature.place_type[0]
+      let radius = 10 // default 10km
+      if (placeType === 'region') radius = 100 // state-level
+      else if (placeType === 'district') radius = 50 // district-level
+      else if (placeType === 'place') radius = 20 // city-level
 
-      // Search for postcodes in the bounding box
-      const zipUrl = `https://api.mapbox.com/geocoding/v5/mapbox.places/postcode.json?access_token=${MAPBOX_TOKEN}&bbox=${minLng},${minLat},${maxLng},${maxLat}&types=postcode&limit=50`
-      const zipResponse = await fetch(zipUrl)
-      const zipData = await zipResponse.json()
+      // Use reverse geocoding with proximity to find nearby ZIP codes
+      // We'll search in a grid pattern around the center point
+      const allZips = new Set<string>()
 
-      if (zipData.features && zipData.features.length > 0) {
-        const newZips = zipData.features
-          .map((f: any) => f.text)
-          .filter((z: string) => /^\d{5}$/.test(z))
-          .filter((z: string) => !form.extraZips.includes(z) && z !== form.baseZip)
+      // Create multiple search points in a grid
+      const gridSize = placeType === 'region' ? 8 : placeType === 'district' ? 5 : 3
+      const step = radius / gridSize
 
-        if (newZips.length > 0) {
-          set('extraZips', [...form.extraZips, ...newZips])
-          toast.success(`Added ${newZips.length} ZIP codes from ${feature.place_name}`)
-          setLocationForZips('')
-        } else {
-          toast.error('No new ZIP codes found in this area')
+      for (let i = -gridSize; i <= gridSize; i++) {
+        for (let j = -gridSize; j <= gridSize; j++) {
+          // Calculate offset in degrees (rough approximation: 1 degree ≈ 111km)
+          const offsetLat = lat + (i * step) / 111
+          const offsetLng = lng + (j * step) / (111 * Math.cos(lat * Math.PI / 180))
+
+          try {
+            const zipUrl = `https://api.mapbox.com/geocoding/v5/mapbox.places/${offsetLng},${offsetLat}.json?access_token=${MAPBOX_TOKEN}&types=postcode&limit=1`
+            const zipResponse = await fetch(zipUrl)
+            const zipData = await zipResponse.json()
+
+            if (zipData.features && zipData.features.length > 0) {
+              const zip = zipData.features[0].text
+              if (/^\d{5}$/.test(zip)) {
+                allZips.add(zip)
+              }
+            }
+          } catch (err) {
+            // Skip errors for individual grid points
+            console.warn('Grid search error:', err)
+          }
         }
+      }
+
+      const newZips = Array.from(allZips)
+        .filter((z: string) => !form.extraZips.includes(z) && z !== form.baseZip)
+        .sort()
+
+      if (newZips.length > 0) {
+        set('extraZips', [...form.extraZips, ...newZips])
+        toast.success(`Added ${newZips.length} ZIP codes from ${feature.place_name}`)
+        setLocationForZips('')
       } else {
-        toast.error('No ZIP codes found. Try a more specific location.')
+        toast.error('No new ZIP codes found in this area (all may already be added)')
       }
     } catch (error) {
       console.error('Error fetching ZIPs:', error)
