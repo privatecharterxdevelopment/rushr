@@ -111,7 +111,8 @@ export async function middleware(req: NextRequest) {
   const needsHomeownerCheck = homeownerOnlyRoutes.some(route => pathname.startsWith(route))
   const needsContractorCheck = contractorOnlyRoutes.some(route => pathname.startsWith(route))
 
-  if (!needsHomeownerCheck && !needsContractorCheck) {
+  // Don't skip protection check if it's a contractor public route (we need to check if user is homeowner)
+  if (!needsHomeownerCheck && !needsContractorCheck && !isContractorPublicRoute) {
     console.log(`[MIDDLEWARE] Path ${pathname} does not need protection`)
     return NextResponse.next()
   }
