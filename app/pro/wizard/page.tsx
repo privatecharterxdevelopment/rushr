@@ -1274,6 +1274,11 @@ async function submitAll(e?: React.FormEvent) {
                   <input className={`w-full px-3 py-2 border rounded-md ${badgeErr('licenseState')}`} value={form.licenseState} onChange={e=>set('licenseState', e.target.value)} placeholder="NY (DOB), NJ (DCA), etc." />
                   {hintErr('licenseState')}
                 </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">States licensed in</label>
+                  <input className="w-full px-3 py-2 border rounded-md" value={form.licensedStates} onChange={e=>set('licensedStates', e.target.value)} placeholder="NY, NJ, CT" />
+                  <div className="mt-1 text-xs text-slate-500">Comma-separated list of states</div>
+                </div>
                 <div data-err="licenseExpires">
                   <label className="block text-sm font-medium text-gray-700 mb-1">License expires *</label>
                   <input type="date" className={`w-full px-3 py-2 border rounded-md ${badgeErr('licenseExpires')}`} value={form.licenseExpires} onChange={e=>set('licenseExpires', e.target.value)} />
@@ -1334,7 +1339,7 @@ async function submitAll(e?: React.FormEvent) {
                 <div>
                   <SectionTitle>Pricing</SectionTitle>
                   <div className="flex flex-wrap gap-2">
-                    {(['Hourly','Flat','Visit fee'] as RateType[]).map(rt=>(
+                    {(['Hourly','Flat'] as RateType[]).map(rt=>(
                       <button
                         key={rt}
                         type="button"
@@ -1347,11 +1352,31 @@ async function submitAll(e?: React.FormEvent) {
                       </button>
                     ))}
                   </div>
+
                   {form.rateType==='Hourly' && (
-                    <div className="mt-2" data-err="hourlyRate">
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Hourly rate *</label>
-                      <input className={`w-full px-3 py-2 border rounded-md ${badgeErr('hourlyRate')}`} value={form.hourlyRate} onChange={e=>set('hourlyRate', e.target.value)} placeholder="$120" />
-                      {hintErr('hourlyRate')}
+                    <div className="mt-3 space-y-3">
+                      <div className="grid md:grid-cols-2 gap-3">
+                        <div data-err="hourlyRate">
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Base hourly rate *</label>
+                          <input className={`w-full px-3 py-2 border rounded-md ${badgeErr('hourlyRate')}`} value={form.hourlyRate} onChange={e=>set('hourlyRate', e.target.value)} placeholder="$120" />
+                          {hintErr('hourlyRate')}
+                        </div>
+                        <div data-err="peakRate">
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Peak hourly rate *</label>
+                          <input className={`w-full px-3 py-2 border rounded-md ${badgeErr('peakRate')}`} value={form.peakRate} onChange={e=>set('peakRate', e.target.value)} placeholder="$150" />
+                          {hintErr('peakRate')}
+                        </div>
+                        <div data-err="offPeakRate">
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Off-peak hourly rate *</label>
+                          <input className={`w-full px-3 py-2 border rounded-md ${badgeErr('offPeakRate')}`} value={form.offPeakRate} onChange={e=>set('offPeakRate', e.target.value)} placeholder="$100" />
+                          {hintErr('offPeakRate')}
+                        </div>
+                        <div data-err="surgeRate">
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Surge hourly rate *</label>
+                          <input className={`w-full px-3 py-2 border rounded-md ${badgeErr('surgeRate')}`} value={form.surgeRate} onChange={e=>set('surgeRate', e.target.value)} placeholder="$200" />
+                          {hintErr('surgeRate')}
+                        </div>
+                      </div>
                     </div>
                   )}
                   {form.rateType==='Flat' && (
@@ -1361,24 +1386,27 @@ async function submitAll(e?: React.FormEvent) {
                       {hintErr('flatMin')}
                     </div>
                   )}
-                  {form.rateType==='Visit fee' && (
-                    <div className="mt-2" data-err="visitFee">
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Visit/diagnostic fee *</label>
+
+                  <div className="mt-3 grid md:grid-cols-2 gap-3">
+                    <div data-err="visitFee">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Visit fee *</label>
                       <input className={`w-full px-3 py-2 border rounded-md ${badgeErr('visitFee')}`} value={form.visitFee} onChange={e=>set('visitFee', e.target.value)} placeholder="$89" />
                       {hintErr('visitFee')}
                     </div>
-                  )}
-                  <label className="mt-2 flex items-center gap-2">
+                    <div data-err="diagnosticFee">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Diagnostic fee *</label>
+                      <input className={`w-full px-3 py-2 border rounded-md ${badgeErr('diagnosticFee')}`} value={form.diagnosticFee} onChange={e=>set('diagnosticFee', e.target.value)} placeholder="$75" />
+                      {hintErr('diagnosticFee')}
+                    </div>
+                  </div>
+
+                  <label className="mt-3 flex items-center gap-2">
                     <input type="checkbox" checked={form.freeEstimates} onChange={e=>set('freeEstimates', e.target.checked)} />
                     Offer free estimates
                   </label>
                 </div>
                 <div>
                   <SectionTitle>Availability & Hours</SectionTitle>
-                  <label className="flex items-center gap-2">
-                    <input type="checkbox" checked={form.emergency} onChange={e=>set('emergency', e.target.checked)} />
-                    Offer emergency service (after-hours / same-day)
-                  </label>
                   <div className={`mt-3 rounded-xl border p-3 ${badgeErr('hours')}`} data-err="hours">
                     <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
                       {DAYS.map((d)=>(
