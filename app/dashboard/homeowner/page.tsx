@@ -626,8 +626,8 @@ export default function HomeownerDashboardPage() {
     saved: stats?.trusted_contractors || 0
   }
 
-  // Show loading while profile OR stats are loading
-  if (!userProfile || statsLoading) {
+  // Show loading while stats are still loading
+  if (statsLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <LoadingSpinner size="md" text="Loading your dashboard..." color="emerald" />
@@ -642,10 +642,10 @@ export default function HomeownerDashboardPage() {
         <div className="flex items-center gap-4">
           {/* Profile Avatar */}
           <div className="w-16 h-16 flex-shrink-0 rounded-full overflow-hidden bg-gradient-to-br from-emerald-500 to-blue-500 flex items-center justify-center">
-            {userProfile.avatar_url ? (
+            {userProfile?.avatar_url ? (
               <img
                 src={userProfile.avatar_url}
-                alt={`${userProfile.name}'s avatar`}
+                alt={`${userProfile?.name}'s avatar`}
                 className="w-full h-full object-cover"
               />
             ) : (
@@ -655,12 +655,12 @@ export default function HomeownerDashboardPage() {
 
           <div className="min-w-0 flex-1">
             <h1 className="text-xl lg:text-2xl font-semibold text-ink dark:text-white flex flex-wrap items-center gap-2">
-              <span className="truncate">Welcome back, {userProfile.name || user.email?.split('@')[0]}</span>
+              <span className="truncate">Welcome back, {userProfile?.name || user?.email?.split('@')[0] || 'User'}</span>
               <Badge>Homeowner</Badge>
               {completenessPct >= 100 && <Badge tone="blue">✓ Profile Complete</Badge>}
             </h1>
             <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
-              Subscription: <span className="capitalize font-medium">{userProfile.subscription_type}</span>
+              Subscription: <span className="capitalize font-medium">{userProfile?.subscription_type || 'free'}</span>
               {completenessPct < 100 && (
                 <span className="ml-3 text-amber-600 dark:text-amber-400">
                   • Profile {completenessPct}% complete

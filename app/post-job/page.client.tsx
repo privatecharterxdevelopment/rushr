@@ -351,6 +351,33 @@ export default function PostJobInner({ userId }: Props) {
   const [showLocationModal, setShowLocationModal] = useState(false)
   const [showPhoneModal, setShowPhoneModal] = useState(false)
 
+  // Restore saved form data if user just logged in
+  useEffect(() => {
+    const savedData = localStorage.getItem('rushr_pending_job')
+    if (savedData) {
+      try {
+        const formData = JSON.parse(savedData)
+        // Only restore if data is less than 1 hour old
+        const oneHourAgo = Date.now() - (60 * 60 * 1000)
+        if (formData.timestamp > oneHourAgo) {
+          setAddress(formData.address || '')
+          setPhone(formData.phone || '')
+          setCategory(formData.category || '')
+          setEmergencyType(formData.emergencyType || '')
+          setDetails(formData.details || '')
+          setSendAll(formData.sendAll !== undefined ? formData.sendAll : true)
+          setPicked(formData.picked || null)
+          setUserLocation(formData.userLocation || null)
+          console.log('[RESTORE] Restored saved job form data')
+        }
+        // Clear the saved data
+        localStorage.removeItem('rushr_pending_job')
+      } catch (e) {
+        console.error('[RESTORE] Failed to parse saved form data:', e)
+      }
+    }
+  }, [])
+
   // Fetch user profile data (phone number)
   useEffect(() => {
     if (!userId) return
@@ -898,11 +925,11 @@ export default function PostJobInner({ userId }: Props) {
       return
     }
 
-    // If selecting specific contractor, ensure one is picked
+    // If selecting specific contractor but none picked, auto-switch to "Alert All"
     if (!sendAll && !picked) {
-      console.error('[SUBMIT] No contractor selected')
-      setErrorPopup('Please select a contractor or choose "Alert All Nearby" option.')
-      return
+      console.log('[SUBMIT] No contractor selected, auto-switching to "Alert All Nearby"')
+      setSendAll(true)
+      // Continue with submission using "Alert All" mode
     }
 
     console.log('[SUBMIT] Opening confirmation modal')
@@ -914,8 +941,24 @@ export default function PostJobInner({ userId }: Props) {
 
     // Auth check - require login before actual submission
     if (!userId) {
-      console.log('[SUBMIT] User not logged in, opening auth modal')
-      openAuth('signup')
+      console.log('[SUBMIT] User not logged in, saving form data and opening auth modal')
+
+      // Save form data to localStorage so it persists after login
+      const formData = {
+        address,
+        phone,
+        category,
+        emergencyType,
+        details,
+        sendAll,
+        picked,
+        userLocation,
+        timestamp: Date.now()
+      }
+      localStorage.setItem('rushr_pending_job', JSON.stringify(formData))
+
+      // Open login modal - user will be returned to this page after login
+      openAuth('/post-job')
       return
     }
 

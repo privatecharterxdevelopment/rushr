@@ -56,7 +56,12 @@ export default function TransactionsPage() {
           .limit(50)
 
         if (jobsError) {
-          console.error('Error fetching jobs:', jobsError)
+          console.error('Error fetching jobs:', {
+            message: jobsError.message,
+            code: jobsError.code,
+            details: jobsError.details,
+            hint: jobsError.hint
+          })
           setLoading(false)
           return
         }

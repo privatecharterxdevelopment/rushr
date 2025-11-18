@@ -76,8 +76,11 @@ function MessagesContent() {
 
   // Fetch conversations with real data
   useEffect(() => {
-    if (!user) {
-      setLoading(false)
+    // Skip if auth is still loading or no user
+    if (authLoading || !user) {
+      if (!authLoading && !user) {
+        setLoading(false)
+      }
       return
     }
 
@@ -229,7 +232,7 @@ function MessagesContent() {
       if (debounceTimer) clearTimeout(debounceTimer)
       conversationSubscription.unsubscribe()
     }
-  }, [user?.id])
+  }, [user?.id, authLoading])
 
   // Fetch messages for selected conversation
   useEffect(() => {

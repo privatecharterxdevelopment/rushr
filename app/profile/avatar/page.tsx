@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useAuth } from '../../../contexts/AuthContext'
 import { useRouter } from 'next/navigation'
 import { supabase } from '../../../lib/supabaseClient'
+import toast, { Toaster } from 'react-hot-toast'
 import {
   Camera,
   Upload,
@@ -204,8 +205,6 @@ export default function AvatarUploadPage() {
   }
 
   const removeAvatar = async () => {
-    if (!confirm('Are you sure you want to remove your profile photo?')) return
-
     setLoading(true)
     setError(null)
 
@@ -224,7 +223,7 @@ export default function AvatarUploadPage() {
       }
 
       await refreshHomeownerProfile()
-      setSuccess('✅ Avatar removed successfully!')
+      toast.success('Photo removed successfully')
 
     } catch (err: any) {
       setError(err.message || 'Failed to remove avatar')
@@ -238,6 +237,7 @@ export default function AvatarUploadPage() {
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-900">
+      <Toaster position="top-center" />
       <div className="container mx-auto px-4 py-8 max-w-2xl">
         {/* Header */}
         <div className="mb-8">

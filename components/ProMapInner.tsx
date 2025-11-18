@@ -491,6 +491,12 @@ export default function ProMapInner({
 
       // Import mapboxgl dynamically for Marker class
       ;(async () => {
+        // Check if map still exists before adding marker
+        if (!map) {
+          console.warn('Map undefined when trying to add marker')
+          return
+        }
+
         const mapboxgl = (await import('mapbox-gl')).default
 
         // Create popup matching FindProMapbox style
