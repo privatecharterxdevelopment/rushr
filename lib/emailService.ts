@@ -712,7 +712,7 @@ export async function sendEarlyAccessConfirmation(params: {
 }) {
   const { email, name } = params
 
-  const subject = 'You're on the Rushr Pro Early Access List! 🎉'
+  const subject = "You're on the Rushr Pro Early Access List!"
   const html = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
       <div style="background: linear-gradient(135deg, #3B82F6 0%, #4F46E5 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
