@@ -14,6 +14,7 @@ export default function EarlyAccessPage() {
   const [phone, setPhone] = useState('')
   const [loading, setLoading] = useState(false)
   const [showTerms, setShowTerms] = useState(false)
+  const [showPrivacy, setShowPrivacy] = useState(false)
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -329,7 +330,7 @@ export default function EarlyAccessPage() {
               <p>&copy; 2025 Rushr. All rights reserved.</p>
               <div className="flex gap-6">
                 <button onClick={() => setShowTerms(true)} className="hover:text-slate-900">Terms</button>
-                <Link href="/privacy" className="hover:text-slate-900">Privacy</Link>
+                <button onClick={() => setShowPrivacy(true)} className="hover:text-slate-900">Privacy</button>
                 <a href="mailto:hello@userushr.com" className="hover:text-slate-900">hello@userushr.com</a>
               </div>
             </div>
@@ -405,6 +406,107 @@ export default function EarlyAccessPage() {
             </div>
             <div className="sticky bottom-0 bg-white border-t border-slate-200 px-6 py-4">
               <button onClick={() => setShowTerms(false)} className="w-full px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium">
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Privacy Modal */}
+      {showPrivacy && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[80vh] overflow-y-auto">
+            <div className="sticky top-0 bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between">
+              <h2 className="text-xl font-bold text-slate-900">Privacy Policy</h2>
+              <button onClick={() => setShowPrivacy(false)} className="p-2 hover:bg-slate-100 rounded-full">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="px-6 py-6 space-y-4 text-sm text-slate-700">
+              <section>
+                <h3 className="font-semibold text-base text-slate-900 mb-2">1. Information We Collect</h3>
+                <p>When you join the early access waitlist, we collect:</p>
+                <ul className="list-disc ml-6 mt-2 space-y-1">
+                  <li>Name and contact information (email, phone number)</li>
+                  <li>Business information (business name, license details, insurance)</li>
+                  <li>Location data (service areas, ZIP codes)</li>
+                  <li>Professional credentials and certifications</li>
+                </ul>
+              </section>
+
+              <section>
+                <h3 className="font-semibold text-base text-slate-900 mb-2">2. How We Use Your Information</h3>
+                <p>We use your information to:</p>
+                <ul className="list-disc ml-6 mt-2 space-y-1">
+                  <li>Process your early access application</li>
+                  <li>Send updates about the Rushr Pro platform</li>
+                  <li>Match you with homeowners seeking services</li>
+                  <li>Verify your credentials and maintain quality standards</li>
+                  <li>Process payments through Stripe Connect</li>
+                </ul>
+              </section>
+
+              <section>
+                <h3 className="font-semibold text-base text-slate-900 mb-2">3. Information Sharing</h3>
+                <p>We share your information only with:</p>
+                <ul className="list-disc ml-6 mt-2 space-y-1">
+                  <li>Homeowners requesting quotes or services</li>
+                  <li>Payment processors (Stripe) for transaction processing</li>
+                  <li>Service providers who help us operate the platform</li>
+                  <li>Law enforcement when required by law</li>
+                </ul>
+                <p className="mt-2 font-medium">We will never sell your personal data to third parties.</p>
+              </section>
+
+              <section>
+                <h3 className="font-semibold text-base text-slate-900 mb-2">4. Data Security</h3>
+                <p>We protect your information using:</p>
+                <ul className="list-disc ml-6 mt-2 space-y-1">
+                  <li>Industry-standard encryption (SSL/TLS)</li>
+                  <li>Secure database storage with Supabase</li>
+                  <li>Regular security audits and updates</li>
+                  <li>Access controls and authentication</li>
+                </ul>
+              </section>
+
+              <section>
+                <h3 className="font-semibold text-base text-slate-900 mb-2">5. Your Rights</h3>
+                <p>You have the right to:</p>
+                <ul className="list-disc ml-6 mt-2 space-y-1">
+                  <li>Access your personal data</li>
+                  <li>Request corrections to your information</li>
+                  <li>Delete your account and data</li>
+                  <li>Opt out of marketing communications</li>
+                  <li>Export your data in a portable format</li>
+                </ul>
+              </section>
+
+              <section>
+                <h3 className="font-semibold text-base text-slate-900 mb-2">6. Cookies & Tracking</h3>
+                <p>We use essential cookies to:</p>
+                <ul className="list-disc ml-6 mt-2 space-y-1">
+                  <li>Keep you logged in</li>
+                  <li>Remember your preferences</li>
+                  <li>Analyze platform usage and performance</li>
+                </ul>
+                <p className="mt-2">You can disable cookies in your browser settings, but some features may not work properly.</p>
+              </section>
+
+              <section>
+                <h3 className="font-semibold text-base text-slate-900 mb-2">7. Changes to This Policy</h3>
+                <p>We may update this privacy policy as our platform evolves. We will notify you of significant changes via email or platform notifications.</p>
+              </section>
+
+              <section>
+                <h3 className="font-semibold text-base text-slate-900 mb-2">8. Contact Us</h3>
+                <p>For privacy-related questions or to exercise your rights, contact us at <a href="mailto:hello@userushr.com" className="text-blue-600 hover:underline">hello@userushr.com</a></p>
+              </section>
+
+              <p className="text-xs text-slate-500 mt-6">Last updated: January 2025</p>
+            </div>
+            <div className="sticky bottom-0 bg-white border-t border-slate-200 px-6 py-4">
+              <button onClick={() => setShowPrivacy(false)} className="w-full px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium">
                 Close
               </button>
             </div>
