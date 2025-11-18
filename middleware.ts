@@ -10,6 +10,16 @@ export async function middleware(req: NextRequest) {
 
   console.log(`[MIDDLEWARE] ========== MIDDLEWARE CALLED: ${pathname} ==========`)
 
+  // PUBLIC ROUTES - Only these routes are accessible without authentication
+  const publicRoutes = [
+    '/pro/early-access',
+    '/pro/early-access/success',
+    '/api/send-early-access-confirmation',
+  ]
+
+  // Check if the current path is a public route
+  const isPublicRoute = publicRoutes.some(route => pathname.startsWith(route))
+
   // Handle subdomain rewrites
   if (host.startsWith('pro.') || host.startsWith('professional.')) {
     if (!pathname.startsWith('/pro') && !pathname.startsWith('/profile')) {
@@ -29,7 +39,15 @@ export async function middleware(req: NextRequest) {
     .map(cookie => `${cookie.name}=${cookie.value}`)
     .join('; ')
 
-  if (!supabaseCookies) {
+  // If no auth cookies and trying to access non-public route, redirect to early access
+  if (!supabaseCookies && !isPublicRoute) {
+    console.log(`[MIDDLEWARE] No auth cookies, redirecting to /pro/early-access`)
+    return NextResponse.redirect(new URL('/pro/early-access', req.url))
+  }
+
+  // Allow public routes without authentication
+  if (isPublicRoute) {
+    console.log(`[MIDDLEWARE] Public route ${pathname}, allowing access`)
     return NextResponse.next()
   }
 
@@ -48,12 +66,12 @@ export async function middleware(req: NextRequest) {
 
   if (userError) {
     console.log(`[MIDDLEWARE] Auth error: ${userError.message}`)
-    return NextResponse.next()
+    return NextResponse.redirect(new URL('/pro/early-access', req.url))
   }
 
   if (!user) {
-    console.log(`[MIDDLEWARE] No user found, allowing access`)
-    return NextResponse.next()
+    console.log(`[MIDDLEWARE] No user found, redirecting to /pro/early-access`)
+    return NextResponse.redirect(new URL('/pro/early-access', req.url))
   }
 
   console.log(`[MIDDLEWARE] User found: ${user.id.substring(0, 8)}`)
