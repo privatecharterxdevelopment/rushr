@@ -12,7 +12,8 @@
       "Bash(findstr:*)",
       "Bash(tasklist:*)",
       "Bash(taskkill:*)",
-      "Bash(open \"http://localhost:3001/pro/early-access\")"
+      "Bash(open \"http://localhost:3001/pro/early-access\")",
+      "Bash(open \"http://localhost:3001\")"
     ],
     "deny": [],
     "ask": []

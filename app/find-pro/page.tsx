@@ -215,7 +215,7 @@ export default function FindProPage() {
   const filtered = useMemo(() => {
     const q = debouncedQuery
 
-    let items = allContractors
+    let items = (allContractors || [])
       .map((c) => ({ ...c }))
       .filter((c) => {
         const name = String(c?.name || '').toLowerCase()

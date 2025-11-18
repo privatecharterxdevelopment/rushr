@@ -10,7 +10,14 @@ export async function middleware(req: NextRequest) {
 
   console.log(`[MIDDLEWARE] ========== MIDDLEWARE CALLED: ${pathname} ==========`)
 
-  // PUBLIC ROUTES - Only these routes are accessible without authentication
+  // Allow localhost to bypass public route restrictions
+  const isLocalhost = host.includes('localhost') || host.includes('127.0.0.1')
+  if (isLocalhost) {
+    console.log(`[MIDDLEWARE] Localhost detected, allowing full access`)
+    // Continue with normal middleware flow but skip public route restrictions
+  }
+
+  // PUBLIC ROUTES - Only these routes are accessible without authentication (production only)
   const publicRoutes = [
     '/pro/early-access',
     '/pro/early-access/success',
@@ -39,8 +46,8 @@ export async function middleware(req: NextRequest) {
     .map(cookie => `${cookie.name}=${cookie.value}`)
     .join('; ')
 
-  // If no auth cookies and trying to access non-public route, redirect to early access
-  if (!supabaseCookies && !isPublicRoute) {
+  // If no auth cookies and trying to access non-public route, redirect to early access (skip for localhost)
+  if (!supabaseCookies && !isPublicRoute && !isLocalhost) {
     console.log(`[MIDDLEWARE] No auth cookies, redirecting to /pro/early-access`)
     return NextResponse.redirect(new URL('/pro/early-access', req.url))
   }
@@ -48,6 +55,12 @@ export async function middleware(req: NextRequest) {
   // Allow public routes without authentication
   if (isPublicRoute) {
     console.log(`[MIDDLEWARE] Public route ${pathname}, allowing access`)
+    return NextResponse.next()
+  }
+
+  // Allow localhost without auth cookies
+  if (isLocalhost && !supabaseCookies) {
+    console.log(`[MIDDLEWARE] Localhost without auth, allowing access`)
     return NextResponse.next()
   }
 
