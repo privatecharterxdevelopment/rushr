@@ -18,18 +18,21 @@ export async function middleware(req: NextRequest) {
   }
 
   // PUBLIC ROUTES - Accessible without authentication (production only)
+  // These routes can be accessed by anyone (logged in or not)
   const publicRoutes = [
     '/pro/early-access',
     '/pro/early-access/success',
-    '/pro/wizard', // Contractor signup/onboarding flow
     '/pro/sign-in', // Contractor sign-in page
     '/pro/how-it-works', // Contractor info page
-    '/pro/page', // Contractor landing page (if exists as /pro/page.tsx)
     '/api/send-early-access-confirmation',
   ]
 
+  // CONTRACTOR-ONLY PUBLIC ROUTES - No auth required, but homeowners are blocked
+  const contractorPublicRoutes = ['/pro/wizard']
+
   // Check if the current path is a public route
   const isPublicRoute = publicRoutes.some(route => pathname.startsWith(route))
+  const isContractorPublicRoute = contractorPublicRoutes.some(route => pathname.startsWith(route))
 
   // Handle subdomain rewrites
   if (host.startsWith('pro.') || host.startsWith('professional.')) {
@@ -51,7 +54,7 @@ export async function middleware(req: NextRequest) {
     .join('; ')
 
   // If no auth cookies and trying to access non-public route, redirect to early access (skip for localhost)
-  if (!supabaseCookies && !isPublicRoute && !isLocalhost) {
+  if (!supabaseCookies && !isPublicRoute && !isContractorPublicRoute && !isLocalhost) {
     console.log(`[MIDDLEWARE] No auth cookies, redirecting to /pro/early-access`)
     return NextResponse.redirect(new URL('/pro/early-access', req.url))
   }
@@ -59,6 +62,13 @@ export async function middleware(req: NextRequest) {
   // Allow public routes without authentication
   if (isPublicRoute) {
     console.log(`[MIDDLEWARE] Public route ${pathname}, allowing access`)
+    return NextResponse.next()
+  }
+
+  // Allow contractor public routes without auth (e.g., /pro/wizard for signup)
+  // But we'll check later if user is homeowner and block them
+  if (isContractorPublicRoute && !supabaseCookies) {
+    console.log(`[MIDDLEWARE] Contractor public route ${pathname}, allowing unauthenticated access`)
     return NextResponse.next()
   }
 
@@ -132,6 +142,12 @@ export async function middleware(req: NextRequest) {
   const isHomeowner = !!homeownerProfile && homeownerProfile.role === 'homeowner' && !homeownerError
 
   console.log(`[MIDDLEWARE] User ${user.id.substring(0, 8)}: isContractor=${isContractor}, isHomeowner=${isHomeowner}, needsHomeownerCheck=${needsHomeownerCheck}, needsContractorCheck=${needsContractorCheck}`)
+
+  // BLOCK homeowners from contractor public routes (like /pro/wizard)
+  if (isHomeowner && isContractorPublicRoute) {
+    console.log(`[MIDDLEWARE] 🚫 BLOCKING HOMEOWNER from contractor public route ${pathname} -> redirecting to /dashboard/homeowner`)
+    return NextResponse.redirect(new URL('/dashboard/homeowner', req.url))
+  }
 
   // BLOCK contractors from homeowner-only routes
   if (isContractor && needsHomeownerCheck) {
