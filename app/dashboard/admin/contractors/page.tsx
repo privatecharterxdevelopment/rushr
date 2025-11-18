@@ -81,7 +81,7 @@ export default function ContractorApprovalsPage() {
         const businessName = contractor.business_name?.toLowerCase() || ''
 
         // Hide if email or name contains these keywords
-        const hideKeywords = ['muhammad', 'rehan', 'abbas', 'pasha']
+        const hideKeywords = ['muhammad', 'rehan', 'abbas', 'pasha', 'madan', 'bhanani']
         return !hideKeywords.some(keyword =>
           email.includes(keyword) || name.includes(keyword) || businessName.includes(keyword)
         )
