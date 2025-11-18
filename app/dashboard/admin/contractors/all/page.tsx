@@ -47,7 +47,21 @@ export default function AllContractorsPage() {
         .order('created_at', { ascending: false })
 
       if (error) throw error
-      setContractors(data || [])
+
+      // Filter out specific contractors (muhammad rehan, abbasprogrammer)
+      const filtered = (data || []).filter(contractor => {
+        const email = contractor.email?.toLowerCase() || ''
+        const name = contractor.name?.toLowerCase() || ''
+        const businessName = contractor.business_name?.toLowerCase() || ''
+
+        // Hide if email or name contains these keywords
+        const hideKeywords = ['muhammad', 'rehan', 'abbas']
+        return !hideKeywords.some(keyword =>
+          email.includes(keyword) || name.includes(keyword) || businessName.includes(keyword)
+        )
+      })
+
+      setContractors(filtered)
     } catch (error) {
       console.error('Error fetching contractors:', error)
     } finally {
