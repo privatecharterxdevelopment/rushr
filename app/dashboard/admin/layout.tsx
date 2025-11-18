@@ -24,8 +24,14 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const pathname = usePathname()
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
-  // Check if user is admin
-  const isAdmin = isAdminUser(userProfile?.email, userProfile?.role)
+  // Check if running on localhost
+  const isLocalhost = typeof window !== 'undefined' &&
+    (window.location.hostname === 'localhost' ||
+     window.location.hostname === '127.0.0.1' ||
+     window.location.hostname.includes('localhost'))
+
+  // Check if user is admin (skip check on localhost)
+  const isAdmin = isLocalhost || isAdminUser(userProfile?.email, userProfile?.role)
 
   if (!isAdmin) {
     return (
