@@ -185,19 +185,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
       {/* Main content */}
       <div className="lg:pl-64">
-        {/* Mobile header */}
-        <header className="sticky top-0 z-30 flex items-center h-16 px-4 bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-800 lg:hidden">
-          <button
-            onClick={() => setSidebarOpen(true)}
-            className="text-gray-500 hover:text-gray-700 dark:text-slate-400 dark:hover:text-slate-200"
-          >
-            <Menu className="h-6 w-6" />
-          </button>
-          <div className="flex items-center gap-2 ml-4">
-            <Shield className="h-5 w-5 text-blue-600" />
-            <h1 className="text-lg font-bold text-gray-900 dark:text-white">Admin Panel</h1>
-          </div>
-        </header>
+        {/* Mobile menu button - floating */}
+        <button
+          onClick={() => setSidebarOpen(true)}
+          className="fixed top-4 left-4 z-30 lg:hidden bg-white dark:bg-slate-900 p-2 rounded-lg shadow-lg border border-gray-200 dark:border-slate-800 text-gray-500 hover:text-gray-700 dark:text-slate-400 dark:hover:text-slate-200"
+        >
+          <Menu className="h-6 w-6" />
+        </button>
 
         {/* Page content */}
         <main className="p-4 lg:p-8">{children}</main>
