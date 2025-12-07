@@ -131,7 +131,7 @@ const IOSCard = ({ children, className = '' }: { children: React.ReactNode; clas
 // Divider component
 const Divider = () => <div className="h-px bg-gray-100 ml-14" />
 
-// Home Tab Content - Map with Book a Pro
+// Home Tab Content - Map with Green Header and Search Input
 function HomeTab({ center, setCenter, filtered, fetchingLocation, setFetchingLocation, firstName }: {
   center: LatLng
   setCenter: (c: LatLng) => void
@@ -140,8 +140,21 @@ function HomeTab({ center, setCenter, filtered, fetchingLocation, setFetchingLoc
   setFetchingLocation: (b: boolean) => void
   firstName: string
 }) {
+  const router = useRouter()
+  const [searchQuery, setSearchQuery] = React.useState('')
+
   const handleBookPro = async () => {
     await triggerHaptic(ImpactStyle.Medium)
+    router.push('/post-job')
+  }
+
+  const handleSearch = async () => {
+    await triggerHaptic(ImpactStyle.Medium)
+    if (searchQuery.trim()) {
+      router.push(`/post-job?service=${encodeURIComponent(searchQuery)}`)
+    } else {
+      router.push('/post-job')
+    }
   }
 
   const handleLocation = async () => {
@@ -159,73 +172,93 @@ function HomeTab({ center, setCenter, filtered, fetchingLocation, setFetchingLoc
   }
 
   return (
-    <div className="absolute inset-0" style={{ paddingBottom: 'calc(49px + env(safe-area-inset-bottom, 0px))' }}>
-      {/* Full-screen Map */}
-      <div className="absolute inset-0">
-        <FindProMapbox
-          items={filtered}
-          radiusMiles={25}
-          searchCenter={center}
-          onSearchHere={(c) => setCenter(c)}
-        />
-      </div>
-
-      {/* Floating Top Bar - iOS native style */}
+    <div className="absolute inset-0 flex flex-col">
+      {/* Green Header */}
       <div
-        className="absolute top-0 left-0 right-0 z-10"
-        style={{ paddingTop: 'calc(env(safe-area-inset-top, 44px) + 8px)' }}
+        className="relative z-20"
+        style={{
+          background: 'linear-gradient(135deg, #10b981, #059669)',
+          paddingTop: 'env(safe-area-inset-top, 44px)'
+        }}
       >
-        <div className="flex items-center justify-between px-4">
-          {/* Hello username - Frosted glass pill */}
-          <div
-            className="rounded-full px-4 py-2.5"
-            style={{
-              background: 'rgba(255, 255, 255, 0.85)',
-              backdropFilter: 'blur(20px)',
-              WebkitBackdropFilter: 'blur(20px)',
-              boxShadow: '0 2px 12px rgba(0,0,0,0.1)'
-            }}
-          >
-            <p className="text-gray-900 font-semibold text-[15px]">
-              {firstName ? `Hello, ${firstName}` : 'Hello'}
-            </p>
-          </div>
+        <div className="flex items-center justify-between px-4 py-3">
+          {/* Hello username - White text */}
+          <p className="text-white font-semibold text-[16px]">
+            {firstName ? `Hello, ${firstName}` : 'Hello'}
+          </p>
 
-          {/* Book a Pro button - Native iOS style */}
-          <Link
-            href="/post-job"
+          {/* Book a Pro button - White pill */}
+          <button
             onClick={handleBookPro}
-            className="px-5 py-2.5 rounded-full font-semibold text-[15px] text-white active:scale-95 transition-transform"
-            style={{
-              background: 'linear-gradient(135deg, #059669, #047857)',
-              boxShadow: '0 4px 14px rgba(5, 150, 105, 0.4)'
-            }}
+            className="px-4 py-2 rounded-full font-semibold text-[14px] text-emerald-600 bg-white active:scale-95 transition-transform"
+            style={{ boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}
           >
             Book a Pro
-          </Link>
+          </button>
         </div>
       </div>
 
-      {/* My Location button - Native iOS style */}
-      <div className="absolute bottom-6 right-4 z-10">
-        <button
-          onClick={handleLocation}
-          className="w-11 h-11 rounded-full flex items-center justify-center active:scale-95 transition-transform"
-          style={{
-            background: 'rgba(255, 255, 255, 0.95)',
-            backdropFilter: 'blur(20px)',
-            WebkitBackdropFilter: 'blur(20px)',
-            boxShadow: '0 2px 12px rgba(0,0,0,0.15)'
-          }}
-        >
-          {fetchingLocation ? (
-            <div className="w-5 h-5 border-2 border-emerald-200 border-t-emerald-600 rounded-full animate-spin" />
-          ) : (
-            <svg className="w-5 h-5 text-emerald-600" fill="currentColor" viewBox="0 0 24 24">
-              <path d="M12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm8.94 3A8.994 8.994 0 0013 3.06V1h-2v2.06A8.994 8.994 0 003.06 11H1v2h2.06A8.994 8.994 0 0011 20.94V23h2v-2.06A8.994 8.994 0 0020.94 13H23v-2h-2.06zM12 19c-3.87 0-7-3.13-7-7s3.13-7 7-7 7 3.13 7 7-3.13 7-7 7z"/>
+      {/* Full-screen Map */}
+      <div className="flex-1 relative" style={{ marginBottom: 'calc(49px + env(safe-area-inset-bottom, 0px))' }}>
+        <div className="absolute inset-0">
+          <FindProMapbox
+            items={filtered}
+            radiusMiles={25}
+            searchCenter={center}
+            onSearchHere={(c) => setCenter(c)}
+          />
+        </div>
+
+        {/* My Location button */}
+        <div className="absolute bottom-24 right-4 z-10">
+          <button
+            onClick={handleLocation}
+            className="w-11 h-11 rounded-full flex items-center justify-center active:scale-95 transition-transform"
+            style={{
+              background: 'rgba(255, 255, 255, 0.95)',
+              backdropFilter: 'blur(20px)',
+              WebkitBackdropFilter: 'blur(20px)',
+              boxShadow: '0 2px 12px rgba(0,0,0,0.15)'
+            }}
+          >
+            {fetchingLocation ? (
+              <div className="w-5 h-5 border-2 border-emerald-200 border-t-emerald-600 rounded-full animate-spin" />
+            ) : (
+              <svg className="w-5 h-5 text-emerald-600" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm8.94 3A8.994 8.994 0 0013 3.06V1h-2v2.06A8.994 8.994 0 003.06 11H1v2h2.06A8.994 8.994 0 0011 20.94V23h2v-2.06A8.994 8.994 0 0020.94 13H23v-2h-2.06zM12 19c-3.87 0-7-3.13-7-7s3.13-7 7-7 7 3.13 7 7-3.13 7-7 7z"/>
+              </svg>
+            )}
+          </button>
+        </div>
+
+        {/* Floating Search Input at Bottom */}
+        <div className="absolute bottom-4 left-4 right-4 z-10">
+          <div
+            className="flex items-center gap-3 bg-white rounded-2xl px-4 py-3"
+            style={{ boxShadow: '0 4px 20px rgba(0,0,0,0.15)' }}
+          >
+            <svg className="w-5 h-5 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
             </svg>
-          )}
-        </button>
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+              placeholder="What do you need help with?"
+              className="flex-1 text-[16px] text-gray-900 placeholder-gray-400 bg-transparent outline-none"
+            />
+            <button
+              onClick={handleSearch}
+              className="flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center active:scale-95 transition-transform"
+              style={{ background: 'linear-gradient(135deg, #10b981, #059669)' }}
+            >
+              <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+              </svg>
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   )
