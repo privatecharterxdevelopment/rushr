@@ -1,8 +1,8 @@
 // components/IOSHomeView.tsx
-// iOS app-specific homepage with green header, find contractors, and get help button
+// iOS app homepage - Grab/Uber style with full-screen map and bottom sheet
 'use client'
 
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useApp } from '../lib/state'
@@ -10,11 +10,11 @@ import { useAuth } from '../contexts/AuthContext'
 import { openAuth } from './AuthModal'
 import dynamic from 'next/dynamic'
 
-// Dynamically import the Mapbox component to avoid SSR issues
+// Dynamically import the Mapbox component
 const FindProMapbox = dynamic(() => import('./FindProMapbox'), {
   ssr: false,
   loading: () => (
-    <div className="h-[300px] w-full rounded-2xl bg-slate-100 flex items-center justify-center">
+    <div className="absolute inset-0 bg-slate-100 flex items-center justify-center">
       <div className="text-slate-400">Loading map...</div>
     </div>
   )
@@ -22,13 +22,15 @@ const FindProMapbox = dynamic(() => import('./FindProMapbox'), {
 
 type LatLng = [number, number]
 
-/* Optional ZIP presets (fast, no geocoding) */
-const ZIP_COORDS: Record<string, LatLng> = {
-  '10001': [40.7506, -73.9972],
-  '10002': [40.717, -73.989],
-  '10017': [40.7522, -73.9725],
-  '11201': [40.6955, -73.989],
-}
+// Service categories with icons
+const SERVICE_CATEGORIES = [
+  { id: 'Plumbing', label: 'Plumbing', icon: '🚿' },
+  { id: 'Electrical', label: 'Electrical', icon: '⚡' },
+  { id: 'HVAC', label: 'HVAC', icon: '❄️' },
+  { id: 'Locksmith', label: 'Locksmith', icon: '🔐' },
+  { id: 'Auto Battery', label: 'Jump Start', icon: '🔋' },
+  { id: 'Tow', label: 'Towing', icon: '🚗' },
+]
 
 export default function IOSHomeView() {
   const { state } = useApp()
@@ -41,54 +43,58 @@ export default function IOSHomeView() {
   // Get first name for greeting
   const firstName = userProfile?.name?.split(' ')[0] || ''
 
-  // Filter states
-  const [query, setQuery] = useState('')
+  // UI state
+  const [sheetExpanded, setSheetExpanded] = useState(false)
+  const [searchFocused, setSearchFocused] = useState(false)
+  const [selectedService, setSelectedService] = useState<string | null>(null)
+  const [searchQuery, setSearchQuery] = useState('')
   const [debouncedQuery, setDebouncedQuery] = useState('')
-  const [services, setServices] = useState<string[]>([])
-  const [radius, setRadius] = useState(15)
+
+  // Location state
   const [center, setCenter] = useState<LatLng>([40.7128, -74.006])
-  const [zip, setZip] = useState('')
   const [fetchingLocation, setFetchingLocation] = useState(false)
-  const [sort, setSort] = useState<'best' | 'distance' | 'rating'>('best')
+  const [locationName, setLocationName] = useState('Finding location...')
 
-  // Debounce query
+  // Get user location on mount
   useEffect(() => {
-    const t = setTimeout(() => setDebouncedQuery(query.trim().toLowerCase()), 140)
-    return () => clearTimeout(t)
-  }, [query])
-
-  // Auto-center when ZIP typed
-  useEffect(() => {
-    const z = zip.trim()
-    if (z.length === 5 && ZIP_COORDS[z]) setCenter(ZIP_COORDS[z])
-  }, [zip])
-
-  // Get user location
-  const fetchUserLocation = async () => {
-    setFetchingLocation(true)
-    try {
-      if (!navigator.geolocation) {
-        alert('Geolocation is not supported')
-        return
-      }
+    if (navigator.geolocation) {
+      setFetchingLocation(true)
       navigator.geolocation.getCurrentPosition(
-        (position) => {
+        async (position) => {
           const { latitude, longitude } = position.coords
           setCenter([latitude, longitude])
-          setZip('')
           setFetchingLocation(false)
+
+          // Reverse geocode to get location name
+          try {
+            const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN
+            if (MAPBOX_TOKEN) {
+              const res = await fetch(
+                `https://api.mapbox.com/geocoding/v5/mapbox.places/${longitude},${latitude}.json?access_token=${MAPBOX_TOKEN}&types=neighborhood,locality,place`
+              )
+              const data = await res.json()
+              if (data.features?.[0]) {
+                setLocationName(data.features[0].place_name?.split(',')[0] || 'Your Location')
+              }
+            }
+          } catch {
+            setLocationName('Your Location')
+          }
         },
-        (error) => {
-          console.error('Location error:', error)
-          alert('Unable to get location')
+        () => {
           setFetchingLocation(false)
+          setLocationName('New York')
         },
         { enableHighAccuracy: true, timeout: 10000 }
       )
-    } catch {
-      setFetchingLocation(false)
     }
-  }
+  }, [])
+
+  // Debounce search
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedQuery(searchQuery.trim().toLowerCase()), 200)
+    return () => clearTimeout(t)
+  }, [searchQuery])
 
   // Distance helper
   function distMiles(a: LatLng, b: LatLng) {
@@ -105,7 +111,6 @@ export default function IOSHomeView() {
 
   // Filter contractors
   const filtered = useMemo(() => {
-    const q = debouncedQuery
     let items = (allContractors || [])
       .map((c) => ({ ...c }))
       .filter((c) => {
@@ -113,88 +118,80 @@ export default function IOSHomeView() {
         const city = String(c?.city || '').toLowerCase()
         const svc: string[] = Array.isArray(c?.services) ? c.services : []
 
-        if (q) {
+        // Text search
+        if (debouncedQuery) {
           const hay = `${name} ${city} ${svc.join(' ')}`.toLowerCase()
-          if (!hay.includes(q)) return false
+          if (!hay.includes(debouncedQuery)) return false
         }
 
-        if (services.length && !svc.some((s) => services.includes(s))) return false
+        // Service filter
+        if (selectedService && !svc.includes(selectedService)) return false
 
+        // Location filter
         const lat = Number(c?.loc?.lat ?? c?.latitude)
         const lng = Number(c?.loc?.lng ?? c?.longitude)
         if (!isFinite(lat) || !isFinite(lng)) return false
 
         const d = distMiles(center, [lat, lng])
         ;(c as any).__distance = d
-        if (d > radius) return false
+        if (d > 25) return false // 25 mile radius
 
         return true
       })
 
-    if (sort === 'distance') {
-      items.sort((a, b) => (a.__distance ?? 1e9) - (b.__distance ?? 1e9))
-    } else if (sort === 'rating') {
-      items.sort((a, b) => (Number(b?.rating) || 0) - (Number(a?.rating) || 0))
-    } else {
-      items.sort((a, b) => {
-        const r = (Number(b?.rating) || 0) - (Number(a?.rating) || 0)
-        if (r !== 0) return r
-        return (a.__distance ?? 1e9) - (b.__distance ?? 1e9)
-      })
-    }
+    // Sort by distance
+    items.sort((a, b) => (a.__distance ?? 1e9) - (b.__distance ?? 1e9))
+    return items.slice(0, 10) // Limit to 10 nearest
+  }, [allContractors, debouncedQuery, selectedService, center])
 
-    return items
-  }, [allContractors, debouncedQuery, services, radius, sort, center])
-
-  // Service categories
-  const serviceCategories = {
-    'Home': ['Plumbing', 'Electrical', 'HVAC', 'Roofing', 'Water Damage', 'Locksmith', 'Appliance Repair', 'Handyman'],
-    'Auto': ['Auto Battery', 'Auto Tire', 'Auto Lockout', 'Tow', 'Fuel Delivery', 'Mobile Mechanic']
-  }
-
-  // Show login/registration if not logged in
+  // Show login screen if not authenticated
   if (!authLoading && !user) {
     return (
-      <div className="min-h-screen bg-gray-50">
-        {/* Green Header */}
-        <div className="bg-emerald-600 px-4 py-6 text-white">
-          <h1 className="text-2xl font-bold">Welcome to Rushr</h1>
-          <p className="mt-1 text-emerald-100">Find trusted pros near you</p>
+      <div className="fixed inset-0 bg-white flex flex-col">
+        {/* Map background - blurred */}
+        <div className="absolute inset-0 opacity-30">
+          <FindProMapbox
+            items={[]}
+            radiusMiles={15}
+            searchCenter={center}
+            onSearchHere={() => {}}
+          />
         </div>
 
-        {/* Login/Register Options */}
-        <div className="p-4 space-y-4">
-          <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-200">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Get Started</h2>
+        {/* Login Card */}
+        <div className="relative flex-1 flex items-center justify-center p-6">
+          <div className="bg-white rounded-3xl shadow-2xl p-8 w-full max-w-sm border border-gray-100">
+            {/* Logo */}
+            <div className="text-center mb-6">
+              <div className="inline-flex items-center justify-center w-16 h-16 bg-emerald-100 rounded-2xl mb-4">
+                <span className="text-3xl">🏠</span>
+              </div>
+              <h1 className="text-2xl font-bold text-gray-900">Rushr</h1>
+              <p className="text-gray-500 mt-1">Find trusted pros near you</p>
+            </div>
 
-            <button
-              onClick={() => openAuth('signin')}
-              className="w-full py-3 px-4 bg-emerald-600 text-white rounded-xl font-semibold hover:bg-emerald-700 transition-colors mb-3"
-            >
-              Sign In
-            </button>
+            {/* Auth buttons */}
+            <div className="space-y-3">
+              <button
+                onClick={() => openAuth('signin')}
+                className="w-full py-4 bg-emerald-600 text-white rounded-2xl font-semibold text-lg hover:bg-emerald-700 transition-colors"
+              >
+                Sign In
+              </button>
+              <button
+                onClick={() => openAuth('signup')}
+                className="w-full py-4 border-2 border-emerald-600 text-emerald-600 rounded-2xl font-semibold text-lg hover:bg-emerald-50 transition-colors"
+              >
+                Create Account
+              </button>
+            </div>
 
-            <button
-              onClick={() => openAuth('signup')}
-              className="w-full py-3 px-4 border-2 border-emerald-600 text-emerald-600 rounded-xl font-semibold hover:bg-emerald-50 transition-colors"
-            >
-              Create Account
-            </button>
-
-            <div className="mt-4 text-center text-sm text-gray-500">
-              <Link href="/pro/contractor-signup" className="text-blue-600 font-medium">
-                Are you a contractor? Join as Pro
+            <div className="mt-6 text-center">
+              <Link href="/pro/contractor-signup" className="text-sm text-blue-600 font-medium">
+                Join as a Pro →
               </Link>
             </div>
           </div>
-
-          {/* Browse without account */}
-          <button
-            onClick={() => router.push('/find-pro')}
-            className="w-full py-3 px-4 bg-gray-100 text-gray-700 rounded-xl font-medium hover:bg-gray-200 transition-colors"
-          >
-            Browse Pros Without Account
-          </button>
         </div>
       </div>
     )
@@ -203,202 +200,261 @@ export default function IOSHomeView() {
   // Loading state
   if (authLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-gray-500">Loading...</div>
+      <div className="fixed inset-0 bg-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-emerald-200 border-t-emerald-600 rounded-full animate-spin mx-auto"></div>
+          <p className="mt-4 text-gray-500">Loading...</p>
+        </div>
       </div>
     )
   }
 
-  // Logged in view
+  // Main app view
   return (
-    <div className="min-h-screen bg-gray-50 pb-20">
-      {/* Green Header with Greeting and Get Help button */}
-      <div className="bg-emerald-600 px-4 py-4 text-white">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-emerald-200 text-sm">Welcome back</p>
-            <h1 className="text-xl font-bold">
-              Hello, {firstName || 'there'}
-            </h1>
-          </div>
-          <Link
-            href="/post-job"
-            className="bg-white text-emerald-600 px-4 py-2 rounded-xl font-semibold text-sm hover:bg-emerald-50 transition-colors"
-          >
-            Get Help
-          </Link>
-        </div>
-      </div>
-
-      {/* Search & Filters */}
-      <div className="px-3 py-3 space-y-3">
-        {/* Search Bar */}
-        <div className="bg-white rounded-xl border border-gray-200 p-2.5 shadow-sm">
-          <div className="flex gap-2">
-            <input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search name, city, or service"
-              className="flex-1 rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-emerald-400"
-            />
-            <input
-              value={zip}
-              onChange={(e) => setZip(e.target.value.replace(/\D/g, '').slice(0, 5))}
-              placeholder="ZIP"
-              maxLength={5}
-              className="w-20 rounded-lg border border-gray-200 px-2 py-2 text-sm outline-none focus:border-emerald-400"
-            />
-            <button
-              onClick={fetchUserLocation}
-              disabled={fetchingLocation}
-              className="rounded-lg bg-emerald-50 px-3 py-2 text-emerald-600 hover:bg-emerald-100 disabled:opacity-50"
-              title="Use my location"
-            >
-              {fetchingLocation ? (
-                <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-              ) : (
-                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                </svg>
-              )}
-            </button>
-          </div>
-
-          {/* Service chips */}
-          <div className="mt-2 flex flex-wrap gap-1.5">
-            {Object.values(serviceCategories).flat().slice(0, 6).map((svc) => {
-              const active = services.includes(svc)
-              return (
-                <button
-                  key={svc}
-                  onClick={() => setServices(prev =>
-                    active ? prev.filter(s => s !== svc) : [...prev, svc]
-                  )}
-                  className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
-                    active
-                      ? 'bg-emerald-600 text-white'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }`}
-                >
-                  {svc}
-                </button>
-              )
-            })}
-            {services.length > 0 && (
-              <button
-                onClick={() => setServices([])}
-                className="px-2.5 py-1 rounded-full text-xs font-medium text-red-600 bg-red-50 hover:bg-red-100"
-              >
-                Clear
-              </button>
-            )}
-          </div>
-        </div>
-
-        {/* Map */}
+    <div className="fixed inset-0 bg-white flex flex-col">
+      {/* Full-screen Map */}
+      <div className="absolute inset-0">
         <FindProMapbox
           items={filtered}
-          category={services[0] || undefined}
-          radiusMiles={radius}
+          category={selectedService || undefined}
+          radiusMiles={25}
           searchCenter={center}
           onSearchHere={(c) => setCenter(c)}
         />
+      </div>
 
-        {/* Results header */}
-        <div className="flex items-center justify-between">
-          <div className="text-xs text-gray-600">
-            <span className="font-semibold text-gray-900">{filtered.length}</span> pros within {radius} mi
-          </div>
-          <select
-            value={sort}
-            onChange={(e) => setSort(e.target.value as any)}
-            className="rounded-lg border border-gray-200 px-2 py-1 text-xs"
+      {/* Top Header - Floating */}
+      <div className="relative z-10 safe-area-top">
+        <div className="flex items-center justify-between px-4 pt-2 pb-2">
+          {/* Menu / Profile */}
+          <button
+            onClick={() => router.push('/dashboard/homeowner')}
+            className="w-10 h-10 bg-white rounded-full shadow-lg flex items-center justify-center"
           >
-            <option value="best">Best match</option>
-            <option value="distance">Distance</option>
-            <option value="rating">Rating</option>
-          </select>
+            <svg className="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+          </button>
+
+          {/* Location indicator */}
+          <button
+            onClick={() => setSheetExpanded(true)}
+            className="flex items-center gap-2 bg-white rounded-full shadow-lg px-4 py-2"
+          >
+            <div className="w-2 h-2 bg-emerald-500 rounded-full"></div>
+            <span className="text-sm font-medium text-gray-800 max-w-[150px] truncate">
+              {fetchingLocation ? 'Finding...' : locationName}
+            </span>
+            <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+
+          {/* My Location button */}
+          <button
+            onClick={() => {
+              if (navigator.geolocation) {
+                setFetchingLocation(true)
+                navigator.geolocation.getCurrentPosition(
+                  (pos) => {
+                    setCenter([pos.coords.latitude, pos.coords.longitude])
+                    setFetchingLocation(false)
+                  },
+                  () => setFetchingLocation(false)
+                )
+              }
+            }}
+            className="w-10 h-10 bg-white rounded-full shadow-lg flex items-center justify-center"
+          >
+            {fetchingLocation ? (
+              <div className="w-5 h-5 border-2 border-emerald-200 border-t-emerald-600 rounded-full animate-spin"></div>
+            ) : (
+              <svg className="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+            )}
+          </button>
+        </div>
+      </div>
+
+      {/* Bottom Sheet */}
+      <div
+        className={`absolute left-0 right-0 bottom-0 bg-white rounded-t-3xl shadow-2xl transition-all duration-300 ease-out z-20 ${
+          sheetExpanded ? 'top-20' : 'top-auto'
+        }`}
+        style={{
+          maxHeight: sheetExpanded ? 'calc(100% - 80px)' : '320px',
+          minHeight: sheetExpanded ? 'calc(100% - 80px)' : '280px'
+        }}
+      >
+        {/* Sheet Handle */}
+        <div
+          className="flex justify-center py-3 cursor-pointer"
+          onClick={() => setSheetExpanded(!sheetExpanded)}
+        >
+          <div className="w-10 h-1 bg-gray-300 rounded-full"></div>
         </div>
 
-        {/* Contractor list */}
-        <div className="space-y-2">
-          {filtered.map((c) => {
-            const d = (c as any).__distance as number | undefined
-            const svc: string[] = Array.isArray(c?.services) ? c.services : []
-            const logoUrl = c?.logo_url || c?.avatar_url
-            return (
-              <div
-                key={String(c?.id ?? c?.name)}
-                className="bg-white rounded-xl border border-gray-200 p-3 shadow-sm"
-              >
-                <div className="flex items-start gap-3">
-                  {logoUrl && (
-                    <img
-                      src={logoUrl}
-                      alt={c?.name || 'Contractor'}
-                      className="h-12 w-12 rounded-lg object-contain border border-gray-200 bg-white flex-shrink-0"
-                    />
-                  )}
-                  <div className="flex-1 min-w-0">
-                    <div className="font-semibold text-gray-900 truncate">{c?.name || 'Contractor'}</div>
-                    <div className="text-xs text-gray-500 mt-0.5">
-                      {c?.city}
-                      {c?.rating && ` • ★ ${Number(c.rating).toFixed(1)}`}
-                      {typeof d === 'number' && ` • ${d.toFixed(1)} mi`}
-                    </div>
-                    <div className="mt-1.5 flex flex-wrap gap-1">
-                      {svc.slice(0, 3).map((s: string) => (
-                        <span
-                          key={s}
-                          className="rounded-full bg-gray-100 px-2 py-0.5 text-[10px] text-gray-600"
-                        >
-                          {s}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-                <div className="mt-3 flex gap-2">
-                  <button
-                    onClick={() => {
-                      if (!user) {
-                        openAuth()
-                      } else {
-                        router.push(`/post-job?contractor=${c?.id}`)
-                      }
-                    }}
-                    className="flex-1 rounded-lg bg-emerald-600 py-2 text-sm font-semibold text-white hover:bg-emerald-700"
-                  >
-                    Offer Job
-                  </button>
-                  <Link
-                    href={`/contractors/${encodeURIComponent(String(c?.id ?? ''))}`}
-                    className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-                  >
-                    View
-                  </Link>
-                </div>
-              </div>
-            )
-          })}
+        {/* Greeting & Search */}
+        <div className="px-4 pb-3">
+          {/* Greeting */}
+          <div className="flex items-center justify-between mb-3">
+            <div>
+              <p className="text-gray-500 text-sm">Good {getTimeOfDay()}</p>
+              <h2 className="text-xl font-bold text-gray-900">
+                {firstName ? `Hello, ${firstName}` : 'What do you need?'}
+              </h2>
+            </div>
+            <Link
+              href="/post-job"
+              className="bg-emerald-600 text-white px-4 py-2 rounded-xl font-semibold text-sm hover:bg-emerald-700 transition-colors flex items-center gap-1"
+            >
+              <span>Get Help</span>
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+            </Link>
+          </div>
 
-          {filtered.length === 0 && (
-            <div className="bg-white rounded-xl border border-dashed border-gray-300 p-8 text-center">
-              <p className="text-gray-600 mb-4">No contractors found</p>
+          {/* Search Input - Grab style */}
+          <div
+            className={`bg-gray-100 rounded-2xl transition-all ${searchFocused ? 'ring-2 ring-emerald-500' : ''}`}
+          >
+            <div className="flex items-center px-4 py-3">
+              <div className="w-3 h-3 bg-emerald-500 rounded-full mr-3"></div>
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onFocus={() => { setSearchFocused(true); setSheetExpanded(true); }}
+                onBlur={() => setSearchFocused(false)}
+                placeholder="I need help with..."
+                className="flex-1 bg-transparent text-gray-900 placeholder-gray-500 outline-none text-base"
+              />
+              {searchQuery && (
+                <button onClick={() => setSearchQuery('')} className="p-1">
+                  <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Service Categories - Horizontal scroll */}
+        <div className="px-4 pb-3">
+          <div className="flex gap-2 overflow-x-auto pb-2 hide-scrollbar">
+            {SERVICE_CATEGORIES.map((cat) => (
+              <button
+                key={cat.id}
+                onClick={() => setSelectedService(selectedService === cat.id ? null : cat.id)}
+                className={`flex items-center gap-2 px-4 py-2 rounded-full whitespace-nowrap transition-all ${
+                  selectedService === cat.id
+                    ? 'bg-emerald-600 text-white'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                <span>{cat.icon}</span>
+                <span className="text-sm font-medium">{cat.label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Results List */}
+        <div className="flex-1 overflow-y-auto px-4 pb-safe">
+          {filtered.length > 0 ? (
+            <div className="space-y-2">
+              <p className="text-xs text-gray-500 mb-2">{filtered.length} pros nearby</p>
+              {filtered.map((c) => {
+                const d = (c as any).__distance as number | undefined
+                const svc: string[] = Array.isArray(c?.services) ? c.services : []
+                const logoUrl = c?.logo_url || c?.avatar_url
+                return (
+                  <div
+                    key={String(c?.id ?? c?.name)}
+                    className="bg-gray-50 rounded-2xl p-3 flex items-center gap-3"
+                  >
+                    {/* Avatar */}
+                    <div className="w-12 h-12 rounded-xl bg-white border border-gray-200 flex items-center justify-center overflow-hidden flex-shrink-0">
+                      {logoUrl ? (
+                        <img src={logoUrl} alt="" className="w-full h-full object-contain" />
+                      ) : (
+                        <span className="text-xl">👷</span>
+                      )}
+                    </div>
+
+                    {/* Info */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold text-gray-900 truncate">{c?.name || 'Contractor'}</span>
+                        {c?.rating && (
+                          <span className="text-xs text-gray-500 flex items-center gap-0.5">
+                            <span className="text-amber-500">★</span> {Number(c.rating).toFixed(1)}
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-xs text-gray-500 truncate">
+                        {svc.slice(0, 2).join(' • ')}
+                        {typeof d === 'number' && ` • ${d.toFixed(1)} mi`}
+                      </div>
+                    </div>
+
+                    {/* Action */}
+                    <button
+                      onClick={() => {
+                        if (!user) openAuth()
+                        else router.push(`/post-job?contractor=${c?.id}`)
+                      }}
+                      className="bg-emerald-600 text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-emerald-700 transition-colors flex-shrink-0"
+                    >
+                      Book
+                    </button>
+                  </div>
+                )
+              })}
+            </div>
+          ) : (
+            <div className="text-center py-8">
+              <div className="text-4xl mb-3">🔍</div>
+              <p className="text-gray-500">No pros found nearby</p>
               <Link
                 href="/post-job"
-                className="inline-block px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-semibold"
+                className="inline-block mt-4 bg-emerald-600 text-white px-6 py-3 rounded-xl font-semibold"
               >
-                Post a Job Instead
+                Post a Job Request
               </Link>
             </div>
           )}
         </div>
       </div>
+
+      {/* Custom styles */}
+      <style jsx>{`
+        .safe-area-top {
+          padding-top: env(safe-area-inset-top, 0);
+        }
+        .pb-safe {
+          padding-bottom: env(safe-area-inset-bottom, 20px);
+        }
+        .hide-scrollbar::-webkit-scrollbar {
+          display: none;
+        }
+        .hide-scrollbar {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
+        }
+      `}</style>
     </div>
   )
+}
+
+// Helper to get time of day greeting
+function getTimeOfDay(): string {
+  const hour = new Date().getHours()
+  if (hour < 12) return 'morning'
+  if (hour < 17) return 'afternoon'
+  return 'evening'
 }
