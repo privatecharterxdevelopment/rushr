@@ -126,7 +126,7 @@ export default function IOSRegistration() {
       <div className="fixed inset-0 bg-white flex flex-col">
         {/* Hero Section - Map Background with Green Overlay */}
         <div
-          className="flex-1 flex flex-col items-center justify-end px-8 pb-12 relative overflow-hidden"
+          className="flex-1 flex flex-col items-center justify-center px-8 relative overflow-hidden"
           style={{ minHeight: '60%' }}
         >
           {/* Map Background Image */}
