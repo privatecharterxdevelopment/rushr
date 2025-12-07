@@ -1,7 +1,11 @@
 {
   "compilerOptions": {
     "target": "ES2022",
-    "lib": ["dom", "dom.iterable", "es2022"],
+    "lib": [
+      "dom",
+      "dom.iterable",
+      "es2022"
+    ],
     "module": "esnext",
     "moduleResolution": "bundler",
     "strict": true,
@@ -10,18 +14,25 @@
     "isolatedModules": true,
     "resolveJsonModule": true,
     "esModuleInterop": true,
-    "jsx": "preserve",
+    "jsx": "react-jsx",
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./*"]
+      "@/*": [
+        "./*"
+      ]
     },
-    "plugins": [{ "name": "next" }],
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ],
     "allowJs": false,
     "forceConsistentCasingInFileNames": true,
     "incremental": true,
-
     // ✅ Ensure types from node + custom shims are loaded
-    "types": ["node"]
+    "types": [
+      "node"
+    ]
   },
   "include": [
     "next-env.d.ts",
@@ -29,7 +40,8 @@
     "components/**/*.{ts,tsx}",
     "lib/**/*.{ts,tsx}",
     ".next/types/**/*.ts",
-    "types/**/*.d.ts"
+    "types/**/*.d.ts",
+    ".next/dev/types/**/*.ts"
   ],
   "exclude": [
     "node_modules",

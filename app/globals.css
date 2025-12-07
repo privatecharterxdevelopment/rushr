@@ -1,3 +1,5 @@
+@import url('https://unpkg.com/leaflet@1.9.4/dist/leaflet.css');
+
 /* Satoshi Font */
 @font-face {
   font-family: 'Satoshi';
@@ -89,7 +91,6 @@ html {
 body {
   overflow-x: hidden;
 }
-@import url('https://unpkg.com/leaflet@1.9.4/dist/leaflet.css');
 
 /* =======================
    Brand tokens (green default, blue for Pro)
