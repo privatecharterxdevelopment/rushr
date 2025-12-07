@@ -1,101 +1,296 @@
 // components/IOSHomeView.tsx
-// iOS app homepage - Grab/Uber style with full-screen map and bottom sheet
+// iOS app main view - Native app experience with bottom tabs
 'use client'
 
-import React, { useEffect, useMemo, useState, useRef } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useApp } from '../lib/state'
 import { useAuth } from '../contexts/AuthContext'
-import { openAuth } from './AuthModal'
 import dynamic from 'next/dynamic'
 import IOSRegistration from './IOSRegistration'
+import IOSTabBar, { TabId } from './IOSTabBar'
 
 // Dynamically import the Mapbox component
 const FindProMapbox = dynamic(() => import('./FindProMapbox'), {
   ssr: false,
   loading: () => (
-    <div className="absolute inset-0 bg-slate-100 flex items-center justify-center">
-      <div className="text-slate-400">Loading map...</div>
+    <div className="absolute inset-0 bg-gray-100 flex items-center justify-center">
+      <div className="relative flex items-center justify-center">
+        <div className="w-12 h-12 bg-emerald-600 rounded-xl flex items-center justify-center">
+          <span className="text-white font-bold text-xl">R</span>
+        </div>
+      </div>
     </div>
   )
 })
 
 type LatLng = [number, number]
 
-// Service categories with icons
-const SERVICE_CATEGORIES = [
-  { id: 'Plumbing', label: 'Plumbing', icon: '🚿' },
-  { id: 'Electrical', label: 'Electrical', icon: '⚡' },
-  { id: 'HVAC', label: 'HVAC', icon: '❄️' },
-  { id: 'Locksmith', label: 'Locksmith', icon: '🔐' },
-  { id: 'Auto Battery', label: 'Jump Start', icon: '🔋' },
-  { id: 'Tow', label: 'Towing', icon: '🚗' },
-]
+// Animated loading logo
+const LoadingLogo = () => (
+  <div className="fixed inset-0 bg-white flex flex-col items-center justify-center">
+    <div className="relative flex items-center justify-center">
+      <div className="absolute w-20 h-20 bg-emerald-400/20 rounded-2xl animate-ping" style={{ animationDuration: '2s' }} />
+      <div className="relative w-14 h-14 bg-emerald-600 rounded-xl flex items-center justify-center shadow-lg">
+        <span className="text-white font-bold text-2xl">R</span>
+      </div>
+    </div>
+  </div>
+)
+
+// Home Tab Content - Map with Book a Pro
+function HomeTab({ center, setCenter, filtered, fetchingLocation, setFetchingLocation, firstName }: {
+  center: LatLng
+  setCenter: (c: LatLng) => void
+  filtered: any[]
+  fetchingLocation: boolean
+  setFetchingLocation: (b: boolean) => void
+  firstName: string
+}) {
+  return (
+    <div className="absolute inset-0 pb-20">
+      {/* Full-screen Map */}
+      <div className="absolute inset-0">
+        <FindProMapbox
+          items={filtered}
+          radiusMiles={25}
+          searchCenter={center}
+          onSearchHere={(c) => setCenter(c)}
+        />
+      </div>
+
+      {/* Floating Top Bar */}
+      <div className="absolute top-0 left-0 right-0 pt-safe px-4 pb-3 z-10">
+        <div className="flex items-center justify-between pt-2">
+          {/* Hello username */}
+          <div className="bg-white rounded-full px-4 py-2 shadow-lg">
+            <p className="text-gray-900 font-medium text-sm">
+              {firstName ? `Hello, ${firstName}` : 'Hello'}
+            </p>
+          </div>
+
+          {/* Book a Pro button */}
+          <Link
+            href="/post-job"
+            className="bg-emerald-600 text-white px-5 py-2.5 rounded-full font-semibold text-sm shadow-lg active:bg-emerald-700"
+          >
+            Book a Pro
+          </Link>
+        </div>
+      </div>
+
+      {/* My Location button */}
+      <div className="absolute bottom-24 right-4 z-10">
+        <button
+          onClick={() => {
+            if (navigator.geolocation) {
+              setFetchingLocation(true)
+              navigator.geolocation.getCurrentPosition(
+                (pos) => {
+                  setCenter([pos.coords.latitude, pos.coords.longitude])
+                  setFetchingLocation(false)
+                },
+                () => setFetchingLocation(false)
+              )
+            }
+          }}
+          className="w-11 h-11 bg-white rounded-full shadow-lg flex items-center justify-center active:bg-gray-50"
+        >
+          {fetchingLocation ? (
+            <div className="w-5 h-5 border-2 border-emerald-200 border-t-emerald-600 rounded-full animate-spin" />
+          ) : (
+            <svg className="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+          )}
+        </button>
+      </div>
+    </div>
+  )
+}
+
+// Jobs Tab Content
+function JobsTab() {
+  return (
+    <div className="flex-1 bg-gray-50 pt-safe">
+      <div className="px-4 pt-4 pb-2">
+        <h1 className="text-xl font-bold text-gray-900">My Jobs</h1>
+      </div>
+      <div className="flex-1 flex flex-col items-center justify-center px-6 pb-20">
+        <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+          <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+          </svg>
+        </div>
+        <p className="text-gray-500 text-sm text-center">No jobs yet</p>
+        <p className="text-gray-400 text-xs text-center mt-1">Book a pro to see your jobs here</p>
+        <Link
+          href="/post-job"
+          className="mt-4 bg-emerald-600 text-white px-6 py-2.5 rounded-xl font-semibold text-sm active:bg-emerald-700"
+        >
+          Book a Pro
+        </Link>
+      </div>
+    </div>
+  )
+}
+
+// Messages Tab Content
+function MessagesTab() {
+  return (
+    <div className="flex-1 bg-gray-50 pt-safe">
+      <div className="px-4 pt-4 pb-2">
+        <h1 className="text-xl font-bold text-gray-900">Messages</h1>
+      </div>
+      <div className="flex-1 flex flex-col items-center justify-center px-6 pb-20">
+        <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+          <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+          </svg>
+        </div>
+        <p className="text-gray-500 text-sm text-center">No messages yet</p>
+        <p className="text-gray-400 text-xs text-center mt-1">Your conversations will appear here</p>
+      </div>
+    </div>
+  )
+}
+
+// Notifications Tab Content
+function NotificationsTab() {
+  return (
+    <div className="flex-1 bg-gray-50 pt-safe">
+      <div className="px-4 pt-4 pb-2">
+        <h1 className="text-xl font-bold text-gray-900">Notifications</h1>
+      </div>
+      <div className="flex-1 flex flex-col items-center justify-center px-6 pb-20">
+        <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+          <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+          </svg>
+        </div>
+        <p className="text-gray-500 text-sm text-center">No notifications</p>
+        <p className="text-gray-400 text-xs text-center mt-1">You're all caught up!</p>
+      </div>
+    </div>
+  )
+}
+
+// Profile Tab Content
+function ProfileTab({ firstName, email, onSignOut }: { firstName: string, email: string, onSignOut: () => void }) {
+  return (
+    <div className="flex-1 bg-gray-50 pt-safe">
+      <div className="px-4 pt-4 pb-4">
+        <h1 className="text-xl font-bold text-gray-900">Profile</h1>
+      </div>
+
+      {/* Profile Card */}
+      <div className="px-4 mb-4">
+        <div className="bg-white rounded-2xl p-4 shadow-sm">
+          <div className="flex items-center gap-3">
+            <div className="w-14 h-14 bg-emerald-100 rounded-full flex items-center justify-center">
+              <span className="text-emerald-600 font-bold text-xl">{firstName?.[0] || 'U'}</span>
+            </div>
+            <div>
+              <p className="text-gray-900 font-semibold">{firstName || 'User'}</p>
+              <p className="text-gray-400 text-sm">{email}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Menu Items */}
+      <div className="px-4 space-y-2 pb-24">
+        <Link href="/dashboard" className="flex items-center justify-between bg-white rounded-xl p-4 shadow-sm active:bg-gray-50">
+          <div className="flex items-center gap-3">
+            <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+            </svg>
+            <span className="text-gray-900 text-sm font-medium">Job History</span>
+          </div>
+          <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          </svg>
+        </Link>
+
+        <Link href="/settings" className="flex items-center justify-between bg-white rounded-xl p-4 shadow-sm active:bg-gray-50">
+          <div className="flex items-center gap-3">
+            <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+            <span className="text-gray-900 text-sm font-medium">Settings</span>
+          </div>
+          <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          </svg>
+        </Link>
+
+        <Link href="/help" className="flex items-center justify-between bg-white rounded-xl p-4 shadow-sm active:bg-gray-50">
+          <div className="flex items-center gap-3">
+            <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span className="text-gray-900 text-sm font-medium">Help & Support</span>
+          </div>
+          <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          </svg>
+        </Link>
+
+        <button
+          onClick={onSignOut}
+          className="w-full flex items-center justify-between bg-white rounded-xl p-4 shadow-sm active:bg-gray-50"
+        >
+          <div className="flex items-center gap-3">
+            <svg className="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+            </svg>
+            <span className="text-red-500 text-sm font-medium">Sign Out</span>
+          </div>
+        </button>
+      </div>
+    </div>
+  )
+}
 
 export default function IOSHomeView() {
   const { state } = useApp()
-  const { user, userProfile, loading: authLoading } = useAuth()
+  const { user, userProfile, loading: authLoading, signOut } = useAuth()
   const router = useRouter()
   const allContractors: any[] = Array.isArray((state as any)?.contractors)
     ? (state as any).contractors
     : []
 
+  // Tab state
+  const [activeTab, setActiveTab] = useState<TabId>('home')
+
   // Get first name for greeting
   const firstName = userProfile?.name?.split(' ')[0] || ''
-
-  // UI state
-  const [sheetExpanded, setSheetExpanded] = useState(false)
-  const [searchFocused, setSearchFocused] = useState(false)
-  const [selectedService, setSelectedService] = useState<string | null>(null)
-  const [searchQuery, setSearchQuery] = useState('')
-  const [debouncedQuery, setDebouncedQuery] = useState('')
+  const email = userProfile?.email || user?.email || ''
 
   // Location state
   const [center, setCenter] = useState<LatLng>([40.7128, -74.006])
   const [fetchingLocation, setFetchingLocation] = useState(false)
-  const [locationName, setLocationName] = useState('Finding location...')
 
   // Get user location on mount
   useEffect(() => {
     if (navigator.geolocation) {
       setFetchingLocation(true)
       navigator.geolocation.getCurrentPosition(
-        async (position) => {
+        (position) => {
           const { latitude, longitude } = position.coords
           setCenter([latitude, longitude])
           setFetchingLocation(false)
-
-          // Reverse geocode to get location name
-          try {
-            const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN
-            if (MAPBOX_TOKEN) {
-              const res = await fetch(
-                `https://api.mapbox.com/geocoding/v5/mapbox.places/${longitude},${latitude}.json?access_token=${MAPBOX_TOKEN}&types=neighborhood,locality,place`
-              )
-              const data = await res.json()
-              if (data.features?.[0]) {
-                setLocationName(data.features[0].place_name?.split(',')[0] || 'Your Location')
-              }
-            }
-          } catch {
-            setLocationName('Your Location')
-          }
         },
         () => {
           setFetchingLocation(false)
-          setLocationName('New York')
         },
         { enableHighAccuracy: true, timeout: 10000 }
       )
     }
   }, [])
-
-  // Debounce search
-  useEffect(() => {
-    const t = setTimeout(() => setDebouncedQuery(searchQuery.trim().toLowerCase()), 200)
-    return () => clearTimeout(t)
-  }, [searchQuery])
 
   // Distance helper
   function distMiles(a: LatLng, b: LatLng) {
@@ -115,20 +310,6 @@ export default function IOSHomeView() {
     let items = (allContractors || [])
       .map((c) => ({ ...c }))
       .filter((c) => {
-        const name = String(c?.name || '').toLowerCase()
-        const city = String(c?.city || '').toLowerCase()
-        const svc: string[] = Array.isArray(c?.services) ? c.services : []
-
-        // Text search
-        if (debouncedQuery) {
-          const hay = `${name} ${city} ${svc.join(' ')}`.toLowerCase()
-          if (!hay.includes(debouncedQuery)) return false
-        }
-
-        // Service filter
-        if (selectedService && !svc.includes(selectedService)) return false
-
-        // Location filter
         const lat = Number(c?.loc?.lat ?? c?.latitude)
         const lng = Number(c?.loc?.lng ?? c?.longitude)
         if (!isFinite(lat) || !isFinite(lng)) return false
@@ -143,257 +324,48 @@ export default function IOSHomeView() {
     // Sort by distance
     items.sort((a, b) => (a.__distance ?? 1e9) - (b.__distance ?? 1e9))
     return items.slice(0, 10) // Limit to 10 nearest
-  }, [allContractors, debouncedQuery, selectedService, center])
+  }, [allContractors, center])
 
   // Show registration/login screen if not authenticated
   if (!authLoading && !user) {
     return <IOSRegistration />
   }
 
-  // Loading state
+  // Loading state with animated logo
   if (authLoading) {
-    return (
-      <div className="fixed inset-0 bg-white flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-12 h-12 border-4 border-emerald-200 border-t-emerald-600 rounded-full animate-spin mx-auto"></div>
-          <p className="mt-4 text-gray-500">Loading...</p>
-        </div>
-      </div>
-    )
+    return <LoadingLogo />
   }
 
-  // Main app view
+  // Main app view with bottom tabs
   return (
     <div className="fixed inset-0 bg-white flex flex-col">
-      {/* GREEN HEADER with greeting */}
-      <div className="relative z-30 bg-emerald-600 safe-area-top">
-        <div className="flex items-center justify-between px-4 py-3">
-          {/* Menu button */}
-          <button
-            onClick={() => router.push('/dashboard/homeowner')}
-            className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center"
-          >
-            <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-            </svg>
-          </button>
-
-          {/* Greeting */}
-          <div className="text-center">
-            <p className="text-emerald-200 text-xs">Good {getTimeOfDay()}</p>
-            <h1 className="text-white font-bold text-lg">
-              {firstName ? `Hello, ${firstName}` : 'Find a Pro'}
-            </h1>
-          </div>
-
-          {/* Get Help button */}
-          <Link
-            href="/post-job"
-            className="bg-white text-emerald-600 px-3 py-2 rounded-xl font-semibold text-sm"
-          >
-            Get Help
-          </Link>
-        </div>
-      </div>
-
-      {/* Full-screen Map */}
-      <div className="absolute inset-0 pt-[88px]">
-        <FindProMapbox
-          items={filtered}
-          category={selectedService || undefined}
-          radiusMiles={25}
-          searchCenter={center}
-          onSearchHere={(c) => setCenter(c)}
+      {/* Tab Content */}
+      {activeTab === 'home' && (
+        <HomeTab
+          center={center}
+          setCenter={setCenter}
+          filtered={filtered}
+          fetchingLocation={fetchingLocation}
+          setFetchingLocation={setFetchingLocation}
+          firstName={firstName}
         />
-      </div>
+      )}
+      {activeTab === 'jobs' && <JobsTab />}
+      {activeTab === 'messages' && <MessagesTab />}
+      {activeTab === 'notifications' && <NotificationsTab />}
+      {activeTab === 'profile' && (
+        <ProfileTab
+          firstName={firstName}
+          email={email}
+          onSignOut={signOut}
+        />
+      )}
 
-      {/* Floating controls on map */}
-      <div className="absolute top-[100px] right-4 z-10 flex flex-col gap-2">
-        {/* My Location button */}
-        <button
-          onClick={() => {
-            if (navigator.geolocation) {
-              setFetchingLocation(true)
-              navigator.geolocation.getCurrentPosition(
-                (pos) => {
-                  setCenter([pos.coords.latitude, pos.coords.longitude])
-                  setFetchingLocation(false)
-                },
-                () => setFetchingLocation(false)
-              )
-            }
-          }}
-          className="w-10 h-10 bg-white rounded-full shadow-lg flex items-center justify-center"
-        >
-          {fetchingLocation ? (
-            <div className="w-5 h-5 border-2 border-emerald-200 border-t-emerald-600 rounded-full animate-spin"></div>
-          ) : (
-            <svg className="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-            </svg>
-          )}
-        </button>
-      </div>
-
-      {/* Bottom Sheet */}
-      <div
-        className={`absolute left-0 right-0 bottom-0 bg-white rounded-t-3xl shadow-2xl transition-all duration-300 ease-out z-20 ${
-          sheetExpanded ? 'top-20' : 'top-auto'
-        }`}
-        style={{
-          maxHeight: sheetExpanded ? 'calc(100% - 80px)' : '320px',
-          minHeight: sheetExpanded ? 'calc(100% - 80px)' : '280px'
-        }}
-      >
-        {/* Sheet Handle */}
-        <div
-          className="flex justify-center py-3 cursor-pointer"
-          onClick={() => setSheetExpanded(!sheetExpanded)}
-        >
-          <div className="w-10 h-1 bg-gray-300 rounded-full"></div>
-        </div>
-
-        {/* Search */}
-        <div className="px-4 pb-3">
-          {/* Search Input - Grab style */}
-          <div
-            className={`bg-gray-100 rounded-2xl transition-all ${searchFocused ? 'ring-2 ring-emerald-500' : ''}`}
-          >
-            <div className="flex items-center px-4 py-3">
-              <div className="w-3 h-3 bg-emerald-500 rounded-full mr-3"></div>
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                onFocus={() => { setSearchFocused(true); setSheetExpanded(true); }}
-                onBlur={() => setSearchFocused(false)}
-                placeholder="I need help with..."
-                className="flex-1 bg-transparent text-gray-900 placeholder-gray-500 outline-none text-base"
-              />
-              {searchQuery && (
-                <button onClick={() => setSearchQuery('')} className="p-1">
-                  <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Service Categories - Horizontal scroll */}
-        <div className="px-4 pb-3">
-          <div className="flex gap-2 overflow-x-auto pb-2 hide-scrollbar">
-            {SERVICE_CATEGORIES.map((cat) => (
-              <button
-                key={cat.id}
-                onClick={() => setSelectedService(selectedService === cat.id ? null : cat.id)}
-                className={`flex items-center gap-2 px-4 py-2 rounded-full whitespace-nowrap transition-all ${
-                  selectedService === cat.id
-                    ? 'bg-emerald-600 text-white'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
-              >
-                <span>{cat.icon}</span>
-                <span className="text-sm font-medium">{cat.label}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Results List */}
-        <div className="flex-1 overflow-y-auto px-4 pb-safe">
-          {filtered.length > 0 ? (
-            <div className="space-y-2">
-              <p className="text-xs text-gray-500 mb-2">{filtered.length} pros nearby</p>
-              {filtered.map((c) => {
-                const d = (c as any).__distance as number | undefined
-                const svc: string[] = Array.isArray(c?.services) ? c.services : []
-                const logoUrl = c?.logo_url || c?.avatar_url
-                return (
-                  <div
-                    key={String(c?.id ?? c?.name)}
-                    className="bg-gray-50 rounded-2xl p-3 flex items-center gap-3"
-                  >
-                    {/* Avatar */}
-                    <div className="w-12 h-12 rounded-xl bg-white border border-gray-200 flex items-center justify-center overflow-hidden flex-shrink-0">
-                      {logoUrl ? (
-                        <img src={logoUrl} alt="" className="w-full h-full object-contain" />
-                      ) : (
-                        <span className="text-xl">👷</span>
-                      )}
-                    </div>
-
-                    {/* Info */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="font-semibold text-gray-900 truncate">{c?.name || 'Contractor'}</span>
-                        {c?.rating && (
-                          <span className="text-xs text-gray-500 flex items-center gap-0.5">
-                            <span className="text-amber-500">★</span> {Number(c.rating).toFixed(1)}
-                          </span>
-                        )}
-                      </div>
-                      <div className="text-xs text-gray-500 truncate">
-                        {svc.slice(0, 2).join(' • ')}
-                        {typeof d === 'number' && ` • ${d.toFixed(1)} mi`}
-                      </div>
-                    </div>
-
-                    {/* Action */}
-                    <button
-                      onClick={() => {
-                        if (!user) openAuth()
-                        else router.push(`/post-job?contractor=${c?.id}`)
-                      }}
-                      className="bg-emerald-600 text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-emerald-700 transition-colors flex-shrink-0"
-                    >
-                      Book
-                    </button>
-                  </div>
-                )
-              })}
-            </div>
-          ) : (
-            <div className="text-center py-8">
-              <div className="text-4xl mb-3">🔍</div>
-              <p className="text-gray-500">No pros found nearby</p>
-              <Link
-                href="/post-job"
-                className="inline-block mt-4 bg-emerald-600 text-white px-6 py-3 rounded-xl font-semibold"
-              >
-                Post a Job Request
-              </Link>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Custom styles */}
-      <style jsx>{`
-        .safe-area-top {
-          padding-top: env(safe-area-inset-top, 0);
-        }
-        .pb-safe {
-          padding-bottom: env(safe-area-inset-bottom, 20px);
-        }
-        .hide-scrollbar::-webkit-scrollbar {
-          display: none;
-        }
-        .hide-scrollbar {
-          -ms-overflow-style: none;
-          scrollbar-width: none;
-        }
-      `}</style>
+      {/* Bottom Tab Bar */}
+      <IOSTabBar
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+      />
     </div>
   )
-}
-
-// Helper to get time of day greeting
-function getTimeOfDay(): string {
-  const hour = new Date().getHours()
-  if (hour < 12) return 'morning'
-  if (hour < 17) return 'afternoon'
-  return 'evening'
 }

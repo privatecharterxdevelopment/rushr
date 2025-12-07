@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabaseClient'
 import AiRewriteBubble from '@/components/AiRewriteBubble'
 import TagInput from '@/components/TagInput'
 import toast, { Toaster } from 'react-hot-toast'
+import IOSProWizardWrapper from '@/components/IOSProWizardWrapper'
 
 /* ====================== Types ====================== */
 type Day = 'Mon'|'Tue'|'Wed'|'Thu'|'Fri'|'Sat'|'Sun'
@@ -681,7 +682,7 @@ async function submitAll(e?: React.FormEvent) {
 
   /* ====================== Render ====================== */
   return (
-    <>
+    <IOSProWizardWrapper>
       <Toaster position="top-center" />
       <section className="section min-h-screen bg-gray-50 py-12">
         <div className="container max-w-4xl mx-auto px-4">
@@ -1698,7 +1699,7 @@ async function submitAll(e?: React.FormEvent) {
         )}
       </div>
     </section>
-    </>
+    </IOSProWizardWrapper>
   )
 }
 
