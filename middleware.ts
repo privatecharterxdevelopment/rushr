@@ -94,15 +94,10 @@ export async function middleware(req: NextRequest) {
   // Get the current user
   const { data: { user }, error: userError } = await supabase.auth.getUser()
 
-  // STAGING: Allow unauthenticated users - redirect to sign-in instead of early-access
-  if (userError) {
-    console.log(`[MIDDLEWARE] Auth error: ${userError.message}`)
-    return NextResponse.redirect(new URL('/sign-in', req.url))
-  }
-
-  if (!user) {
-    console.log(`[MIDDLEWARE] No user found, redirecting to /sign-in`)
-    return NextResponse.redirect(new URL('/sign-in', req.url))
+  // STAGING: Allow unauthenticated users to browse freely
+  if (userError || !user) {
+    console.log(`[MIDDLEWARE] No authenticated user, allowing access`)
+    return NextResponse.next()
   }
 
   console.log(`[MIDDLEWARE] User found: ${user.id.substring(0, 8)}`)
