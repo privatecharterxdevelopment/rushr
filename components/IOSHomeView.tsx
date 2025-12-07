@@ -212,8 +212,39 @@ export default function IOSHomeView() {
   // Main app view
   return (
     <div className="fixed inset-0 bg-white flex flex-col">
+      {/* GREEN HEADER with greeting */}
+      <div className="relative z-30 bg-emerald-600 safe-area-top">
+        <div className="flex items-center justify-between px-4 py-3">
+          {/* Menu button */}
+          <button
+            onClick={() => router.push('/dashboard/homeowner')}
+            className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center"
+          >
+            <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+          </button>
+
+          {/* Greeting */}
+          <div className="text-center">
+            <p className="text-emerald-200 text-xs">Good {getTimeOfDay()}</p>
+            <h1 className="text-white font-bold text-lg">
+              {firstName ? `Hello, ${firstName}` : 'Find a Pro'}
+            </h1>
+          </div>
+
+          {/* Get Help button */}
+          <Link
+            href="/post-job"
+            className="bg-white text-emerald-600 px-3 py-2 rounded-xl font-semibold text-sm"
+          >
+            Get Help
+          </Link>
+        </div>
+      </div>
+
       {/* Full-screen Map */}
-      <div className="absolute inset-0">
+      <div className="absolute inset-0 pt-[88px]">
         <FindProMapbox
           items={filtered}
           category={selectedService || undefined}
@@ -223,59 +254,33 @@ export default function IOSHomeView() {
         />
       </div>
 
-      {/* Top Header - Floating */}
-      <div className="relative z-10 safe-area-top">
-        <div className="flex items-center justify-between px-4 pt-2 pb-2">
-          {/* Menu / Profile */}
-          <button
-            onClick={() => router.push('/dashboard/homeowner')}
-            className="w-10 h-10 bg-white rounded-full shadow-lg flex items-center justify-center"
-          >
+      {/* Floating controls on map */}
+      <div className="absolute top-[100px] right-4 z-10 flex flex-col gap-2">
+        {/* My Location button */}
+        <button
+          onClick={() => {
+            if (navigator.geolocation) {
+              setFetchingLocation(true)
+              navigator.geolocation.getCurrentPosition(
+                (pos) => {
+                  setCenter([pos.coords.latitude, pos.coords.longitude])
+                  setFetchingLocation(false)
+                },
+                () => setFetchingLocation(false)
+              )
+            }
+          }}
+          className="w-10 h-10 bg-white rounded-full shadow-lg flex items-center justify-center"
+        >
+          {fetchingLocation ? (
+            <div className="w-5 h-5 border-2 border-emerald-200 border-t-emerald-600 rounded-full animate-spin"></div>
+          ) : (
             <svg className="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
             </svg>
-          </button>
-
-          {/* Location indicator */}
-          <button
-            onClick={() => setSheetExpanded(true)}
-            className="flex items-center gap-2 bg-white rounded-full shadow-lg px-4 py-2"
-          >
-            <div className="w-2 h-2 bg-emerald-500 rounded-full"></div>
-            <span className="text-sm font-medium text-gray-800 max-w-[150px] truncate">
-              {fetchingLocation ? 'Finding...' : locationName}
-            </span>
-            <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-            </svg>
-          </button>
-
-          {/* My Location button */}
-          <button
-            onClick={() => {
-              if (navigator.geolocation) {
-                setFetchingLocation(true)
-                navigator.geolocation.getCurrentPosition(
-                  (pos) => {
-                    setCenter([pos.coords.latitude, pos.coords.longitude])
-                    setFetchingLocation(false)
-                  },
-                  () => setFetchingLocation(false)
-                )
-              }
-            }}
-            className="w-10 h-10 bg-white rounded-full shadow-lg flex items-center justify-center"
-          >
-            {fetchingLocation ? (
-              <div className="w-5 h-5 border-2 border-emerald-200 border-t-emerald-600 rounded-full animate-spin"></div>
-            ) : (
-              <svg className="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-              </svg>
-            )}
-          </button>
-        </div>
+          )}
+        </button>
       </div>
 
       {/* Bottom Sheet */}
@@ -296,27 +301,8 @@ export default function IOSHomeView() {
           <div className="w-10 h-1 bg-gray-300 rounded-full"></div>
         </div>
 
-        {/* Greeting & Search */}
+        {/* Search */}
         <div className="px-4 pb-3">
-          {/* Greeting */}
-          <div className="flex items-center justify-between mb-3">
-            <div>
-              <p className="text-gray-500 text-sm">Good {getTimeOfDay()}</p>
-              <h2 className="text-xl font-bold text-gray-900">
-                {firstName ? `Hello, ${firstName}` : 'What do you need?'}
-              </h2>
-            </div>
-            <Link
-              href="/post-job"
-              className="bg-emerald-600 text-white px-4 py-2 rounded-xl font-semibold text-sm hover:bg-emerald-700 transition-colors flex items-center gap-1"
-            >
-              <span>Get Help</span>
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-              </svg>
-            </Link>
-          </div>
-
           {/* Search Input - Grab style */}
           <div
             className={`bg-gray-100 rounded-2xl transition-all ${searchFocused ? 'ring-2 ring-emerald-500' : ''}`}
