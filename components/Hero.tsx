@@ -64,7 +64,10 @@ function detectCategory(searchText: string): string | null {
 
 export default function Hero(){
   const router = useRouter()
-  const { user } = useAuth()
+  const { user, userProfile } = useAuth()
+
+  // Get first name for greeting
+  const firstName = userProfile?.name?.split(' ')[0] || ''
 
   const [searchQuery, setSearchQuery] = useState('')
   const [location, setLocation] = useState('')
@@ -216,9 +219,16 @@ export default function Hero(){
         <div className="grid lg:grid-cols-2 gap-8 lg:gap-12 w-full items-end pb-0">
           {/* Left Column - Content */}
           <div className="text-white space-y-3 lg:space-y-4 flex flex-col justify-center pt-8 lg:pt-12">
+            {/* Personalized greeting when logged in */}
+            {firstName && (
+              <p className="text-emerald-200 text-lg md:text-xl font-medium mb-1">
+                Hello, {firstName} 👋
+              </p>
+            )}
+
             <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold leading-tight">
-              Emergency help,<br />
-              <span className="text-emerald-200">on the way in minutes</span>
+              {firstName ? 'Need help today?' : 'Emergency help,'}<br />
+              <span className="text-emerald-200">{firstName ? 'Find a pro near you' : 'on the way in minutes'}</span>
             </h1>
 
             <p className="text-base md:text-lg text-emerald-50 max-w-xl">
