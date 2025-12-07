@@ -157,8 +157,8 @@ export default function IOSRegistration() {
 
         {/* Bottom Section - Just Buttons */}
         <div
-          className="bg-white px-6 pt-8"
-          style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 20px) + 24px)' }}
+          className="bg-white px-6 pt-6 pb-6"
+          style={{ paddingBottom: 'max(env(safe-area-inset-bottom, 34px), 34px)' }}
         >
           {/* Buttons Only */}
           <button
