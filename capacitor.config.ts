@@ -3,10 +3,11 @@ import type { CapacitorConfig } from '@capacitor/cli';
 const config: CapacitorConfig = {
   appId: 'com.rushr.app',
   appName: 'Rushr',
-  webDir: 'public',
+  webDir: 'out',
   server: {
-    // Point to your live/staging server - the app loads from there
-    url: 'https://staging-rushr.netlify.app',
+    // For development: use local server
+    // For production: change to your deployed URL
+    url: 'http://127.0.0.1:3001',
     cleartext: true
   },
   ios: {
