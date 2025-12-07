@@ -124,31 +124,30 @@ export default function IOSRegistration() {
   if (screen === 'welcome') {
     return (
       <div className="fixed inset-0 bg-white flex flex-col">
-        {/* Hero Section - Top 60% */}
+        {/* Hero Section - Map Background with Green Overlay */}
         <div
-          className="flex-1 flex flex-col items-center justify-center px-8 relative overflow-hidden"
-          style={{
-            background: 'linear-gradient(160deg, #10b981 0%, #059669 50%, #047857 100%)',
-            minHeight: '55%'
-          }}
+          className="flex-1 flex flex-col items-center justify-end px-8 pb-12 relative overflow-hidden"
+          style={{ minHeight: '60%' }}
         >
-          {/* Background decoration */}
-          <div className="absolute top-0 right-0 w-64 h-64 rounded-full bg-white/5 -translate-y-1/2 translate-x-1/2" />
-          <div className="absolute bottom-0 left-0 w-48 h-48 rounded-full bg-white/5 translate-y-1/2 -translate-x-1/2" />
+          {/* Map Background Image */}
+          <div
+            className="absolute inset-0"
+            style={{
+              backgroundImage: 'url(https://api.mapbox.com/styles/v1/mapbox/streets-v12/static/-74.006,40.7128,12,0/800x1200@2x?access_token=pk.eyJ1IjoicnVzaHJhcHAiLCJhIjoiY200OHFyZTR1MDRoNzJrcjNjOWR2NDhzNyJ9.AJC5_k3SJyFNgKb0c5WDCQ)',
+              backgroundSize: 'cover',
+              backgroundPosition: 'center'
+            }}
+          />
+          {/* Green Gradient Overlay */}
+          <div
+            className="absolute inset-0"
+            style={{
+              background: 'linear-gradient(180deg, rgba(16, 185, 129, 0.85) 0%, rgba(5, 150, 105, 0.92) 100%)'
+            }}
+          />
 
-          {/* Logo */}
-          <div className="relative z-10 mb-6">
-            <div className="w-24 h-24 bg-white rounded-2xl flex items-center justify-center shadow-xl p-3">
-              <img
-                src="https://jtrxdcccswdwlritgstp.supabase.co/storage/v1/object/public/contractor-logos/Rushr%20Logo%20Vector.svg"
-                alt="Rushr"
-                className="w-full h-full object-contain"
-              />
-            </div>
-          </div>
-
-          {/* Headline */}
-          <h1 className="text-white text-3xl font-bold text-center tracking-tight relative z-10">
+          {/* Headline - No logo needed, shown in splash */}
+          <h1 className="text-white text-[32px] font-bold text-center tracking-tight relative z-10 leading-tight">
             Emergency help,{'\n'}on demand
           </h1>
           <p className="text-white/80 text-base text-center mt-3 relative z-10">
@@ -156,28 +155,12 @@ export default function IOSRegistration() {
           </p>
         </div>
 
-        {/* Bottom Section */}
+        {/* Bottom Section - Just Buttons */}
         <div
           className="bg-white px-6 pt-8"
-          style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 20px) + 20px)' }}
+          style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 20px) + 24px)' }}
         >
-          {/* Features */}
-          <div className="flex justify-around mb-8">
-            {[
-              { icon: '⚡', label: '12 min avg' },
-              { icon: '✓', label: 'Verified' },
-              { icon: '$', label: 'Upfront' }
-            ].map((item, i) => (
-              <div key={i} className="flex flex-col items-center">
-                <div className="w-12 h-12 bg-emerald-50 rounded-full flex items-center justify-center mb-2">
-                  <span className="text-xl">{item.icon}</span>
-                </div>
-                <span className="text-gray-600 text-xs font-medium">{item.label}</span>
-              </div>
-            ))}
-          </div>
-
-          {/* Buttons */}
+          {/* Buttons Only */}
           <button
             onClick={() => navigateTo('signup')}
             className="w-full py-4 rounded-2xl font-semibold text-[17px] text-white mb-3 active:scale-[0.98] transition-transform"
@@ -195,10 +178,6 @@ export default function IOSRegistration() {
           >
             I already have an account
           </button>
-
-          <p className="text-center text-gray-400 text-xs mt-4">
-            Are you a contractor? <span className="text-emerald-600 font-medium">Join as Pro</span>
-          </p>
         </div>
       </div>
     )
