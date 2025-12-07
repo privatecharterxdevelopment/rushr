@@ -49,8 +49,51 @@ export default function Header() {
 
   // Use state to detect native platform after hydration
   const [isNative, setIsNative] = useState(false)
+
+  const [openFindPro, setOpenFindPro] = useState(false)
+  const [openFindWork, setOpenFindWork] = useState(false)
+  const [openMore, setOpenMore] = useState(false)
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [isScrolled, setIsScrolled] = useState(false)
+  const timers = useRef<Record<string, number | null>>({ pro: null, work: null, more: null })
+
   useEffect(() => {
     setIsNative(Capacitor.isNativePlatform())
+  }, [])
+
+  // Detect scroll to change header background
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 10)
+    }
+
+    window.addEventListener('scroll', handleScroll)
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [])
+
+  // Close all dropdowns when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as HTMLElement
+      // Check if click is outside all dropdowns
+      if (!target.closest('[data-dropdown-container]')) {
+        setOpenFindPro(false)
+        setOpenFindWork(false)
+        setOpenMore(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
+  // Cleanup timers on unmount to prevent memory leaks
+  useEffect(() => {
+    return () => {
+      Object.values(timers.current).forEach(timer => {
+        if (timer) window.clearTimeout(timer)
+      })
+    }
   }, [])
 
   // Hide header in native iOS/Android app
@@ -104,48 +147,6 @@ export default function Header() {
     if (/^https?:\/\//i.test(href)) window.location.href = href
     else router.push(href)
   }
-
-  const [openFindPro, setOpenFindPro] = useState(false)
-  const [openFindWork, setOpenFindWork] = useState(false)
-  const [openMore, setOpenMore] = useState(false)
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
-  const [isScrolled, setIsScrolled] = useState(false)
-  const timers = useRef<Record<string, number | null>>({ pro: null, work: null, more: null })
-
-  // Detect scroll to change header background
-  useEffect(() => {
-    const handleScroll = () => {
-      setIsScrolled(window.scrollY > 10)
-    }
-
-    window.addEventListener('scroll', handleScroll)
-    return () => window.removeEventListener('scroll', handleScroll)
-  }, [])
-
-  // Close all dropdowns when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      const target = e.target as HTMLElement
-      // Check if click is outside all dropdowns
-      if (!target.closest('[data-dropdown-container]')) {
-        setOpenFindPro(false)
-        setOpenFindWork(false)
-        setOpenMore(false)
-      }
-    }
-
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [])
-
-  // Cleanup timers on unmount to prevent memory leaks
-  useEffect(() => {
-    return () => {
-      Object.values(timers.current).forEach(timer => {
-        if (timer) window.clearTimeout(timer)
-      })
-    }
-  }, [])
 
   const isActive = (href: string) => pathname === href || (href !== '/' && pathname.startsWith(href))
 
