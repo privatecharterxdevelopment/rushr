@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useAuth } from '../contexts/AuthContext'
 import { openAuth } from './AuthModal'
 import dynamic from 'next/dynamic'
+import { Capacitor } from '@capacitor/core'
 import styles from './Hero.module.css'
 
 const HeroMapPreview = dynamic(() => import('./HeroMapPreview'), { ssr: false })
@@ -66,8 +67,11 @@ export default function Hero(){
   const router = useRouter()
   const { user, userProfile } = useAuth()
 
-  // Get first name for greeting
-  const firstName = userProfile?.name?.split(' ')[0] || ''
+  // Check if running in Capacitor (iOS app)
+  const isNativeApp = Capacitor.isNativePlatform()
+
+  // Get first name for greeting (iOS app only)
+  const firstName = isNativeApp ? (userProfile?.name?.split(' ')[0] || '') : ''
 
   const [searchQuery, setSearchQuery] = useState('')
   const [location, setLocation] = useState('')
