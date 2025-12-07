@@ -14,8 +14,14 @@ export default function Footer() {
   const { user: homeownerUser } = useAuth()
   const { user: proUser } = useProAuth()
 
+  // Use state to detect native platform after hydration
+  const [isNative, setIsNative] = React.useState(false)
+  React.useEffect(() => {
+    setIsNative(Capacitor.isNativePlatform())
+  }, [])
+
   // Hide footer in native iOS/Android app
-  if (Capacitor.isNativePlatform()) {
+  if (isNative) {
     return null
   }
 

@@ -47,8 +47,14 @@ export default function Header() {
 
   const pathname = usePathname() || ''
 
+  // Use state to detect native platform after hydration
+  const [isNative, setIsNative] = useState(false)
+  useEffect(() => {
+    setIsNative(Capacitor.isNativePlatform())
+  }, [])
+
   // Hide header in native iOS/Android app
-  if (Capacitor.isNativePlatform()) {
+  if (isNative) {
     return null
   }
 

@@ -94,18 +94,21 @@ export default function IOSRegistration() {
         {/* Animated Logo */}
         <div className="relative">
           <div
-            className="absolute inset-0 w-24 h-24 rounded-3xl"
+            className="absolute inset-0 w-28 h-28 rounded-3xl"
             style={{
               background: 'rgba(255,255,255,0.2)',
               animation: 'ping 2s cubic-bezier(0, 0, 0.2, 1) infinite'
             }}
           />
-          <div className="relative w-24 h-24 bg-white rounded-3xl flex items-center justify-center shadow-2xl">
-            <span className="text-emerald-600 font-black text-5xl">R</span>
+          <div className="relative w-28 h-28 bg-white rounded-3xl flex items-center justify-center shadow-2xl p-3">
+            <img
+              src="https://jtrxdcccswdwlritgstp.supabase.co/storage/v1/object/public/contractor-logos/Rushr%20Logo%20Vector.svg"
+              alt="Rushr"
+              className="w-full h-full object-contain"
+            />
           </div>
         </div>
-        <p className="text-white text-2xl font-bold mt-6 tracking-tight">Rushr</p>
-        <p className="text-white/70 text-sm mt-1">Get help fast</p>
+        <p className="text-white/70 text-sm mt-6">Get help fast</p>
 
         <style jsx>{`
           @keyframes ping {
@@ -135,8 +138,12 @@ export default function IOSRegistration() {
 
           {/* Logo */}
           <div className="relative z-10 mb-6">
-            <div className="w-20 h-20 bg-white rounded-2xl flex items-center justify-center shadow-xl">
-              <span className="text-emerald-600 font-black text-4xl">R</span>
+            <div className="w-24 h-24 bg-white rounded-2xl flex items-center justify-center shadow-xl p-3">
+              <img
+                src="https://jtrxdcccswdwlritgstp.supabase.co/storage/v1/object/public/contractor-logos/Rushr%20Logo%20Vector.svg"
+                alt="Rushr"
+                className="w-full h-full object-contain"
+              />
             </div>
           </div>
 
