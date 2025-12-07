@@ -12,16 +12,6 @@ export default function SignUpPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
 
-  // Check if user wants multi-step wizard
-  const useWizard = searchParams.get('wizard') === 'true'
-
-  // Redirect to wizard if requested
-  useEffect(() => {
-    if (useWizard) {
-      router.replace('/sign-up/wizard')
-    }
-  }, [useWizard, router])
-
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [name, setName] = useState('')
