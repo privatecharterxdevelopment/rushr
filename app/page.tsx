@@ -6,6 +6,7 @@ import { motion, useMotionValue, useSpring, useTransform, useInView } from 'moti
 import { Button } from '../components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { openAuth } from '../components/AuthModal'
+import { Capacitor } from '@capacitor/core'
 import {
   ShieldCheck,
   MessageSquare,
@@ -34,6 +35,7 @@ import {
   Bug,
 } from 'lucide-react'
 import Hero from '../components/Hero'
+import IOSHomeView from '../components/IOSHomeView'
 
 /* ----------------------------------------------------------------
    Brand helpers (emerald-forward for homeowners)
@@ -44,6 +46,15 @@ const homeBg = 'bg-[var(--home)]'
 const homeRing = 'focus-visible:ring-[var(--home)]'
 
 export default function HomePage() {
+  // Check if running in Capacitor (iOS/Android app)
+  const isNativeApp = Capacitor.isNativePlatform()
+
+  // Show iOS-specific view when in native app
+  if (isNativeApp) {
+    return <IOSHomeView />
+  }
+
+  // Web version - unchanged
   return (
     <div className="relative min-h-screen overflow-clip bg-gray-50">
       <GradientMesh />
