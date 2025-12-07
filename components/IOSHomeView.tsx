@@ -1,5 +1,5 @@
 // components/IOSHomeView.tsx
-// iOS app main view - True native experience
+// iOS app main view - True native experience with full database integration
 'use client'
 
 import React, { useEffect, useMemo, useState, useCallback } from 'react'
@@ -7,6 +7,9 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useApp } from '../lib/state'
 import { useAuth } from '../contexts/AuthContext'
+import { useHomeownerStats, HomeownerJob } from '../lib/hooks/useHomeownerStats'
+import { useConversations } from '../lib/hooks/useMessaging'
+import { supabase } from '../lib/supabaseClient'
 import dynamic from 'next/dynamic'
 import IOSRegistration from './IOSRegistration'
 import IOSTabBar, { TabId } from './IOSTabBar'
@@ -263,14 +266,38 @@ function HomeTab({ center, setCenter, filtered, fetchingLocation, setFetchingLoc
   )
 }
 
-// Jobs Tab Content
-function JobsTab() {
+// Jobs Tab Content - Connected to real database
+function JobsTab({ jobs, loading }: { jobs: HomeownerJob[]; loading: boolean }) {
+  const router = useRouter()
+
+  const handleJobPress = async (jobId: string) => {
+    await triggerHaptic()
+    router.push(`/jobs/${jobId}`)
+  }
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'pending': return { bg: 'bg-amber-100', text: 'text-amber-700', dot: 'bg-amber-500' }
+      case 'confirmed': return { bg: 'bg-blue-100', text: 'text-blue-700', dot: 'bg-blue-500' }
+      case 'in_progress': return { bg: 'bg-emerald-100', text: 'text-emerald-700', dot: 'bg-emerald-500' }
+      case 'completed': return { bg: 'bg-gray-100', text: 'text-gray-700', dot: 'bg-gray-500' }
+      case 'cancelled': return { bg: 'bg-red-100', text: 'text-red-700', dot: 'bg-red-500' }
+      default: return { bg: 'bg-gray-100', text: 'text-gray-700', dot: 'bg-gray-500' }
+    }
+  }
+
+  const formatDate = (dateStr: string | null) => {
+    if (!dateStr) return null
+    const date = new Date(dateStr)
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+  }
+
   return (
     <div
       className="absolute inset-0 flex flex-col bg-white"
       style={{ paddingBottom: 'calc(65px + max(env(safe-area-inset-bottom, 20px), 20px))' }}
     >
-      {/* Green Header - consistent with Home tab */}
+      {/* Green Header */}
       <div
         className="relative z-20"
         style={{
@@ -278,40 +305,132 @@ function JobsTab() {
           paddingTop: 'env(safe-area-inset-top, 44px)'
         }}
       >
-        <div className="flex items-center justify-center px-4 py-3">
+        <div className="flex items-center justify-between px-4 py-3">
           <p className="text-white font-semibold text-[16px]">My Jobs</p>
+          <Link
+            href="/post-job"
+            className="px-3 py-1.5 rounded-full text-[13px] font-medium text-emerald-600 bg-white active:scale-95 transition-transform"
+          >
+            + New Job
+          </Link>
         </div>
       </div>
 
-      {/* Empty State */}
-      <div className="flex-1 flex flex-col items-center justify-center px-6">
-        <div
-          className="w-16 h-16 rounded-full flex items-center justify-center mb-4"
-          style={{ background: 'linear-gradient(135deg, #d1fae5, #a7f3d0)' }}
-        >
-          <svg className="w-8 h-8 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-          </svg>
+      {/* Loading State */}
+      {loading ? (
+        <div className="flex-1 flex items-center justify-center">
+          <div className="w-8 h-8 border-2 border-emerald-200 border-t-emerald-600 rounded-full animate-spin" />
         </div>
-        <p className="text-gray-900 text-[16px] font-semibold mb-1">No Jobs Yet</p>
-        <p className="text-gray-500 text-[14px] text-center mb-5">Book a pro to see your jobs here</p>
-        <Link
-          href="/post-job"
-          className="px-5 py-2.5 rounded-full font-semibold text-[14px] text-white active:scale-95 transition-transform"
-          style={{
-            background: 'linear-gradient(135deg, #10b981, #059669)',
-            boxShadow: '0 4px 14px rgba(16, 185, 129, 0.3)'
-          }}
-        >
-          Book a Pro
-        </Link>
-      </div>
+      ) : jobs.length === 0 ? (
+        /* Empty State */
+        <div className="flex-1 flex flex-col items-center justify-center px-6">
+          <div
+            className="w-16 h-16 rounded-full flex items-center justify-center mb-4"
+            style={{ background: 'linear-gradient(135deg, #d1fae5, #a7f3d0)' }}
+          >
+            <svg className="w-8 h-8 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+            </svg>
+          </div>
+          <p className="text-gray-900 text-[16px] font-semibold mb-1">No Jobs Yet</p>
+          <p className="text-gray-500 text-[14px] text-center mb-5">Book a pro to see your jobs here</p>
+          <Link
+            href="/post-job"
+            className="px-5 py-2.5 rounded-full font-semibold text-[14px] text-white active:scale-95 transition-transform"
+            style={{
+              background: 'linear-gradient(135deg, #10b981, #059669)',
+              boxShadow: '0 4px 14px rgba(16, 185, 129, 0.3)'
+            }}
+          >
+            Book a Pro
+          </Link>
+        </div>
+      ) : (
+        /* Jobs List */
+        <div className="flex-1 overflow-auto">
+          <div className="px-4 py-3 space-y-3">
+            {jobs.map((job) => {
+              const statusStyle = getStatusColor(job.status)
+              return (
+                <button
+                  key={job.id}
+                  onClick={() => handleJobPress(job.id)}
+                  className="w-full bg-white rounded-xl p-4 text-left active:scale-[0.98] transition-transform"
+                  style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}
+                >
+                  <div className="flex items-start justify-between mb-2">
+                    <div className="flex-1">
+                      <p className="text-[15px] font-semibold text-gray-900 line-clamp-1">{job.title}</p>
+                      <p className="text-[13px] text-gray-500 mt-0.5">{job.category}</p>
+                    </div>
+                    <div className={`px-2 py-1 rounded-full ${statusStyle.bg} flex items-center gap-1`}>
+                      <div className={`w-1.5 h-1.5 rounded-full ${statusStyle.dot}`} />
+                      <span className={`text-[11px] font-medium ${statusStyle.text} capitalize`}>
+                        {job.status.replace('_', ' ')}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3 text-[12px] text-gray-500">
+                      {job.scheduled_date && (
+                        <span className="flex items-center gap-1">
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                          </svg>
+                          {formatDate(job.scheduled_date)}
+                        </span>
+                      )}
+                      {job.estimated_cost && (
+                        <span className="flex items-center gap-1">
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                          ${job.estimated_cost}
+                        </span>
+                      )}
+                    </div>
+                    <svg className="w-4 h-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                  </div>
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
 
-// Messages Tab Content
-function MessagesTab() {
+// Messages Tab Content - Connected to real conversations
+function MessagesTab({ conversations, loading, unreadCount }: {
+  conversations: any[]
+  loading: boolean
+  unreadCount: number
+}) {
+  const router = useRouter()
+
+  const handleConversationPress = async (conversationId: string) => {
+    await triggerHaptic()
+    router.push(`/messages?conversation=${conversationId}`)
+  }
+
+  const formatTime = (dateStr: string) => {
+    const date = new Date(dateStr)
+    const now = new Date()
+    const diff = now.getTime() - date.getTime()
+    const minutes = Math.floor(diff / 60000)
+    const hours = Math.floor(minutes / 60)
+    const days = Math.floor(hours / 24)
+
+    if (minutes < 1) return 'now'
+    if (minutes < 60) return `${minutes}m`
+    if (hours < 24) return `${hours}h`
+    if (days < 7) return `${days}d`
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+  }
+
   return (
     <div
       className="absolute inset-0 flex flex-col bg-white"
@@ -325,30 +444,249 @@ function MessagesTab() {
           paddingTop: 'env(safe-area-inset-top, 44px)'
         }}
       >
-        <div className="flex items-center justify-center px-4 py-3">
-          <p className="text-white font-semibold text-[16px]">Messages</p>
+        <div className="flex items-center justify-between px-4 py-3">
+          <div className="flex items-center gap-2">
+            <p className="text-white font-semibold text-[16px]">Messages</p>
+            {unreadCount > 0 && (
+              <span className="px-1.5 py-0.5 bg-white/20 rounded-full text-[11px] text-white font-medium">
+                {unreadCount}
+              </span>
+            )}
+          </div>
         </div>
       </div>
 
-      {/* Empty State */}
-      <div className="flex-1 flex flex-col items-center justify-center px-6">
-        <div
-          className="w-16 h-16 rounded-full flex items-center justify-center mb-4"
-          style={{ background: 'linear-gradient(135deg, #d1fae5, #a7f3d0)' }}
-        >
-          <svg className="w-8 h-8 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-          </svg>
+      {/* Loading State */}
+      {loading ? (
+        <div className="flex-1 flex items-center justify-center">
+          <div className="w-8 h-8 border-2 border-emerald-200 border-t-emerald-600 rounded-full animate-spin" />
         </div>
-        <p className="text-gray-900 text-[16px] font-semibold mb-1">No Messages</p>
-        <p className="text-gray-500 text-[14px] text-center">Your conversations will appear here</p>
-      </div>
+      ) : conversations.length === 0 ? (
+        /* Empty State */
+        <div className="flex-1 flex flex-col items-center justify-center px-6">
+          <div
+            className="w-16 h-16 rounded-full flex items-center justify-center mb-4"
+            style={{ background: 'linear-gradient(135deg, #d1fae5, #a7f3d0)' }}
+          >
+            <svg className="w-8 h-8 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+            </svg>
+          </div>
+          <p className="text-gray-900 text-[16px] font-semibold mb-1">No Messages</p>
+          <p className="text-gray-500 text-[14px] text-center">Your conversations will appear here</p>
+        </div>
+      ) : (
+        /* Conversations List */
+        <div className="flex-1 overflow-auto">
+          <div className="divide-y divide-gray-100">
+            {conversations.map((conv) => (
+              <button
+                key={conv.id}
+                onClick={() => handleConversationPress(conv.id)}
+                className="w-full px-4 py-3 flex items-center gap-3 active:bg-gray-50 text-left"
+              >
+                {/* Avatar */}
+                <div className="w-12 h-12 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0">
+                  <span className="text-emerald-700 font-semibold text-[15px]">
+                    {(conv.pro_name || conv.homeowner_name || 'R')[0].toUpperCase()}
+                  </span>
+                </div>
+
+                {/* Content */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between mb-0.5">
+                    <p className={`text-[15px] ${conv.unread_count > 0 ? 'font-semibold text-gray-900' : 'font-medium text-gray-700'} truncate`}>
+                      {conv.pro_name || conv.homeowner_name || conv.title || 'Rushr Support'}
+                    </p>
+                    <span className="text-[12px] text-gray-400 flex-shrink-0 ml-2">
+                      {formatTime(conv.last_message_at)}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <p className={`text-[13px] truncate ${conv.unread_count > 0 ? 'text-gray-700' : 'text-gray-500'}`}>
+                      {conv.last_message_content || 'No messages yet'}
+                    </p>
+                    {conv.unread_count > 0 && (
+                      <span className="ml-2 w-5 h-5 rounded-full bg-emerald-500 text-white text-[11px] font-semibold flex items-center justify-center flex-shrink-0">
+                        {conv.unread_count > 9 ? '9+' : conv.unread_count}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
 
-// Notifications Tab Content
-function NotificationsTab() {
+// Notification type
+interface Notification {
+  id: string
+  type: 'bid' | 'message' | 'job_update' | 'payment' | 'system'
+  title: string
+  body: string
+  read: boolean
+  created_at: string
+  data?: {
+    job_id?: string
+    bid_id?: string
+    conversation_id?: string
+  }
+}
+
+// Notifications Tab Content - Connected to real notifications
+function NotificationsTab({ userId }: { userId: string }) {
+  const router = useRouter()
+  const [notifications, setNotifications] = useState<Notification[]>([])
+  const [loading, setLoading] = useState(true)
+
+  // Fetch notifications from database
+  useEffect(() => {
+    const fetchNotifications = async () => {
+      if (!userId) return
+
+      try {
+        const { data, error } = await supabase
+          .from('notifications')
+          .select('*')
+          .eq('user_id', userId)
+          .order('created_at', { ascending: false })
+          .limit(50)
+
+        if (error) {
+          console.error('Error fetching notifications:', error)
+          setNotifications([])
+        } else {
+          setNotifications(data || [])
+        }
+      } catch (err) {
+        console.error('Error:', err)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchNotifications()
+
+    // Subscribe to real-time notifications
+    const subscription = supabase
+      .channel('notifications_changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'notifications',
+          filter: `user_id=eq.${userId}`
+        },
+        () => {
+          fetchNotifications()
+        }
+      )
+      .subscribe()
+
+    return () => {
+      subscription.unsubscribe()
+    }
+  }, [userId])
+
+  const handleNotificationPress = async (notification: Notification) => {
+    await triggerHaptic()
+
+    // Mark as read
+    if (!notification.read) {
+      await supabase
+        .from('notifications')
+        .update({ read: true })
+        .eq('id', notification.id)
+    }
+
+    // Navigate based on type
+    if (notification.data?.job_id) {
+      router.push(`/jobs/${notification.data.job_id}`)
+    } else if (notification.data?.conversation_id) {
+      router.push(`/messages?conversation=${notification.data.conversation_id}`)
+    } else if (notification.data?.bid_id) {
+      router.push(`/dashboard/homeowner/bids`)
+    }
+  }
+
+  const markAllAsRead = async () => {
+    await triggerHaptic()
+    await supabase
+      .from('notifications')
+      .update({ read: true })
+      .eq('user_id', userId)
+      .eq('read', false)
+
+    setNotifications(prev => prev.map(n => ({ ...n, read: true })))
+  }
+
+  const getNotificationIcon = (type: string) => {
+    switch (type) {
+      case 'bid':
+        return (
+          <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
+            <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+        )
+      case 'message':
+        return (
+          <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center">
+            <svg className="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+            </svg>
+          </div>
+        )
+      case 'job_update':
+        return (
+          <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center">
+            <svg className="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+            </svg>
+          </div>
+        )
+      case 'payment':
+        return (
+          <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center">
+            <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+            </svg>
+          </div>
+        )
+      default:
+        return (
+          <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center">
+            <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+            </svg>
+          </div>
+        )
+    }
+  }
+
+  const formatTime = (dateStr: string) => {
+    const date = new Date(dateStr)
+    const now = new Date()
+    const diff = now.getTime() - date.getTime()
+    const minutes = Math.floor(diff / 60000)
+    const hours = Math.floor(minutes / 60)
+    const days = Math.floor(hours / 24)
+
+    if (minutes < 1) return 'now'
+    if (minutes < 60) return `${minutes}m ago`
+    if (hours < 24) return `${hours}h ago`
+    if (days < 7) return `${days}d ago`
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+  }
+
+  const unreadCount = notifications.filter(n => !n.read).length
+
   return (
     <div
       className="absolute inset-0 flex flex-col bg-white"
@@ -362,24 +700,77 @@ function NotificationsTab() {
           paddingTop: 'env(safe-area-inset-top, 44px)'
         }}
       >
-        <div className="flex items-center justify-center px-4 py-3">
-          <p className="text-white font-semibold text-[16px]">Notifications</p>
+        <div className="flex items-center justify-between px-4 py-3">
+          <div className="flex items-center gap-2">
+            <p className="text-white font-semibold text-[16px]">Notifications</p>
+            {unreadCount > 0 && (
+              <span className="px-1.5 py-0.5 bg-white/20 rounded-full text-[11px] text-white font-medium">
+                {unreadCount}
+              </span>
+            )}
+          </div>
+          {unreadCount > 0 && (
+            <button
+              onClick={markAllAsRead}
+              className="text-[13px] text-white/80 active:text-white"
+            >
+              Mark all read
+            </button>
+          )}
         </div>
       </div>
 
-      {/* Empty State */}
-      <div className="flex-1 flex flex-col items-center justify-center px-6">
-        <div
-          className="w-16 h-16 rounded-full flex items-center justify-center mb-4"
-          style={{ background: 'linear-gradient(135deg, #d1fae5, #a7f3d0)' }}
-        >
-          <svg className="w-8 h-8 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-          </svg>
+      {/* Loading State */}
+      {loading ? (
+        <div className="flex-1 flex items-center justify-center">
+          <div className="w-8 h-8 border-2 border-emerald-200 border-t-emerald-600 rounded-full animate-spin" />
         </div>
-        <p className="text-gray-900 text-[16px] font-semibold mb-1">All Caught Up</p>
-        <p className="text-gray-500 text-[14px] text-center">No new notifications</p>
-      </div>
+      ) : notifications.length === 0 ? (
+        /* Empty State */
+        <div className="flex-1 flex flex-col items-center justify-center px-6">
+          <div
+            className="w-16 h-16 rounded-full flex items-center justify-center mb-4"
+            style={{ background: 'linear-gradient(135deg, #d1fae5, #a7f3d0)' }}
+          >
+            <svg className="w-8 h-8 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+            </svg>
+          </div>
+          <p className="text-gray-900 text-[16px] font-semibold mb-1">All Caught Up</p>
+          <p className="text-gray-500 text-[14px] text-center">No new notifications</p>
+        </div>
+      ) : (
+        /* Notifications List */
+        <div className="flex-1 overflow-auto">
+          <div className="divide-y divide-gray-100">
+            {notifications.map((notification) => (
+              <button
+                key={notification.id}
+                onClick={() => handleNotificationPress(notification)}
+                className={`w-full px-4 py-3 flex items-start gap-3 text-left active:bg-gray-50 ${!notification.read ? 'bg-emerald-50/50' : ''}`}
+              >
+                {getNotificationIcon(notification.type)}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-start justify-between gap-2">
+                    <p className={`text-[14px] ${!notification.read ? 'font-semibold text-gray-900' : 'font-medium text-gray-700'} line-clamp-1`}>
+                      {notification.title}
+                    </p>
+                    <span className="text-[11px] text-gray-400 flex-shrink-0">
+                      {formatTime(notification.created_at)}
+                    </span>
+                  </div>
+                  <p className="text-[13px] text-gray-500 line-clamp-2 mt-0.5">
+                    {notification.body}
+                  </p>
+                </div>
+                {!notification.read && (
+                  <div className="w-2 h-2 rounded-full bg-emerald-500 flex-shrink-0 mt-2" />
+                )}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -534,10 +925,13 @@ function ProfileTab({ firstName, email, onSignOut }: { firstName: string; email:
 export default function IOSHomeView() {
   const { state } = useApp()
   const { user, userProfile, loading: authLoading, signOut } = useAuth()
-  const router = useRouter()
   const allContractors: any[] = Array.isArray((state as any)?.contractors)
     ? (state as any).contractors
     : []
+
+  // Database hooks - fetch real data from Supabase
+  const { jobs, stats, loading: jobsLoading } = useHomeownerStats()
+  const { conversations, loading: conversationsLoading } = useConversations()
 
   // Tab state
   const [activeTab, setActiveTab] = useState<TabId>('home')
@@ -656,9 +1050,15 @@ export default function IOSHomeView() {
           firstName={firstName}
         />
       )}
-      {activeTab === 'jobs' && <JobsTab />}
-      {activeTab === 'messages' && <MessagesTab />}
-      {activeTab === 'notifications' && <NotificationsTab />}
+      {activeTab === 'jobs' && <JobsTab jobs={jobs} loading={jobsLoading} />}
+      {activeTab === 'messages' && (
+        <MessagesTab
+          conversations={conversations}
+          loading={conversationsLoading}
+          unreadCount={conversations.reduce((sum, c) => sum + (c.unread_count || 0), 0)}
+        />
+      )}
+      {activeTab === 'notifications' && <NotificationsTab userId={user?.id || ''} />}
       {activeTab === 'profile' && (
         <ProfileTab
           firstName={firstName}
@@ -671,6 +1071,8 @@ export default function IOSHomeView() {
       <IOSTabBar
         activeTab={activeTab}
         onTabChange={setActiveTab}
+        unreadMessages={conversations.reduce((sum, c) => sum + (c.unread_count || 0), 0)}
+        unreadNotifications={stats?.unread_messages || 0}
       />
     </div>
   )
