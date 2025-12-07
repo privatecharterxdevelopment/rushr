@@ -199,8 +199,8 @@ function HomeTab({ center, setCenter, filtered, fetchingLocation, setFetchingLoc
       </div>
 
       {/* Full-screen Map */}
-      <div className="flex-1 relative" style={{ marginBottom: 'calc(49px + env(safe-area-inset-bottom, 0px))' }}>
-        <div className="absolute inset-0">
+      <div className="flex-1 relative">
+        <div className="absolute inset-0" style={{ bottom: 0 }}>
           <FindProMapbox
             items={filtered}
             radiusMiles={25}
@@ -209,8 +209,8 @@ function HomeTab({ center, setCenter, filtered, fetchingLocation, setFetchingLoc
           />
         </div>
 
-        {/* My Location button */}
-        <div className="absolute bottom-24 right-4 z-10">
+        {/* My Location button - positioned above search bar and tab bar */}
+        <div className="absolute right-4 z-10" style={{ bottom: 'calc(80px + 49px + env(safe-area-inset-bottom, 0px))' }}>
           <button
             onClick={handleLocation}
             className="w-11 h-11 rounded-full flex items-center justify-center active:scale-95 transition-transform"
@@ -231,8 +231,8 @@ function HomeTab({ center, setCenter, filtered, fetchingLocation, setFetchingLoc
           </button>
         </div>
 
-        {/* Floating Search Input at Bottom */}
-        <div className="absolute bottom-4 left-4 right-4 z-10">
+        {/* Floating Search Input at Bottom - above tab bar */}
+        <div className="absolute left-4 right-4 z-10" style={{ bottom: 'calc(16px + 49px + env(safe-area-inset-bottom, 0px))' }}>
           <div
             className="flex items-center gap-3 bg-white rounded-2xl px-4 py-3"
             style={{ boxShadow: '0 4px 20px rgba(0,0,0,0.15)' }}
