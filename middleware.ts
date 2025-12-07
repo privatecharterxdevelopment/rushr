@@ -17,24 +17,31 @@ export async function middleware(req: NextRequest) {
     // Continue with normal middleware flow but skip public route restrictions
   }
 
-  // PUBLIC ROUTES - Accessible without authentication (production only)
-  // These routes can be accessed by anyone (logged in or not)
+  // PUBLIC ROUTES - Accessible without authentication
   const publicRoutes = [
+    '/',
+    '/sign-in',
+    '/sign-up',
+    '/about',
+    '/contact',
+    '/pricing',
+    '/privacy',
+    '/terms',
+    '/how-it-works',
+    '/pro',
     '/pro/early-access',
     '/pro/early-access/success',
-    '/pro/sign-in', // Contractor sign-in page
-    '/pro/how-it-works', // Contractor info page
+    '/pro/sign-in',
+    '/pro/how-it-works',
+    '/pro/contractor-signup',
     '/api/send-early-access-confirmation',
   ]
-
-  // Special case: /pro landing page (exact match only, not subpaths)
-  const isProLandingPage = pathname === '/pro'
 
   // CONTRACTOR-ONLY PUBLIC ROUTES - No auth required, but homeowners are blocked
   const contractorPublicRoutes = ['/pro/wizard']
 
   // Check if the current path is a public route
-  const isPublicRoute = publicRoutes.some(route => pathname.startsWith(route)) || isProLandingPage
+  const isPublicRoute = publicRoutes.some(route => pathname === route || pathname.startsWith(route + '/'))
   const isContractorPublicRoute = contractorPublicRoutes.some(route => pathname.startsWith(route))
 
   // Handle subdomain rewrites
@@ -43,6 +50,12 @@ export async function middleware(req: NextRequest) {
       url.pathname = `/pro${pathname}`
       return NextResponse.rewrite(url)
     }
+  }
+
+  // Allow public routes without authentication
+  if (isPublicRoute) {
+    console.log(`[MIDDLEWARE] Public route ${pathname}, allowing access`)
+    return NextResponse.next()
   }
 
   // Initialize Supabase client for middleware
@@ -56,29 +69,16 @@ export async function middleware(req: NextRequest) {
     .map(cookie => `${cookie.name}=${cookie.value}`)
     .join('; ')
 
-  // STAGING: Early access redirect disabled - allow all users to access the site
-  // if (!supabaseCookies && !isPublicRoute && !isContractorPublicRoute && !isLocalhost) {
-  //   console.log(`[MIDDLEWARE] No auth cookies, redirecting to /pro/early-access`)
-  //   return NextResponse.redirect(new URL('/pro/early-access', req.url))
-  // }
-
-  // Allow public routes without authentication
-  if (isPublicRoute) {
-    console.log(`[MIDDLEWARE] Public route ${pathname}, allowing access`)
-    return NextResponse.next()
-  }
-
   // Allow contractor public routes without auth (e.g., /pro/wizard for signup)
-  // But we'll check later if user is homeowner and block them
   if (isContractorPublicRoute && !supabaseCookies) {
     console.log(`[MIDDLEWARE] Contractor public route ${pathname}, allowing unauthenticated access`)
     return NextResponse.next()
   }
 
-  // Allow localhost without auth cookies
-  if (isLocalhost && !supabaseCookies) {
-    console.log(`[MIDDLEWARE] Localhost without auth, allowing access`)
-    return NextResponse.next()
+  // If no auth cookies, redirect to sign-in
+  if (!supabaseCookies) {
+    console.log(`[MIDDLEWARE] No auth cookies, redirecting to /sign-in`)
+    return NextResponse.redirect(new URL('/sign-in', req.url))
   }
 
   const supabase = createClient(supabaseUrl, supabaseKey, {
@@ -94,10 +94,14 @@ export async function middleware(req: NextRequest) {
   // Get the current user
   const { data: { user }, error: userError } = await supabase.auth.getUser()
 
-  // STAGING: Allow unauthenticated users to browse freely
-  if (userError || !user) {
-    console.log(`[MIDDLEWARE] No authenticated user, allowing access`)
-    return NextResponse.next()
+  if (userError) {
+    console.log(`[MIDDLEWARE] Auth error: ${userError.message}`)
+    return NextResponse.redirect(new URL('/sign-in', req.url))
+  }
+
+  if (!user) {
+    console.log(`[MIDDLEWARE] No user found, redirecting to /sign-in`)
+    return NextResponse.redirect(new URL('/sign-in', req.url))
   }
 
   console.log(`[MIDDLEWARE] User found: ${user.id.substring(0, 8)}`)
