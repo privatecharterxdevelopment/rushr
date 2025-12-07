@@ -430,7 +430,7 @@ function ProfileTab({ firstName, email, onSignOut }: { firstName: string; email:
         <div className="px-4 pt-4 space-y-3">
           {/* Account Section */}
           <IOSCard>
-            <button onClick={() => handleNavigation('/dashboard')} className="w-full">
+            <button onClick={() => handleNavigation('/dashboard/homeowner')} className="w-full">
               <div className="flex items-center justify-between py-3 px-4 active:bg-gray-50">
                 <div className="flex items-center gap-3">
                   <div className="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center">
@@ -438,7 +438,7 @@ function ProfileTab({ firstName, email, onSignOut }: { firstName: string; email:
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                     </svg>
                   </div>
-                  <span className="text-[15px] text-gray-900">Job History</span>
+                  <span className="text-[15px] text-gray-900">Dashboard</span>
                 </div>
                 <svg className="w-4 h-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
@@ -446,7 +446,7 @@ function ProfileTab({ firstName, email, onSignOut }: { firstName: string; email:
               </div>
             </button>
             <div className="h-px bg-gray-100 ml-14" />
-            <button onClick={() => handleNavigation('/settings/payments')} className="w-full">
+            <button onClick={() => handleNavigation('/dashboard/homeowner/billing')} className="w-full">
               <div className="flex items-center justify-between py-3 px-4 active:bg-gray-50">
                 <div className="flex items-center gap-3">
                   <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center">
@@ -454,7 +454,7 @@ function ProfileTab({ firstName, email, onSignOut }: { firstName: string; email:
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
                     </svg>
                   </div>
-                  <span className="text-[15px] text-gray-900">Payment Methods</span>
+                  <span className="text-[15px] text-gray-900">Billing & Payments</span>
                 </div>
                 <svg className="w-4 h-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
@@ -462,16 +462,15 @@ function ProfileTab({ firstName, email, onSignOut }: { firstName: string; email:
               </div>
             </button>
             <div className="h-px bg-gray-100 ml-14" />
-            <button onClick={() => handleNavigation('/settings/addresses')} className="w-full">
+            <button onClick={() => handleNavigation('/dashboard/homeowner/transactions')} className="w-full">
               <div className="flex items-center justify-between py-3 px-4 active:bg-gray-50">
                 <div className="flex items-center gap-3">
                   <div className="w-8 h-8 rounded-lg bg-orange-100 flex items-center justify-center">
                     <svg className="w-4 h-4 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z" />
                     </svg>
                   </div>
-                  <span className="text-[15px] text-gray-900">Saved Addresses</span>
+                  <span className="text-[15px] text-gray-900">Transaction History</span>
                 </div>
                 <svg className="w-4 h-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
@@ -482,16 +481,15 @@ function ProfileTab({ firstName, email, onSignOut }: { firstName: string; email:
 
           {/* Settings Section */}
           <IOSCard>
-            <button onClick={() => handleNavigation('/settings')} className="w-full">
+            <button onClick={() => handleNavigation('/profile/settings')} className="w-full">
               <div className="flex items-center justify-between py-3 px-4 active:bg-gray-50">
                 <div className="flex items-center gap-3">
                   <div className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center">
                     <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                     </svg>
                   </div>
-                  <span className="text-[15px] text-gray-900">Settings</span>
+                  <span className="text-[15px] text-gray-900">Profile Settings</span>
                 </div>
                 <svg className="w-4 h-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
@@ -499,7 +497,7 @@ function ProfileTab({ firstName, email, onSignOut }: { firstName: string; email:
               </div>
             </button>
             <div className="h-px bg-gray-100 ml-14" />
-            <button onClick={() => handleNavigation('/help')} className="w-full">
+            <button onClick={() => handleNavigation('/contact')} className="w-full">
               <div className="flex items-center justify-between py-3 px-4 active:bg-gray-50">
                 <div className="flex items-center gap-3">
                   <div className="w-8 h-8 rounded-lg bg-purple-100 flex items-center justify-center">
