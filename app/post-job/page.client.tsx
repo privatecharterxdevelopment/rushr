@@ -5,6 +5,7 @@ import { useSearchParams, useRouter } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import { supabase } from '../../lib/supabaseClient'
 import { openAuth } from '../../components/AuthModal'
+import { Capacitor } from '@capacitor/core'
 import {
   Check,
   Clock,
@@ -23,6 +24,7 @@ import {
   Wrench,
   Leaf,
   User,
+  ChevronLeft,
 } from 'lucide-react'
 
 const ProMap = dynamic(() => import('../../components/ProMap'), { ssr: false })
@@ -341,6 +343,12 @@ function TopProgress({ active }: { active: boolean }) {
 
 export default function PostJobInner({ userId }: Props) {
   const router = useRouter()
+
+  // Detect iOS native platform
+  const [isNative, setIsNative] = useState(false)
+  useEffect(() => {
+    setIsNative(Capacitor.isNativePlatform())
+  }, [])
 
   // Form state
   const [address, setAddress] = useState('')
@@ -1036,7 +1044,34 @@ export default function PostJobInner({ userId }: Props) {
     <>
       <TopProgress active={sending} />
 
-      <div className="container-max section">
+      {/* iOS Native Header with back button */}
+      {isNative && (
+        <div
+          className="sticky top-0 z-50"
+          style={{
+            background: 'linear-gradient(135deg, #10b981, #059669)',
+            paddingTop: 'env(safe-area-inset-top, 44px)'
+          }}
+        >
+          <div className="flex items-center px-4 py-3">
+            <button
+              onClick={() => router.back()}
+              className="flex items-center text-white active:opacity-60"
+            >
+              <ChevronLeft className="w-6 h-6" />
+              <span className="ml-1 font-medium">Back</span>
+            </button>
+            <h1 className="flex-1 text-center text-white font-semibold text-lg pr-12">
+              Post a Job
+            </h1>
+          </div>
+        </div>
+      )}
+
+      <div
+        className="container-max section"
+        style={isNative ? { paddingBottom: 'calc(80px + env(safe-area-inset-bottom, 20px))' } : {}}
+      >
         <ConfirmModal
           open={confirmOpen}
           onClose={() => setConfirmOpen(false)}

@@ -7,7 +7,7 @@ const config: CapacitorConfig = {
   server: {
     // For development: use local server
     // For production: change to your deployed URL
-    url: 'http://127.0.0.1:3001',
+    url: 'http://localhost:3001',
     cleartext: true
   },
   ios: {

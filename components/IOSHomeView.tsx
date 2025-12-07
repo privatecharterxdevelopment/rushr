@@ -2,7 +2,7 @@
 // iOS app main view - True native experience with full database integration
 'use client'
 
-import React, { useEffect, useMemo, useState, useCallback } from 'react'
+import React, { useEffect, useMemo, useState, useCallback, Component, ErrorInfo, ReactNode } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useApp } from '../lib/state'
@@ -16,6 +16,57 @@ import IOSTabBar, { TabId } from './IOSTabBar'
 import { Haptics, ImpactStyle } from '@capacitor/haptics'
 import { StatusBar, Style } from '@capacitor/status-bar'
 import { Keyboard } from '@capacitor/keyboard'
+
+// Error Boundary to catch render errors
+interface ErrorBoundaryProps {
+  children: ReactNode
+}
+
+interface ErrorBoundaryState {
+  hasError: boolean
+  error: Error | null
+}
+
+class IOSErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
+  constructor(props: ErrorBoundaryProps) {
+    super(props)
+    this.state = { hasError: false, error: null }
+  }
+
+  static getDerivedStateFromError(error: Error): ErrorBoundaryState {
+    return { hasError: true, error }
+  }
+
+  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    console.error('IOSHomeView Error:', error, errorInfo)
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="fixed inset-0 bg-white flex flex-col items-center justify-center p-6">
+          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mb-4">
+            <svg className="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+          </div>
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">Something went wrong</h2>
+          <p className="text-gray-500 text-center mb-4 text-sm">
+            {this.state.error?.message || 'An unexpected error occurred'}
+          </p>
+          <button
+            onClick={() => window.location.reload()}
+            className="px-6 py-2.5 bg-emerald-600 text-white rounded-full font-medium active:scale-95 transition-transform"
+          >
+            Reload App
+          </button>
+        </div>
+      )
+    }
+
+    return this.props.children
+  }
+}
 
 // Dynamically import the Mapbox component
 const FindProMapbox = dynamic(() => import('./FindProMapbox'), {
@@ -154,9 +205,10 @@ function HomeTab({ center, setCenter, filtered, fetchingLocation, setFetchingLoc
   const handleSearch = async () => {
     await triggerHaptic(ImpactStyle.Medium)
     if (searchQuery.trim()) {
-      router.push(`/post-job?service=${encodeURIComponent(searchQuery)}`)
+      // Navigate to find-pro with search query
+      router.push(`/find-pro?search=${encodeURIComponent(searchQuery)}`)
     } else {
-      router.push('/post-job')
+      router.push('/find-pro')
     }
   }
 
@@ -537,16 +589,19 @@ interface Notification {
   }
 }
 
-// Notifications Tab Content - Connected to real notifications
+// Notifications Tab Content - Uses mock data until notifications table is set up
 function NotificationsTab({ userId }: { userId: string }) {
   const router = useRouter()
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [loading, setLoading] = useState(true)
 
-  // Fetch notifications from database
+  // Fetch notifications - with fallback to mock data if table doesn't exist
   useEffect(() => {
     const fetchNotifications = async () => {
-      if (!userId) return
+      if (!userId) {
+        setLoading(false)
+        return
+      }
 
       try {
         const { data, error } = await supabase
@@ -557,13 +612,32 @@ function NotificationsTab({ userId }: { userId: string }) {
           .limit(50)
 
         if (error) {
-          console.error('Error fetching notifications:', error)
-          setNotifications([])
+          // Table might not exist yet - use empty array with welcome notification
+          console.log('Notifications table not ready, using mock data')
+          setNotifications([{
+            id: 'welcome-notification',
+            type: 'system',
+            title: 'Welcome to Rushr!',
+            body: 'Get started by posting your first job or browsing local pros.',
+            read: false,
+            created_at: new Date().toISOString(),
+            data: {}
+          }])
         } else {
           setNotifications(data || [])
         }
       } catch (err) {
         console.error('Error:', err)
+        // Fallback to welcome notification
+        setNotifications([{
+          id: 'welcome-notification',
+          type: 'system',
+          title: 'Welcome to Rushr!',
+          body: 'Get started by posting your first job or browsing local pros.',
+          read: false,
+          created_at: new Date().toISOString(),
+          data: {}
+        }])
       } finally {
         setLoading(false)
       }
@@ -571,7 +645,10 @@ function NotificationsTab({ userId }: { userId: string }) {
 
     fetchNotifications()
 
-    // Subscribe to real-time notifications
+    // Only subscribe if user exists
+    if (!userId) return
+
+    // Subscribe to real-time notifications (will fail silently if table doesn't exist)
     const subscription = supabase
       .channel('notifications_changes')
       .on(
@@ -596,12 +673,24 @@ function NotificationsTab({ userId }: { userId: string }) {
   const handleNotificationPress = async (notification: Notification) => {
     await triggerHaptic()
 
-    // Mark as read
+    // Handle mock welcome notification
+    if (notification.id === 'welcome-notification') {
+      setNotifications(prev => prev.map(n =>
+        n.id === notification.id ? { ...n, read: true } : n
+      ))
+      return
+    }
+
+    // Mark as read in database
     if (!notification.read) {
-      await supabase
-        .from('notifications')
-        .update({ read: true })
-        .eq('id', notification.id)
+      try {
+        await supabase
+          .from('notifications')
+          .update({ read: true })
+          .eq('id', notification.id)
+      } catch (e) {
+        // Ignore errors if table doesn't exist
+      }
     }
 
     // Navigate based on type
@@ -616,13 +705,20 @@ function NotificationsTab({ userId }: { userId: string }) {
 
   const markAllAsRead = async () => {
     await triggerHaptic()
-    await supabase
-      .from('notifications')
-      .update({ read: true })
-      .eq('user_id', userId)
-      .eq('read', false)
 
+    // Update local state first
     setNotifications(prev => prev.map(n => ({ ...n, read: true })))
+
+    // Try to update database (ignore errors if table doesn't exist)
+    try {
+      await supabase
+        .from('notifications')
+        .update({ read: true })
+        .eq('user_id', userId)
+        .eq('read', false)
+    } catch (e) {
+      // Ignore errors
+    }
   }
 
   const getNotificationIcon = (type: string) => {
@@ -1038,42 +1134,44 @@ export default function IOSHomeView() {
 
   // Main app view with bottom tabs
   return (
-    <div className="fixed inset-0 bg-gray-50 flex flex-col">
-      {/* Tab Content */}
-      {activeTab === 'home' && (
-        <HomeTab
-          center={center}
-          setCenter={setCenter}
-          filtered={filtered}
-          fetchingLocation={fetchingLocation}
-          setFetchingLocation={setFetchingLocation}
-          firstName={firstName}
-        />
-      )}
-      {activeTab === 'jobs' && <JobsTab jobs={jobs} loading={jobsLoading} />}
-      {activeTab === 'messages' && (
-        <MessagesTab
-          conversations={conversations}
-          loading={conversationsLoading}
-          unreadCount={conversations.reduce((sum, c) => sum + (c.unread_count || 0), 0)}
-        />
-      )}
-      {activeTab === 'notifications' && <NotificationsTab userId={user?.id || ''} />}
-      {activeTab === 'profile' && (
-        <ProfileTab
-          firstName={firstName}
-          email={email}
-          onSignOut={signOut}
-        />
-      )}
+    <IOSErrorBoundary>
+      <div className="fixed inset-0 bg-gray-50 flex flex-col">
+        {/* Tab Content */}
+        {activeTab === 'home' && (
+          <HomeTab
+            center={center}
+            setCenter={setCenter}
+            filtered={filtered}
+            fetchingLocation={fetchingLocation}
+            setFetchingLocation={setFetchingLocation}
+            firstName={firstName}
+          />
+        )}
+        {activeTab === 'jobs' && <JobsTab jobs={jobs} loading={jobsLoading} />}
+        {activeTab === 'messages' && (
+          <MessagesTab
+            conversations={conversations}
+            loading={conversationsLoading}
+            unreadCount={conversations.reduce((sum, c) => sum + (c.unread_count || 0), 0)}
+          />
+        )}
+        {activeTab === 'notifications' && <NotificationsTab userId={user?.id || ''} />}
+        {activeTab === 'profile' && (
+          <ProfileTab
+            firstName={firstName}
+            email={email}
+            onSignOut={signOut}
+          />
+        )}
 
-      {/* Bottom Tab Bar */}
-      <IOSTabBar
-        activeTab={activeTab}
-        onTabChange={setActiveTab}
-        unreadMessages={conversations.reduce((sum, c) => sum + (c.unread_count || 0), 0)}
-        unreadNotifications={stats?.unread_messages || 0}
-      />
-    </div>
+        {/* Bottom Tab Bar */}
+        <IOSTabBar
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
+          unreadMessages={conversations.reduce((sum, c) => sum + (c.unread_count || 0), 0)}
+          unreadNotifications={stats?.unread_messages || 0}
+        />
+      </div>
+    </IOSErrorBoundary>
   )
 }

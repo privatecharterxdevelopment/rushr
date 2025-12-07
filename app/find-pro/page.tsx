@@ -1,6 +1,6 @@
 // app/find-pro/page.tsx
 // Two-row header. Hours of Operation = multi-select popover.
-// Now using Mapbox instead of Leaflet
+// Now using Mapbox instead of Leaflet - Mobile optimized for iOS
 'use client'
 
 import React, { useEffect, useMemo, useState } from 'react'
@@ -11,6 +11,7 @@ import { useAuth } from '../../contexts/AuthContext'
 import dynamic from 'next/dynamic'
 import OfferJobModal from '../../components/OfferJobModal'
 import { openAuth } from '../../components/AuthModal'
+import { Capacitor } from '@capacitor/core'
 
 // Dynamically import the Mapbox component to avoid SSR issues
 const FindProMapbox = dynamic(() => import('../../components/FindProMapbox'), {
@@ -75,6 +76,12 @@ export default function FindProPage() {
   const allContractors: any[] = Array.isArray((state as any)?.contractors)
     ? (state as any).contractors
     : []
+
+  // Detect iOS native platform
+  const [isNative, setIsNative] = useState(false)
+  useEffect(() => {
+    setIsNative(Capacitor.isNativePlatform())
+  }, [])
 
   // Offer modal state
   const [offerModalContractor, setOfferModalContractor] = useState<any | null>(null)
@@ -150,12 +157,17 @@ export default function FindProPage() {
   useEffect(() => {
     const category = searchParams.get('category')
     const near = searchParams.get('near')
+    const search = searchParams.get('search')
 
     if (category) {
       setServices([category])
     }
     if (near) {
       setZip(near)
+    }
+    // Handle search query from iOS app
+    if (search) {
+      setQuery(search)
     }
   }, [searchParams])
 
@@ -311,7 +323,36 @@ export default function FindProPage() {
     <>
       {/* Login gate removed - page is now accessible without login */}
 
-      <section className={`mx-auto max-w-6xl space-y-3 px-3 py-3`}>
+      {/* iOS Native Header with back button */}
+      {isNative && (
+        <div
+          className="sticky top-0 z-50"
+          style={{
+            background: 'linear-gradient(135deg, #10b981, #059669)',
+            paddingTop: 'env(safe-area-inset-top, 44px)'
+          }}
+        >
+          <div className="flex items-center px-4 py-3">
+            <button
+              onClick={() => router.back()}
+              className="flex items-center text-white active:opacity-60"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+              <span className="ml-1 font-medium">Back</span>
+            </button>
+            <h1 className="flex-1 text-center text-white font-semibold text-lg pr-12">
+              Find a Pro
+            </h1>
+          </div>
+        </div>
+      )}
+
+      <section
+        className={`mx-auto max-w-6xl space-y-3 px-3 py-3`}
+        style={isNative ? { paddingBottom: 'calc(80px + env(safe-area-inset-bottom, 20px))' } : {}}
+      >
         {/* TOP BAR — TWO ROWS (unchanged look) */}
         <div className="w-full rounded-2xl border border-slate-200 bg-white p-2.5 shadow-sm">
           {/* LINE 1 */}
