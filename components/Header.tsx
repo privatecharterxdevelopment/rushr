@@ -6,6 +6,7 @@ import { useRouter, usePathname } from 'next/navigation'
 import { useAuth } from '../contexts/AuthContext'
 import { useProAuth } from '../contexts/ProAuthContext'
 import { supabaseBrowser } from '../utils/supabase-browser'
+import { Capacitor } from '@capacitor/core'
 
 const supabase = supabaseBrowser()
 import { useHydrated } from '../lib/useHydrated'
@@ -45,6 +46,11 @@ export default function Header() {
   const { user: contractorUser, contractorProfile } = useProAuth()
 
   const pathname = usePathname() || ''
+
+  // Hide header in native iOS/Android app
+  if (Capacitor.isNativePlatform()) {
+    return null
+  }
 
   // Hide header on early access pages and admin panel
   if (pathname.startsWith('/pro/early-access') || pathname.startsWith('/dashboard/admin')) {

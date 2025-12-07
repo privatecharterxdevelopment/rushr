@@ -6,12 +6,18 @@ import { useAuth } from '../contexts/AuthContext'
 import { useProAuth } from '../contexts/ProAuthContext'
 import { openAuth } from './AuthModal'
 import LogoWordmark from './LogoWordmark'
+import { Capacitor } from '@capacitor/core'
 
 export default function Footer() {
   const pathname = usePathname() || ''
   const router = useRouter()
   const { user: homeownerUser } = useAuth()
   const { user: proUser } = useProAuth()
+
+  // Hide footer in native iOS/Android app
+  if (Capacitor.isNativePlatform()) {
+    return null
+  }
 
   // Hide footer on early access pages and admin panel
   if (pathname.startsWith('/pro/early-access') || pathname.startsWith('/dashboard/admin')) {
