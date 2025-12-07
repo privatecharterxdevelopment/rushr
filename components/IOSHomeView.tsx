@@ -9,6 +9,7 @@ import { useApp } from '../lib/state'
 import { useAuth } from '../contexts/AuthContext'
 import { openAuth } from './AuthModal'
 import dynamic from 'next/dynamic'
+import IOSRegistration from './IOSRegistration'
 
 // Dynamically import the Mapbox component
 const FindProMapbox = dynamic(() => import('./FindProMapbox'), {
@@ -144,57 +145,9 @@ export default function IOSHomeView() {
     return items.slice(0, 10) // Limit to 10 nearest
   }, [allContractors, debouncedQuery, selectedService, center])
 
-  // Show login screen if not authenticated
+  // Show registration/login screen if not authenticated
   if (!authLoading && !user) {
-    return (
-      <div className="fixed inset-0 bg-white flex flex-col">
-        {/* Map background - blurred */}
-        <div className="absolute inset-0 opacity-30">
-          <FindProMapbox
-            items={[]}
-            radiusMiles={15}
-            searchCenter={center}
-            onSearchHere={() => {}}
-          />
-        </div>
-
-        {/* Login Card */}
-        <div className="relative flex-1 flex items-center justify-center p-6">
-          <div className="bg-white rounded-3xl shadow-2xl p-8 w-full max-w-sm border border-gray-100">
-            {/* Logo */}
-            <div className="text-center mb-6">
-              <div className="inline-flex items-center justify-center w-16 h-16 bg-emerald-100 rounded-2xl mb-4">
-                <span className="text-3xl">🏠</span>
-              </div>
-              <h1 className="text-2xl font-bold text-gray-900">Rushr</h1>
-              <p className="text-gray-500 mt-1">Find trusted pros near you</p>
-            </div>
-
-            {/* Auth buttons */}
-            <div className="space-y-3">
-              <button
-                onClick={() => openAuth('signin')}
-                className="w-full py-4 bg-emerald-600 text-white rounded-2xl font-semibold text-lg hover:bg-emerald-700 transition-colors"
-              >
-                Sign In
-              </button>
-              <button
-                onClick={() => openAuth('signup')}
-                className="w-full py-4 border-2 border-emerald-600 text-emerald-600 rounded-2xl font-semibold text-lg hover:bg-emerald-50 transition-colors"
-              >
-                Create Account
-              </button>
-            </div>
-
-            <div className="mt-6 text-center">
-              <Link href="/pro/contractor-signup" className="text-sm text-blue-600 font-medium">
-                Join as a Pro →
-              </Link>
-            </div>
-          </div>
-        </div>
-      </div>
-    )
+    return <IOSRegistration />
   }
 
   // Loading state
