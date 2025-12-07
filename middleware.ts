@@ -56,11 +56,11 @@ export async function middleware(req: NextRequest) {
     .map(cookie => `${cookie.name}=${cookie.value}`)
     .join('; ')
 
-  // If no auth cookies and trying to access non-public route, redirect to early access (skip for localhost)
-  if (!supabaseCookies && !isPublicRoute && !isContractorPublicRoute && !isLocalhost) {
-    console.log(`[MIDDLEWARE] No auth cookies, redirecting to /pro/early-access`)
-    return NextResponse.redirect(new URL('/pro/early-access', req.url))
-  }
+  // STAGING: Early access redirect disabled - allow all users to access the site
+  // if (!supabaseCookies && !isPublicRoute && !isContractorPublicRoute && !isLocalhost) {
+  //   console.log(`[MIDDLEWARE] No auth cookies, redirecting to /pro/early-access`)
+  //   return NextResponse.redirect(new URL('/pro/early-access', req.url))
+  // }
 
   // Allow public routes without authentication
   if (isPublicRoute) {
@@ -94,14 +94,15 @@ export async function middleware(req: NextRequest) {
   // Get the current user
   const { data: { user }, error: userError } = await supabase.auth.getUser()
 
+  // STAGING: Allow unauthenticated users - redirect to sign-in instead of early-access
   if (userError) {
     console.log(`[MIDDLEWARE] Auth error: ${userError.message}`)
-    return NextResponse.redirect(new URL('/pro/early-access', req.url))
+    return NextResponse.redirect(new URL('/sign-in', req.url))
   }
 
   if (!user) {
-    console.log(`[MIDDLEWARE] No user found, redirecting to /pro/early-access`)
-    return NextResponse.redirect(new URL('/pro/early-access', req.url))
+    console.log(`[MIDDLEWARE] No user found, redirecting to /sign-in`)
+    return NextResponse.redirect(new URL('/sign-in', req.url))
   }
 
   console.log(`[MIDDLEWARE] User found: ${user.id.substring(0, 8)}`)
