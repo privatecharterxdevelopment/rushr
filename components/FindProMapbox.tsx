@@ -42,6 +42,7 @@ interface Props {
   searchCenter: LatLng
   onSearchHere?: (center: LatLng) => void
   category?: string
+  fullscreen?: boolean
 }
 
 export default function FindProMapbox({
@@ -50,6 +51,7 @@ export default function FindProMapbox({
   searchCenter,
   onSearchHere,
   category,
+  fullscreen = false,
 }: Props) {
   const mapRef = useRef<HTMLDivElement>(null)
   const mapObjRef = useRef<mapboxgl.Map | null>(null)
@@ -288,18 +290,20 @@ export default function FindProMapbox({
   }, [radiusMiles, searchCenter])
 
   return (
-    <div className="relative">
+    <div className={fullscreen ? "absolute inset-0" : "relative"}>
       <div
         ref={mapRef}
-        className="h-[360px] w-full rounded-2xl overflow-hidden bg-slate-100"
+        className={`${fullscreen ? 'h-full' : 'h-[360px]'} w-full ${fullscreen ? '' : 'rounded-2xl'} overflow-hidden bg-slate-100`}
         style={{ zIndex: 0 }}
       />
-      <div
-        className="absolute left-1/2 -translate-x-1/2 bottom-3 px-2.5 py-1.5 rounded-xl bg-white/90 text-xs border border-slate-200 shadow"
-        style={{ zIndex: 1100 }}
-      >
-        Radius: {radiusMiles} mi
-      </div>
+      {!fullscreen && (
+        <div
+          className="absolute left-1/2 -translate-x-1/2 bottom-3 px-2.5 py-1.5 rounded-xl bg-white/90 text-xs border border-slate-200 shadow"
+          style={{ zIndex: 1100 }}
+        >
+          Radius: {radiusMiles} mi
+        </div>
+      )}
     </div>
   )
 }
