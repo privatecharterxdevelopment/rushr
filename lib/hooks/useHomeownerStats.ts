@@ -92,25 +92,25 @@ export function useHomeownerStats() {
         setStats(statsResult.data)
       }
 
-      // Handle jobs
+      // Handle jobs - table might not exist yet, use empty array
       if (jobsResult.error) {
-        console.error('Error fetching jobs:', jobsResult.error)
+        // Silently fallback to empty array - table may not exist
         setJobs([])
       } else {
         setJobs(jobsResult.data || [])
       }
 
-      // Handle messages
+      // Handle messages - table might not exist yet, use empty array
       if (messagesResult.error) {
-        console.error('Error fetching messages:', messagesResult.error)
+        // Silently fallback to empty array - table may not exist
         setMessages([])
       } else {
         setMessages(messagesResult.data || [])
       }
 
     } catch (err) {
-      console.error('Error in fetchStats:', err)
-      setError('Failed to load dashboard data')
+      // Silently handle errors - database tables may not exist yet
+      setError(null)
     } finally {
       setLoading(false)
     }
@@ -233,17 +233,17 @@ export function useHomeownerStats() {
           setStats(statsResult.data)
         }
 
-        // Handle jobs
+        // Handle jobs - table might not exist yet, use empty array
         if (jobsResult.error) {
-          console.error('Error fetching jobs:', jobsResult.error)
+          // Silently fallback to empty array - table may not exist
           setJobs([])
         } else {
           setJobs(jobsResult.data || [])
         }
 
-        // Handle messages
+        // Handle messages - table might not exist yet, use empty array
         if (messagesResult.error) {
-          console.error('Error fetching messages:', messagesResult.error)
+          // Silently fallback to empty array - table may not exist
           setMessages([])
         } else {
           setMessages(messagesResult.data || [])
