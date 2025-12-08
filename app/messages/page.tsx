@@ -154,20 +154,153 @@ export default function MessagesPage() {
 
   // Conversation List View
   if (!selectedConversation) {
-    return (
-      <div
-        className="min-h-screen bg-slate-50"
-        style={{
-          paddingTop: isNative ? 'env(safe-area-inset-top)' : undefined,
-          paddingBottom: isNative ? 'calc(80px + env(safe-area-inset-bottom))' : undefined
-        }}
-      >
-        {/* iOS Native Header */}
-        <div className="bg-gradient-to-b from-emerald-600 to-emerald-500 text-white">
+    // iOS native layout with proper scrolling
+    if (isNative) {
+      return (
+        <div className="fixed inset-0 flex flex-col bg-slate-50">
+          {/* iOS Native Header */}
           <div
-            className="px-4 py-4"
-            style={{ paddingTop: isNative ? 'calc(12px + env(safe-area-inset-top))' : '16px' }}
+            className="relative z-50 flex-shrink-0"
+            style={{
+              background: 'linear-gradient(135deg, #10b981, #059669)',
+              paddingTop: 'env(safe-area-inset-top, 44px)'
+            }}
           >
+            <div className="px-4 py-4">
+              <div className="flex items-center justify-between mb-4">
+                <button
+                  onClick={() => router.back()}
+                  className="flex items-center text-white active:opacity-60"
+                  style={{ WebkitTapHighlightColor: 'transparent' }}
+                >
+                  <ArrowLeft className="h-6 w-6" />
+                  <span className="ml-1 font-medium">Back</span>
+                </button>
+                <h1 className="text-xl font-bold text-white">Messages</h1>
+                <div className="w-16" />
+              </div>
+
+              {/* Search Bar */}
+              <div className="relative mb-3">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-emerald-200" />
+                <input
+                  type="text"
+                  placeholder="Search messages..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-10 pr-4 py-3 bg-white/20 backdrop-blur-sm rounded-xl text-white placeholder-emerald-200 border border-white/30 focus:outline-none focus:border-white/50"
+                />
+              </div>
+
+              {/* Filter Pills */}
+              <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+                {[
+                  { key: 'all', label: 'All', icon: MessageCircle },
+                  { key: 'name', label: 'Name', icon: Filter },
+                  { key: 'date', label: 'Date', icon: Calendar }
+                ].map(({ key, label, icon: Icon }) => (
+                  <button
+                    key={key}
+                    onClick={() => setActiveFilter(key as FilterType)}
+                    className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all ${
+                      activeFilter === key
+                        ? 'bg-white text-emerald-600 shadow-md'
+                        : 'bg-white/20 text-white hover:bg-white/30'
+                    }`}
+                  >
+                    <Icon className="h-4 w-4" />
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Scrollable Conversations List */}
+          <div
+            className="flex-1 overflow-auto"
+            style={{
+              WebkitOverflowScrolling: 'touch',
+              paddingBottom: 'calc(80px + env(safe-area-inset-bottom, 34px))'
+            }}
+          >
+            <div className="p-4 space-y-2">
+              {convsLoading ? (
+                <div className="text-center py-12">
+                  <img
+                    src="https://jtrxdcccswdwlritgstp.supabase.co/storage/v1/object/public/contractor-logos/RushrLogoAnimation.gif"
+                    alt="Loading..."
+                    className="h-8 w-8 mx-auto mb-2 object-contain"
+                  />
+                  <p className="text-slate-500 text-sm">Loading conversations...</p>
+                </div>
+              ) : filteredConversations.length === 0 ? (
+                <div className="text-center py-16">
+                  <div className="w-20 h-20 mx-auto mb-4 bg-slate-100 rounded-full flex items-center justify-center">
+                    <MessageCircle className="h-10 w-10 text-slate-400" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-slate-800 mb-1">No messages yet</h3>
+                  <p className="text-slate-500 text-sm">
+                    {searchQuery ? 'No conversations match your search' : 'Start a conversation to get help'}
+                  </p>
+                </div>
+              ) : (
+                filteredConversations.map((conv) => {
+                  const name = isContractor ? conv.homeowner_name : conv.pro_name
+                  const initial = name?.charAt(0)?.toUpperCase() || '?'
+                  const isRushrSupport = conv.pro_id === '00000000-0000-0000-0000-000000000000' ||
+                                         conv.homeowner_id === '00000000-0000-0000-0000-000000000000'
+
+                  return (
+                    <button
+                      key={conv.id}
+                      onClick={() => setSelectedConversation(conv.id)}
+                      className="w-full bg-white rounded-2xl p-4 shadow-sm border border-slate-100 flex items-center gap-4 hover:shadow-md active:scale-[0.99] transition-all text-left"
+                    >
+                      <div className={`w-14 h-14 rounded-full flex items-center justify-center text-xl font-bold text-white flex-shrink-0 ${
+                        isRushrSupport
+                          ? 'bg-gradient-to-br from-emerald-400 to-teal-500'
+                          : 'bg-gradient-to-br from-blue-400 to-purple-500'
+                      }`}>
+                        {isRushrSupport ? '🚀' : initial}
+                      </div>
+
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-2 mb-0.5">
+                          <h3 className="font-semibold text-slate-900 truncate">
+                            {isRushrSupport ? 'Rushr Support' : (name || 'Unknown')}
+                          </h3>
+                          <span className="text-xs text-slate-500 flex-shrink-0">
+                            {formatTime(conv.last_message_at)}
+                          </span>
+                        </div>
+                        <p className="text-sm text-slate-600 truncate">{conv.title}</p>
+                        {(conv.unread_count || 0) > 0 && (
+                          <div className="mt-1 flex items-center gap-1">
+                            <span className="px-2 py-0.5 bg-emerald-500 text-white text-xs font-medium rounded-full">
+                              {conv.unread_count} new
+                            </span>
+                          </div>
+                        )}
+                      </div>
+
+                      <ChevronRight className="h-5 w-5 text-slate-400 flex-shrink-0" />
+                    </button>
+                  )
+                })
+              )}
+            </div>
+          </div>
+        </div>
+      )
+    }
+
+    // Web layout
+    return (
+      <div className="min-h-screen bg-slate-50">
+        {/* Web Header */}
+        <div className="bg-gradient-to-b from-emerald-600 to-emerald-500 text-white">
+          <div className="px-4 py-4">
             <div className="flex items-center justify-between mb-4">
               <button
                 onClick={() => router.back()}
@@ -291,17 +424,19 @@ export default function MessagesPage() {
   // Chat View
   return (
     <div
-      className="h-screen flex flex-col bg-slate-100"
-      style={{
-        paddingTop: isNative ? 'env(safe-area-inset-top)' : undefined
-      }}
+      className={isNative ? "fixed inset-0 flex flex-col bg-slate-100" : "h-screen flex flex-col bg-slate-100"}
     >
-      {/* iOS Native Chat Header */}
-      <div className="bg-gradient-to-b from-emerald-600 to-emerald-500 text-white flex-shrink-0">
-        <div
-          className="px-4 py-3"
-          style={{ paddingTop: isNative ? 'calc(8px + env(safe-area-inset-top))' : '12px' }}
-        >
+      {/* Chat Header */}
+      <div
+        className="flex-shrink-0"
+        style={isNative ? {
+          background: 'linear-gradient(135deg, #10b981, #059669)',
+          paddingTop: 'env(safe-area-inset-top, 44px)'
+        } : {
+          background: 'linear-gradient(135deg, #10b981, #059669)'
+        }}
+      >
+        <div className="px-4 py-3">
           <div className="flex items-center gap-3">
             <button
               onClick={() => setSelectedConversation(null)}
@@ -324,7 +459,10 @@ export default function MessagesPage() {
       </div>
 
       {/* Messages Container */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      <div
+        className="flex-1 overflow-y-auto p-4 space-y-4"
+        style={{ WebkitOverflowScrolling: 'touch' }}
+      >
         {msgsLoading ? (
           <div className="text-center py-8">
             <img

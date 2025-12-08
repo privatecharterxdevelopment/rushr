@@ -170,225 +170,259 @@ export default function JobDetail() {
     'auto': '🚗'
   }
 
-  return (
-    <section
-      className="min-h-screen bg-slate-50"
-      style={{
-        paddingTop: isNative ? 'env(safe-area-inset-top)' : undefined,
-        paddingBottom: isNative ? 'calc(80px + env(safe-area-inset-bottom))' : undefined
-      }}
-    >
-      {/* iOS Native Header */}
-      {isNative && (
-        <div className="bg-gradient-to-b from-emerald-600 to-emerald-500 text-white sticky top-0 z-50">
-          <div
-            className="px-4 py-4"
-            style={{ paddingTop: 'calc(12px + env(safe-area-inset-top))' }}
+  // Content renderer for both iOS and web
+  const renderContent = () => (
+    <>
+      {/* Header - Web Version */}
+      {!isNative && (
+        <div className="mb-6">
+          <Link
+            href="/jobs"
+            className="inline-flex items-center gap-2 text-slate-600 hover:text-emerald-600 font-medium transition-colors mb-4"
           >
-            <div className="flex items-center justify-between">
-              <button
-                onClick={() => router.back()}
-                className="p-2 -ml-2 rounded-full hover:bg-white/20 active:bg-white/30 transition-colors"
-              >
-                <ArrowLeft className="h-6 w-6" />
-              </button>
-              <h1 className="text-lg font-bold flex-1 text-center">Job Details</h1>
-              <div className="w-10" />
-            </div>
-          </div>
+            <ArrowLeft className="h-4 w-4" />
+            Back to Jobs
+          </Link>
         </div>
       )}
 
-      <div className="container-max section">
-        {/* Header - Web Version */}
-        {!isNative && (
-          <div className="mb-6">
-            <Link
-              href="/jobs"
-              className="inline-flex items-center gap-2 text-slate-600 hover:text-emerald-600 font-medium transition-colors mb-4"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              Back to Jobs
-            </Link>
-          </div>
-        )}
-
-        {/* Job Title Section */}
-        <div className="mb-6">
-          <div className="flex items-start justify-between gap-4 flex-wrap">
-            <div>
-              <div className="flex items-center gap-3 mb-2">
-                <span className="text-4xl">{categoryEmoji[job.category] || '📋'}</span>
-                <h1 className="text-2xl md:text-3xl font-bold text-slate-900">{job.title}</h1>
-              </div>
-              <div className="flex items-center gap-2 md:gap-3 flex-wrap">
-                <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-medium border ${priorityConfig.color}`}>
-                  <span>{priorityConfig.icon}</span>
-                  {priorityConfig.label}
-                </span>
-                <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-medium border ${statusConfig.color}`}>
-                  <StatusIcon className="h-3.5 w-3.5" />
-                  {statusConfig.label}
-                </span>
-                {jobNumber && (
-                  <span className="text-sm text-slate-500">Job #{jobNumber}</span>
-                )}
-              </div>
+      {/* Job Title Section */}
+      <div className="mb-6">
+        <div className="flex items-start justify-between gap-4 flex-wrap">
+          <div>
+            <div className="flex items-center gap-3 mb-2">
+              <span className="text-4xl">{categoryEmoji[job.category] || '📋'}</span>
+              <h1 className="text-2xl md:text-3xl font-bold text-slate-900">{job.title}</h1>
             </div>
-
-            <div className="flex gap-2">
-              {isContractor ? (
-                <button
-                  className="btn-primary flex items-center gap-2"
-                  onClick={() => setOpenQB(true)}
-                >
-                  <DollarSign className="h-4 w-4" />
-                  Submit Bid
-                </button>
-              ) : (
-                <Link href={`/jobs/${jobNumber || jobId}/compare`} className="btn-primary flex items-center gap-2">
-                  <FileText className="h-4 w-4" />
-                  See Bids
-                </Link>
+            <div className="flex items-center gap-2 md:gap-3 flex-wrap">
+              <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-medium border ${priorityConfig.color}`}>
+                <span>{priorityConfig.icon}</span>
+                {priorityConfig.label}
+              </span>
+              <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-medium border ${statusConfig.color}`}>
+                <StatusIcon className="h-3.5 w-3.5" />
+                {statusConfig.label}
+              </span>
+              {jobNumber && (
+                <span className="text-sm text-slate-500">Job #{jobNumber}</span>
               )}
             </div>
           </div>
-        </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left Column - Job Details */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* Description Card */}
-            <div className="card p-6">
-              <h2 className="text-lg font-semibold text-slate-900 mb-4 flex items-center gap-2">
-                <FileText className="h-5 w-5 text-emerald-600" />
-                Job Description
-              </h2>
-              <p className="text-slate-700 leading-relaxed whitespace-pre-wrap">
-                {job.description || 'No description provided.'}
-              </p>
-            </div>
-
-            {/* Location Map */}
-            {job.latitude && job.longitude ? (
-              <div className="card p-0 overflow-hidden">
-                <div className="p-4 border-b border-slate-200 bg-slate-50">
-                  <h2 className="text-lg font-semibold text-slate-900 flex items-center gap-2">
-                    <MapPin className="h-5 w-5 text-emerald-600" />
-                    Service Location
-                  </h2>
-                </div>
-                <div className="h-[400px]">
-                  <ProMap
-                    centerZip={job.zip_code || '10001'}
-                    category={job.category}
-                    radiusMiles={0.5}
-                    searchCenter={[Number(job.latitude), Number(job.longitude)]}
-                    contractors={[]}
-                  />
-                </div>
-                <div className="p-4 border-t border-slate-200 bg-white">
-                  <div className="flex items-start gap-2 text-slate-700">
-                    <MapPin className="h-5 w-5 text-slate-400 flex-shrink-0 mt-0.5" />
-                    <span>{job.address}</span>
-                  </div>
-                </div>
-              </div>
+          <div className="flex gap-2">
+            {isContractor ? (
+              <button
+                className="btn-primary flex items-center gap-2"
+                onClick={() => setOpenQB(true)}
+              >
+                <DollarSign className="h-4 w-4" />
+                Submit Bid
+              </button>
             ) : (
-              <div className="card p-6">
-                <h2 className="text-lg font-semibold text-slate-900 mb-4 flex items-center gap-2">
+              <Link href={`/jobs/${jobNumber || jobId}/compare`} className="btn-primary flex items-center gap-2">
+                <FileText className="h-4 w-4" />
+                See Bids
+              </Link>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Left Column - Job Details */}
+        <div className="lg:col-span-2 space-y-6">
+          {/* Description Card */}
+          <div className="card p-6">
+            <h2 className="text-lg font-semibold text-slate-900 mb-4 flex items-center gap-2">
+              <FileText className="h-5 w-5 text-emerald-600" />
+              Job Description
+            </h2>
+            <p className="text-slate-700 leading-relaxed whitespace-pre-wrap">
+              {job.description || 'No description provided.'}
+            </p>
+          </div>
+
+          {/* Location Map */}
+          {job.latitude && job.longitude ? (
+            <div className="card p-0 overflow-hidden">
+              <div className="p-4 border-b border-slate-200 bg-slate-50">
+                <h2 className="text-lg font-semibold text-slate-900 flex items-center gap-2">
                   <MapPin className="h-5 w-5 text-emerald-600" />
                   Service Location
                 </h2>
+              </div>
+              <div className="h-[400px]">
+                <ProMap
+                  centerZip={job.zip_code || '10001'}
+                  category={job.category}
+                  radiusMiles={0.5}
+                  searchCenter={[Number(job.latitude), Number(job.longitude)]}
+                  contractors={[]}
+                />
+              </div>
+              <div className="p-4 border-t border-slate-200 bg-white">
                 <div className="flex items-start gap-2 text-slate-700">
                   <MapPin className="h-5 w-5 text-slate-400 flex-shrink-0 mt-0.5" />
-                  <span>{job.address || 'Location not specified'}</span>
+                  <span>{job.address}</span>
                 </div>
               </div>
-            )}
-          </div>
-
-          {/* Right Column - Job Info */}
-          <div className="space-y-6">
-            {/* Quick Info Card */}
+            </div>
+          ) : (
             <div className="card p-6">
-              <h2 className="text-lg font-semibold text-slate-900 mb-4">Job Details</h2>
-              <div className="space-y-4">
+              <h2 className="text-lg font-semibold text-slate-900 mb-4 flex items-center gap-2">
+                <MapPin className="h-5 w-5 text-emerald-600" />
+                Service Location
+              </h2>
+              <div className="flex items-start gap-2 text-slate-700">
+                <MapPin className="h-5 w-5 text-slate-400 flex-shrink-0 mt-0.5" />
+                <span>{job.address || 'Location not specified'}</span>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Right Column - Job Info */}
+        <div className="space-y-6">
+          {/* Quick Info Card */}
+          <div className="card p-6">
+            <h2 className="text-lg font-semibold text-slate-900 mb-4">Job Details</h2>
+            <div className="space-y-4">
+              <div className="flex items-start gap-3">
+                <Calendar className="h-5 w-5 text-slate-400 flex-shrink-0 mt-0.5" />
+                <div>
+                  <div className="text-sm text-slate-500">Posted</div>
+                  <div className="font-medium text-slate-900">
+                    {new Date(job.created_at).toLocaleDateString('en-US', {
+                      month: 'short',
+                      day: 'numeric',
+                      year: 'numeric'
+                    })}
+                  </div>
+                  <div className="text-sm text-slate-500">
+                    {new Date(job.created_at).toLocaleTimeString('en-US', {
+                      hour: 'numeric',
+                      minute: '2-digit'
+                    })}
+                  </div>
+                </div>
+              </div>
+
+              {job.phone && (
                 <div className="flex items-start gap-3">
-                  <Calendar className="h-5 w-5 text-slate-400 flex-shrink-0 mt-0.5" />
+                  <Phone className="h-5 w-5 text-slate-400 flex-shrink-0 mt-0.5" />
                   <div>
-                    <div className="text-sm text-slate-500">Posted</div>
+                    <div className="text-sm text-slate-500">Contact</div>
+                    <a href={`tel:${job.phone}`} className="font-medium text-emerald-600 hover:text-emerald-700">
+                      {job.phone}
+                    </a>
+                  </div>
+                </div>
+              )}
+
+              {job.estimated_cost && (
+                <div className="flex items-start gap-3">
+                  <DollarSign className="h-5 w-5 text-slate-400 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <div className="text-sm text-slate-500">Estimated Budget</div>
                     <div className="font-medium text-slate-900">
-                      {new Date(job.created_at).toLocaleDateString('en-US', {
-                        month: 'short',
-                        day: 'numeric',
-                        year: 'numeric'
-                      })}
-                    </div>
-                    <div className="text-sm text-slate-500">
-                      {new Date(job.created_at).toLocaleTimeString('en-US', {
-                        hour: 'numeric',
-                        minute: '2-digit'
-                      })}
+                      ${parseFloat(job.estimated_cost).toLocaleString()}
                     </div>
                   </div>
                 </div>
+              )}
 
-                {job.phone && (
-                  <div className="flex items-start gap-3">
-                    <Phone className="h-5 w-5 text-slate-400 flex-shrink-0 mt-0.5" />
-                    <div>
-                      <div className="text-sm text-slate-500">Contact</div>
-                      <a href={`tel:${job.phone}`} className="font-medium text-emerald-600 hover:text-emerald-700">
-                        {job.phone}
-                      </a>
-                    </div>
-                  </div>
-                )}
-
-                {job.estimated_cost && (
-                  <div className="flex items-start gap-3">
-                    <DollarSign className="h-5 w-5 text-slate-400 flex-shrink-0 mt-0.5" />
-                    <div>
-                      <div className="text-sm text-slate-500">Estimated Budget</div>
-                      <div className="font-medium text-slate-900">
-                        ${parseFloat(job.estimated_cost).toLocaleString()}
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                <div className="flex items-start gap-3">
-                  <AlertTriangle className="h-5 w-5 text-slate-400 flex-shrink-0 mt-0.5" />
-                  <div>
-                    <div className="text-sm text-slate-500">Urgency Level</div>
-                    <div className="flex items-center gap-2">
-                      <div className="font-medium text-slate-900">{priorityConfig.score}/10</div>
-                      <div className="flex-1 h-2 bg-slate-200 rounded-full overflow-hidden">
-                        <div
-                          className={`h-full ${
-                            priorityConfig.score >= 8 ? 'bg-red-500' :
-                            priorityConfig.score >= 5 ? 'bg-orange-500' : 'bg-blue-500'
-                          }`}
-                          style={{ width: `${priorityConfig.score * 10}%` }}
-                        />
-                      </div>
+              <div className="flex items-start gap-3">
+                <AlertTriangle className="h-5 w-5 text-slate-400 flex-shrink-0 mt-0.5" />
+                <div>
+                  <div className="text-sm text-slate-500">Urgency Level</div>
+                  <div className="flex items-center gap-2">
+                    <div className="font-medium text-slate-900">{priorityConfig.score}/10</div>
+                    <div className="flex-1 h-2 bg-slate-200 rounded-full overflow-hidden">
+                      <div
+                        className={`h-full ${
+                          priorityConfig.score >= 8 ? 'bg-red-500' :
+                          priorityConfig.score >= 5 ? 'bg-orange-500' : 'bg-blue-500'
+                        }`}
+                        style={{ width: `${priorityConfig.score * 10}%` }}
+                      />
                     </div>
                   </div>
                 </div>
               </div>
             </div>
+          </div>
 
-            {/* Category Card */}
-            <div className="card p-6">
-              <h2 className="text-lg font-semibold text-slate-900 mb-4">Category</h2>
-              <div className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-50 border border-emerald-200 rounded-lg">
-                <span className="text-2xl">{categoryEmoji[job.category] || '📋'}</span>
-                <span className="font-medium text-emerald-900 capitalize">{job.category}</span>
-              </div>
+          {/* Category Card */}
+          <div className="card p-6">
+            <h2 className="text-lg font-semibold text-slate-900 mb-4">Category</h2>
+            <div className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-50 border border-emerald-200 rounded-lg">
+              <span className="text-2xl">{categoryEmoji[job.category] || '📋'}</span>
+              <span className="font-medium text-emerald-900 capitalize">{job.category}</span>
             </div>
           </div>
         </div>
+      </div>
+    </>
+  )
+
+  // iOS native layout with proper scrolling
+  if (isNative) {
+    return (
+      <div className="fixed inset-0 flex flex-col bg-slate-50">
+        {/* iOS Native Header */}
+        <div
+          className="relative z-50 flex-shrink-0"
+          style={{
+            background: 'linear-gradient(135deg, #10b981, #059669)',
+            paddingTop: 'env(safe-area-inset-top, 44px)'
+          }}
+        >
+          <div className="flex items-center px-4 py-3">
+            <button
+              onClick={() => router.back()}
+              className="flex items-center text-white active:opacity-60"
+              style={{ WebkitTapHighlightColor: 'transparent' }}
+            >
+              <ArrowLeft className="w-6 h-6" />
+              <span className="ml-1 font-medium">Back</span>
+            </button>
+            <h1 className="flex-1 text-center text-white font-semibold text-lg pr-12">
+              Job Details
+            </h1>
+          </div>
+        </div>
+
+        {/* Scrollable Content Area */}
+        <div
+          className="flex-1 overflow-auto"
+          style={{
+            WebkitOverflowScrolling: 'touch',
+            paddingBottom: 'calc(80px + env(safe-area-inset-bottom, 34px))'
+          }}
+        >
+          <div className="container-max section">
+            {renderContent()}
+          </div>
+        </div>
+
+        {/* Quick Bid Modal */}
+        {isContractor && (
+          <QuickBidModal
+            open={openQB}
+            onClose={() => setOpenQB(false)}
+            jobId={jobId}
+            category={job.category}
+          />
+        )}
+      </div>
+    )
+  }
+
+  // Web layout
+  return (
+    <section className="min-h-screen bg-slate-50">
+      <div className="container-max section">
+        {renderContent()}
       </div>
 
       {/* Quick Bid Modal */}
