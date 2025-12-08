@@ -16,6 +16,7 @@ import IOSTabBar, { TabId } from './IOSTabBar'
 import { Haptics, ImpactStyle } from '@capacitor/haptics'
 import { StatusBar, Style } from '@capacitor/status-bar'
 import { Keyboard } from '@capacitor/keyboard'
+import { getCurrentLocation as getNativeLocation, isNativePlatform } from '../lib/nativeLocation'
 
 // Error Boundary to catch render errors
 interface ErrorBoundaryProps {
@@ -214,16 +215,14 @@ function HomeTab({ center, setCenter, filtered, fetchingLocation, setFetchingLoc
 
   const handleLocation = async () => {
     await triggerHaptic()
-    if (navigator.geolocation) {
-      setFetchingLocation(true)
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          setCenter([pos.coords.latitude, pos.coords.longitude])
-          setFetchingLocation(false)
-        },
-        () => setFetchingLocation(false)
-      )
+    setFetchingLocation(true)
+
+    // Use native Capacitor Geolocation on iOS
+    const result = await getNativeLocation()
+    if (result.success && result.coordinates) {
+      setCenter([result.coordinates.latitude, result.coordinates.longitude])
     }
+    setFetchingLocation(false)
   }
 
   return (
@@ -1067,22 +1066,18 @@ export default function IOSHomeView() {
     initNative()
   }, [])
 
-  // Get user location on mount
+  // Get user location on mount - uses native Capacitor Geolocation
   useEffect(() => {
-    if (navigator.geolocation) {
+    const fetchLocation = async () => {
       setFetchingLocation(true)
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          const { latitude, longitude } = position.coords
-          setCenter([latitude, longitude])
-          setFetchingLocation(false)
-        },
-        () => {
-          setFetchingLocation(false)
-        },
-        { enableHighAccuracy: true, timeout: 10000 }
-      )
+      const result = await getNativeLocation()
+      if (result.success && result.coordinates) {
+        setCenter([result.coordinates.latitude, result.coordinates.longitude])
+      }
+      setFetchingLocation(false)
     }
+
+    fetchLocation()
   }, [])
 
   // Distance helper

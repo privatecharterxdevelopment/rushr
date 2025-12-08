@@ -6,6 +6,7 @@ import { supabase } from '../lib/supabaseClient'
 import { useRouter } from 'next/navigation'
 import { showGlobalToast } from '../components/Toast'
 import { WelcomeService } from '../lib/welcomeService'
+import { Capacitor } from '@capacitor/core'
 
 export type SubscriptionType = 'free' | 'pro' | 'signals'
 
@@ -283,12 +284,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         })
       }
 
-      // Check if user needs email confirmation
-      if (data.user && !data.user.email_confirmed_at) {
+      // Check if running on iOS native app
+      const isNative = typeof window !== 'undefined' && Capacitor.isNativePlatform()
+
+      // On iOS: Skip email confirmation - user is logged in immediately
+      // On Web: Still require email confirmation for security
+      if (data.user && !data.user.email_confirmed_at && !isNative) {
         return {
           success: true,
           needsConfirmation: true,
           message: "Please check your email and click the confirmation link to complete your registration."
+        }
+      }
+
+      // iOS native: User is already logged in after signUp, set state immediately
+      if (isNative && data.user && data.session) {
+        setUser(data.user)
+        setSession(data.session)
+        if (role === 'homeowner') {
+          await fetchUserProfile(data.user.id)
         }
       }
 

@@ -6,6 +6,7 @@ import dynamic from 'next/dynamic'
 import { supabase } from '../../lib/supabaseClient'
 import { openAuth } from '../../components/AuthModal'
 import { Capacitor } from '@capacitor/core'
+import { getCurrentLocation, reverseGeocode, isNativePlatform } from '../../lib/nativeLocation'
 import {
   Check,
   Clock,
@@ -423,80 +424,32 @@ export default function PostJobInner({ userId }: Props) {
   const [sending, setSending] = useState(false)
   const [errorPopup, setErrorPopup] = useState<string>('')
 
-  // Get user's current location
-  const getCurrentLocation = () => {
-    console.log('getCurrentLocation called!')
+  // Get user's current location - uses native Capacitor Geolocation on iOS
+  const fetchCurrentLocation = async () => {
+    console.log('[POST-JOB] fetchCurrentLocation called! Native:', isNativePlatform())
 
-    if (!navigator.geolocation) {
-      console.error('Geolocation not supported')
-      alert('Geolocation is not supported by your browser.')
-      return
-    }
+    const result = await getCurrentLocation()
 
-    console.log('Requesting geolocation permission...')
+    if (result.success && result.coordinates) {
+      const { latitude, longitude } = result.coordinates
+      console.log('[POST-JOB] Location success:', latitude, longitude)
 
-    navigator.geolocation.getCurrentPosition(
-      async (position) => {
-        console.log('Geolocation success!', position.coords)
-        const { latitude, longitude } = position.coords
-        // Store as [lat, lng] for ProMapInner
-        setUserLocation([latitude, longitude])
+      // Store as [lat, lng] for ProMapInner
+      setUserLocation([latitude, longitude])
 
-        // Reverse geocode to get readable address
-        try {
-          console.log('Reverse geocoding coordinates:', latitude, longitude)
-          const response = await fetch(
-            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&addressdetails=1`,
-            {
-              headers: {
-                'User-Agent': 'Rushr Emergency Services App'
-              }
-            }
-          )
-          const data = await response.json()
-
-          if (data.display_name) {
-            console.log('Reverse geocoding successful:', data.display_name)
-            setAddress(data.display_name)
-          } else {
-            console.log('No address found, using coordinates')
-            setAddress(`${latitude.toFixed(4)}, ${longitude.toFixed(4)}`)
-          }
-        } catch (error) {
-          console.error('Reverse geocoding failed:', error)
-          setAddress(`${latitude.toFixed(4)}, ${longitude.toFixed(4)}`)
-        }
-
-        console.log('Set userLocation:', [latitude, longitude])
-      },
-      (error) => {
-        console.error('Geolocation error:', error)
-        console.error('Error code:', error.code)
-        console.error('Error message:', error.message)
-
-        let errorMessage = 'Could not get your location. '
-        switch (error.code) {
-          case error.PERMISSION_DENIED:
-            errorMessage += 'Permission denied. Please allow location access in your browser settings.'
-            break
-          case error.POSITION_UNAVAILABLE:
-            errorMessage += 'Location information is unavailable.'
-            break
-          case error.TIMEOUT:
-            errorMessage += 'Location request timed out.'
-            break
-          default:
-            errorMessage += 'An unknown error occurred.'
-        }
-
-        alert(errorMessage)
-      },
-      {
-        enableHighAccuracy: true,
-        timeout: 10000,
-        maximumAge: 0
+      // Reverse geocode to get readable address
+      const addressResult = await reverseGeocode(latitude, longitude)
+      if (addressResult) {
+        setAddress(addressResult)
+      } else {
+        setAddress(`${latitude.toFixed(4)}, ${longitude.toFixed(4)}`)
       }
-    )
+
+      console.log('[POST-JOB] Set userLocation:', [latitude, longitude])
+    } else {
+      console.error('[POST-JOB] Location error:', result.error)
+      alert(result.error || 'Could not get your location.')
+    }
   }
 
   // Geocode address (e.g., "New York City" → coordinates + formatted address)
@@ -640,8 +593,8 @@ export default function PostJobInner({ userId }: Props) {
 
   // Auto-fetch user location on page load
   useEffect(() => {
-    console.log('Auto-fetching user location on page load...')
-    getCurrentLocation()
+    console.log('[POST-JOB] Auto-fetching user location on page load...')
+    fetchCurrentLocation()
   }, []) // Empty dependency array = runs once on mount
 
   // Pro list filters
@@ -1029,9 +982,9 @@ export default function PostJobInner({ userId }: Props) {
 
       console.log('Job created successfully:', insertedJob)
 
-      // Redirect to homeowner dashboard
+      // Redirect to job success page with real-time bid notifications
       setSending(false)
-      router.push('/dashboard/homeowner')
+      router.push(`/jobs/${insertedJob.job_number || insertedJob.id}/success`)
 
     } catch (err) {
       console.error('Error submitting job:', err)
@@ -1040,14 +993,15 @@ export default function PostJobInner({ userId }: Props) {
     }
   }
 
-  return (
-    <>
-      <TopProgress active={sending} />
+  // For iOS native, wrap in fixed container with proper safe area handling
+  if (isNative) {
+    return (
+      <div className="fixed inset-0 flex flex-col bg-white">
+        <TopProgress active={sending} />
 
-      {/* iOS Native Header with back button */}
-      {isNative && (
+        {/* iOS Native Header with back button - uses safe-area-inset-top */}
         <div
-          className="sticky top-0 z-50"
+          className="relative z-50 flex-shrink-0"
           style={{
             background: 'linear-gradient(135deg, #10b981, #059669)',
             paddingTop: 'env(safe-area-inset-top, 44px)'
@@ -1057,6 +1011,7 @@ export default function PostJobInner({ userId }: Props) {
             <button
               onClick={() => router.back()}
               className="flex items-center text-white active:opacity-60"
+              style={{ WebkitTapHighlightColor: 'transparent' }}
             >
               <ChevronLeft className="w-6 h-6" />
               <span className="ml-1 font-medium">Back</span>
@@ -1066,12 +1021,13 @@ export default function PostJobInner({ userId }: Props) {
             </h1>
           </div>
         </div>
-      )}
 
-      <div
-        className="container-max section"
-        style={isNative ? { paddingBottom: 'calc(80px + env(safe-area-inset-bottom, 20px))' } : {}}
-      >
+        {/* Scrollable content area with bottom safe area */}
+        <div
+          className="flex-1 overflow-auto"
+          style={{ paddingBottom: 'calc(20px + env(safe-area-inset-bottom, 34px))' }}
+        >
+          <div className="container-max section">
         <ConfirmModal
           open={confirmOpen}
           onClose={() => setConfirmOpen(false)}
@@ -1143,7 +1099,7 @@ export default function PostJobInner({ userId }: Props) {
                 <button
                   type="button"
                   onClick={() => {
-                    getCurrentLocation()
+                    fetchCurrentLocation()
                     setShowLocationModal(false)
                   }}
                   className="w-full px-4 py-3 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 flex items-center justify-center gap-2"
@@ -1240,7 +1196,7 @@ export default function PostJobInner({ userId }: Props) {
               emergencyTypesMap={EMERGENCY_TYPES_MAP}
               nearbyContractors={nearbyContractors}
               selectedContractor={selectedContractor}
-              getCurrentLocation={getCurrentLocation}
+              getCurrentLocation={fetchCurrentLocation}
               onSubmit={submit}
               photos={photos}
               setPhotos={setPhotos}
@@ -1274,7 +1230,7 @@ export default function PostJobInner({ userId }: Props) {
                     <p className="mt-1 text-sm text-slate-500">Use your location or enter an address above</p>
                     <button
                       type="button"
-                      onClick={getCurrentLocation}
+                      onClick={fetchCurrentLocation}
                       className="mt-4 px-6 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors font-medium"
                     >
                       📍 Use My Current Location
@@ -1322,7 +1278,7 @@ export default function PostJobInner({ userId }: Props) {
                 </p>
                 <button
                   type="button"
-                  onClick={getCurrentLocation}
+                  onClick={fetchCurrentLocation}
                   className="px-6 py-3 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors font-medium"
                 >
                   📍 Use My Current Location
@@ -1379,6 +1335,329 @@ export default function PostJobInner({ userId }: Props) {
                 )}
 
                 {/* See All button when all are shown */}
+                {filteredNearby.length > 5 && showCount >= filteredNearby.length && (
+                  <button
+                    onClick={() => window.location.href = `/find-pro?near=${address.match(/\d{5}/)?.[0] || ''}&category=${emergencyType || ''}`}
+                    className="w-full px-4 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-lg transition-colors"
+                  >
+                    See All Pros
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Web version - standard layout without iOS safe areas
+  return (
+    <>
+      <TopProgress active={sending} />
+
+      <div className="container-max section">
+        <ConfirmModal
+          open={confirmOpen}
+          onClose={() => setConfirmOpen(false)}
+          onConfirm={actuallySend}
+          title="Send Emergency Request?"
+          body={
+            sendAll
+              ? 'We will instantly alert all active emergency pros in your area. The first to accept will be shown with live ETA tracking.'
+              : selectedContractor
+                ? `We will notify ${selectedContractor.name} immediately about your emergency.`
+                : 'Please select a contractor or choose "Alert All Nearby" option.'
+          }
+        />
+
+        <ErrorPopup
+          message={errorPopup}
+          onClose={() => setErrorPopup('')}
+        />
+
+        {/* Emergency banner */}
+        <EmergencyBanner />
+
+        {/* Contact Details Section */}
+        <div className="card p-4 mb-6">
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-6">
+              <div className="flex items-center gap-2">
+                <MapPin className="h-4 w-4 text-slate-500" />
+                <span className="text-sm text-slate-600">Location:</span>
+                <button
+                  onClick={() => setShowLocationModal(true)}
+                  className="text-sm text-emerald-600 hover:text-emerald-700 hover:underline font-medium"
+                >
+                  {address || 'Set location'}
+                </button>
+              </div>
+              <div className="flex items-center gap-2">
+                <Phone className="h-4 w-4 text-slate-500" />
+                <span className="text-sm text-slate-600">Phone:</span>
+                <button
+                  onClick={() => setShowPhoneModal(true)}
+                  className="text-sm text-emerald-600 hover:text-emerald-700 hover:underline font-medium"
+                >
+                  {phone || 'Set phone'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Location Modal */}
+        {showLocationModal && (
+          <div className="fixed inset-0 bg-black/20 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div className="bg-white/80 backdrop-blur-lg rounded-xl shadow-2xl max-w-md w-full p-6 border border-white/70" style={{ backdropFilter: 'blur(12px)' }}>
+              <h3 className="text-xl font-bold mb-4 text-gray-900">Set Emergency Location</h3>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Address <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={address}
+                    onChange={(e) => setAddress(e.target.value)}
+                    placeholder="123 Main St, City, State ZIP"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 bg-white"
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    fetchCurrentLocation()
+                    setShowLocationModal(false)
+                  }}
+                  className="w-full px-4 py-3 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 flex items-center justify-center gap-2"
+                >
+                  <MapPin className="h-5 w-5" />
+                  Use My Current Location
+                </button>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setShowLocationModal(false)}
+                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 bg-white"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={() => {
+                      validateField('address', address)
+                      setShowLocationModal(false)
+                    }}
+                    className="flex-1 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700"
+                  >
+                    Save
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Phone Modal */}
+        {showPhoneModal && (
+          <div className="fixed inset-0 bg-black/20 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div className="bg-white/80 backdrop-blur-lg rounded-xl shadow-2xl max-w-md w-full p-6 border border-white/70" style={{ backdropFilter: 'blur(12px)' }}>
+              <h3 className="text-xl font-bold mb-4 text-gray-900">Set Contact Number</h3>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Phone Number <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="tel"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    placeholder="(555) 123-4567"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 bg-white"
+                  />
+                </div>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setShowPhoneModal(false)}
+                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 bg-white"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={() => {
+                      validateField('phone', phone)
+                      setShowPhoneModal(false)
+                    }}
+                    className="flex-1 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700"
+                  >
+                    Save
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 gap-8 lg:grid-cols-5">
+          {/* Left column: Multi-step form */}
+          <div className="lg:col-span-2">
+            <PostJobMultiStep
+              address={address}
+              setAddress={setAddress}
+              phone={phone}
+              setPhone={setPhone}
+              category={category}
+              setCategory={setCategory}
+              emergencyType={emergencyType}
+              setEmergencyType={setEmergencyType}
+              details={details}
+              setDetails={setDetails}
+              sendAll={sendAll}
+              setSendAll={setSendAll}
+              picked={picked}
+              setPicked={setPicked}
+              errors={errors}
+              touched={touched}
+              validateField={validateField}
+              handleFieldBlur={handleFieldBlur}
+              emergencyCategories={EMERGENCY_CATEGORIES}
+              emergencyTypesMap={EMERGENCY_TYPES_MAP}
+              nearbyContractors={nearbyContractors}
+              selectedContractor={selectedContractor}
+              getCurrentLocation={fetchCurrentLocation}
+              onSubmit={submit}
+              photos={photos}
+              setPhotos={setPhotos}
+              onUpload={onUpload}
+              uploadError={uploadError}
+              userId={userId}
+              initialStep={category && emergencyType ? 2 : 1}
+            />
+          </div>
+
+          {/* Right column: Map and emergency pros */}
+          <div className="space-y-6 lg:col-span-3">
+            <div className="card p-0 overflow-hidden relative">
+              <ProMap
+                centerZip={address.match(/\d{5}/)?.[0] || '10001'}
+                category={category}
+                radiusMiles={15}
+                searchCenter={userLocation || undefined}
+                contractors={nearbyContractorsWithLocation}
+              />
+
+              {!userLocation && !address.match(/\d{5}/) && (
+                <div className="absolute inset-0 bg-gradient-to-br from-emerald-50/95 to-white/95 z-10 grid place-items-center">
+                  <div className="text-center">
+                    <div className="mx-auto mb-3 grid h-12 w-12 place-items-center rounded-xl bg-emerald-100 text-emerald-600">
+                      <MapPin className="h-6 w-6" />
+                    </div>
+                    <div className="font-medium text-slate-900">Click to see nearby pros on the map</div>
+                    <p className="mt-1 text-sm text-slate-500">Use your location or enter an address above</p>
+                    <button
+                      type="button"
+                      onClick={fetchCurrentLocation}
+                      className="mt-4 px-6 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors font-medium"
+                    >
+                      📍 Use My Current Location
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div className="text-lg font-semibold text-slate-900">Emergency Professionals Nearby</div>
+              <div className="flex items-center gap-4">
+                <label className="inline-flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    className="accent-emerald-600"
+                    checked={onlyActive}
+                    onChange={(e) => setOnlyActive(e.target.checked)}
+                  />
+                  <span className="text-sm text-slate-600">Available now</span>
+                </label>
+
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value as any)}
+                  className="px-3 py-2 border border-slate-200 rounded-lg text-sm"
+                >
+                  <option value="eta">Sort: Response Time</option>
+                  <option value="distance">Sort: Distance</option>
+                  <option value="rating">Sort: Rating</option>
+                </select>
+              </div>
+            </div>
+
+            {sending ? (
+              <ListSkeleton rows={3} />
+            ) : !userLocation && !address.match(/\d{5}/) ? (
+              <div className="card p-8 text-center bg-slate-50">
+                <MapPin className="h-12 w-12 text-slate-400 mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-slate-900 mb-2">Provide Your Location</h3>
+                <p className="text-slate-600 mb-4">
+                  Enter your address or use your current location to see available emergency professionals nearby.
+                </p>
+                <button
+                  type="button"
+                  onClick={fetchCurrentLocation}
+                  className="px-6 py-3 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors font-medium"
+                >
+                  📍 Use My Current Location
+                </button>
+              </div>
+            ) : loadingContractors ? (
+              <div className="card p-8 text-center bg-slate-50">
+                <img
+                  src="https://jtrxdcccswdwlritgstp.supabase.co/storage/v1/object/public/contractor-logos/RushrLogoAnimation.gif"
+                  alt="Loading..."
+                  className="w-16 h-16 object-contain mx-auto mb-4"
+                />
+                <h3 className="text-lg font-medium text-slate-900 mb-2">Finding Emergency Professionals</h3>
+                <p className="text-slate-600">
+                  Searching for available contractors in your area...
+                </p>
+              </div>
+            ) : filteredNearby.length === 0 ? (
+              <div className="card p-8 text-center bg-slate-50">
+                <Users className="h-12 w-12 text-slate-400 mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-slate-900 mb-2">No Contractors Available</h3>
+                <p className="text-slate-600">
+                  No emergency professionals found in your area at this time.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {filteredNearby.slice(0, showCount).map((c) => (
+                  <ContractorCard
+                    key={c.id}
+                    c={c}
+                    selected={picked === c.id}
+                    onPick={() => setPicked(c.id)}
+                  />
+                ))}
+
+                {filteredNearby.length > showCount && (
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => setShowCount(prev => prev + 5)}
+                      className="flex-1 px-4 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium rounded-lg transition-colors"
+                    >
+                      Show More ({filteredNearby.length - showCount} remaining)
+                    </button>
+                    <button
+                      onClick={() => window.location.href = `/find-pro?near=${address.match(/\d{5}/)?.[0] || ''}&category=${emergencyType || ''}`}
+                      className="flex-1 px-4 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-lg transition-colors"
+                    >
+                      See All Pros
+                    </button>
+                  </div>
+                )}
+
                 {filteredNearby.length > 5 && showCount >= filteredNearby.length && (
                   <button
                     onClick={() => window.location.href = `/find-pro?near=${address.match(/\d{5}/)?.[0] || ''}&category=${emergencyType || ''}`}
