@@ -82,7 +82,7 @@ export default function EarlyAccessSuccessPage() {
         <div className="text-center mt-8">
           <p className="text-sm text-slate-600">
             Have questions?{' '}
-            <a href="mailto:support@rushr.com" className="text-blue-600 hover:text-blue-700 font-medium">
+            <a href="mailto:hello@userushr.com?subject=Rushr%20Pro%20Question" className="text-blue-600 hover:text-blue-700 font-medium">
               Contact our team
             </a>
           </p>
