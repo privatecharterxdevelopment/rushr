@@ -1,7 +1,6 @@
 'use client'
 
-import Link from 'next/link'
-import { CheckCircle, ArrowRight, Mail } from 'lucide-react'
+import { CheckCircle, Mail } from 'lucide-react'
 
 export default function EarlyAccessSuccessPage() {
   return (
@@ -62,21 +61,15 @@ export default function EarlyAccessSuccessPage() {
             </div>
           </div>
 
-          {/* CTA Buttons */}
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link
-              href="/pro"
+          {/* CTA Button */}
+          <div className="flex justify-center">
+            <a
+              href="mailto:hello@userushr.com?subject=Rushr%20Pro%20Early%20Access%20Question&body=Hi%20Rushr%20Team%2C%0A%0AI%20just%20signed%20up%20for%20early%20access%20and%20have%20a%20question%3A%0A%0A"
               className="inline-flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-3 rounded-xl transition-colors shadow-lg shadow-blue-500/30"
             >
-              Learn More About Rushr Pro
-              <ArrowRight className="h-4 w-4" />
-            </Link>
-            <Link
-              href="/"
-              className="inline-flex items-center justify-center gap-2 border border-slate-300 hover:bg-slate-50 text-slate-700 font-semibold px-6 py-3 rounded-xl transition-colors"
-            >
-              Go to Homepage
-            </Link>
+              <Mail className="h-4 w-4" />
+              Contact Us
+            </a>
           </div>
 
           {/* Social Proof */}
