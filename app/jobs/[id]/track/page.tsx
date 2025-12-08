@@ -4,6 +4,7 @@ import React, { useEffect, useState, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { useAuth } from '../../../../contexts/AuthContext'
 import { supabase } from '../../../../lib/supabaseClient'
+import { Capacitor } from '@capacitor/core'
 import mapboxgl from 'mapbox-gl'
 import 'mapbox-gl/dist/mapbox-gl.css'
 
@@ -47,6 +48,8 @@ export default function TrackContractorPage() {
   const [location, setLocation] = useState<ContractorLocation | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+
+  const isNative = typeof window !== 'undefined' && Capacitor.isNativePlatform()
 
   const mapContainer = useRef<HTMLDivElement>(null)
   const map = useRef<mapboxgl.Map | null>(null)
@@ -361,8 +364,12 @@ export default function TrackContractorPage() {
       <div ref={mapContainer} className="absolute inset-0" />
 
       {/* Top ETA Banner */}
-      <div className="absolute top-0 left-0 right-0 z-10 p-4">
-        <div className="bg-white rounded-2xl shadow-2xl p-4 max-w-md mx-auto backdrop-blur-sm bg-white/95">
+      <div
+        className="absolute top-0 left-0 right-0 z-10"
+        style={{ paddingTop: isNative ? 'env(safe-area-inset-top)' : '0' }}
+      >
+        <div className="p-4">
+          <div className="bg-white rounded-2xl shadow-2xl p-4 max-w-md mx-auto backdrop-blur-sm bg-white/95">
           <div className="flex items-center gap-4">
             <div className={`w-3 h-3 rounded-full ${getStatusColor(location?.status)} animate-pulse`}></div>
             <div className="flex-1">
@@ -381,11 +388,16 @@ export default function TrackContractorPage() {
             )}
           </div>
         </div>
+        </div>
       </div>
 
       {/* Bottom Contractor Card */}
-      <div className="absolute bottom-0 left-0 right-0 z-10 p-4">
-        <div className="bg-white rounded-t-3xl shadow-2xl p-6 max-w-2xl mx-auto backdrop-blur-sm bg-white/95">
+      <div
+        className="absolute bottom-0 left-0 right-0 z-10"
+        style={{ paddingBottom: isNative ? 'env(safe-area-inset-bottom)' : '0' }}
+      >
+        <div className="p-4 pb-2">
+          <div className="bg-white rounded-t-3xl shadow-2xl p-6 max-w-2xl mx-auto backdrop-blur-sm bg-white/95">
           {contractor && (
             <div className="space-y-4">
               {/* Contractor Info */}
@@ -447,13 +459,18 @@ export default function TrackContractorPage() {
               )}
             </div>
           )}
+          </div>
         </div>
       </div>
 
       {/* Back Button */}
       <button
         onClick={() => router.push('/dashboard/homeowner')}
-        className="absolute top-4 left-4 z-20 w-10 h-10 bg-white hover:bg-slate-100 rounded-full shadow-lg flex items-center justify-center transition-colors"
+        className="absolute z-20 w-10 h-10 bg-white hover:bg-slate-100 rounded-full shadow-lg flex items-center justify-center transition-colors"
+        style={{
+          top: isNative ? 'calc(16px + env(safe-area-inset-top))' : '16px',
+          left: '16px'
+        }}
       >
         <svg className="w-6 h-6 text-slate-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />

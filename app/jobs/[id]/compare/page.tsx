@@ -5,6 +5,8 @@ import { useParams, useRouter } from 'next/navigation'
 import { useAuth } from '../../../../contexts/AuthContext'
 import { supabase } from '../../../../lib/supabaseClient'
 import PaymentModal from '../../../../components/PaymentModal'
+import { Capacitor } from '@capacitor/core'
+import { ArrowLeft, DollarSign, Clock, CheckCircle } from 'lucide-react'
 
 interface Bid {
   id: string
@@ -35,6 +37,8 @@ export default function CompareBids() {
   const [accepting, setAccepting] = useState<string | null>(null)
   const [showPaymentModal, setShowPaymentModal] = useState(false)
   const [selectedBid, setSelectedBid] = useState<Bid | null>(null)
+
+  const isNative = typeof window !== 'undefined' && Capacitor.isNativePlatform()
 
   useEffect(() => {
     const fetchData = async () => {
@@ -104,18 +108,34 @@ export default function CompareBids() {
 
   if (loading) {
     return (
-      <section className="section">
-        <div className="card p-6">
-          <div className="flex items-center justify-center">
-            <img
-          src="https://jtrxdcccswdwlritgstp.supabase.co/storage/v1/object/public/contractor-logos/RushrLogoAnimation.gif"
-          alt="Loading..."
-          className="h-6 w-6 border-b-2 border-emerald-600 object-contain"
-        />
-            <span className="ml-2">Loading bids...</span>
+      <div
+        className="min-h-screen bg-slate-50"
+        style={{
+          paddingTop: isNative ? 'env(safe-area-inset-top)' : undefined
+        }}
+      >
+        {isNative && (
+          <div className="bg-gradient-to-b from-emerald-600 to-emerald-500 text-white">
+            <div className="px-4 py-4" style={{ paddingTop: 'calc(12px + env(safe-area-inset-top))' }}>
+              <div className="flex items-center justify-between">
+                <button onClick={() => router.back()} className="p-2 -ml-2 rounded-full hover:bg-white/20">
+                  <ArrowLeft className="h-6 w-6" />
+                </button>
+                <h1 className="text-lg font-bold flex-1 text-center">Compare Bids</h1>
+                <div className="w-10" />
+              </div>
+            </div>
           </div>
+        )}
+        <div className="flex items-center justify-center py-20">
+          <img
+            src="https://jtrxdcccswdwlritgstp.supabase.co/storage/v1/object/public/contractor-logos/RushrLogoAnimation.gif"
+            alt="Loading..."
+            className="h-10 w-10 object-contain"
+          />
+          <span className="ml-3 text-slate-600">Loading bids...</span>
         </div>
-      </section>
+      </div>
     )
   }
 
@@ -189,15 +209,42 @@ export default function CompareBids() {
 
   if (bids.length === 0) {
     return (
-      <div className="container mx-auto px-4 py-8 max-w-6xl">
-        <div className="flex items-center justify-between mb-6">
-          <h1 className="text-3xl font-bold text-slate-900">See Bids</h1>
-          <Link href="/dashboard/homeowner" className="px-4 py-2 text-emerald-600 hover:text-emerald-700 font-medium">
-            Back to Dashboard
-          </Link>
-        </div>
-        <div className="bg-white border border-slate-200 rounded-lg p-8 text-center">
-          <p className="text-slate-600">No bids available for this job yet.</p>
+      <div
+        className="min-h-screen bg-slate-50"
+        style={{
+          paddingTop: isNative ? 'env(safe-area-inset-top)' : undefined,
+          paddingBottom: isNative ? 'calc(80px + env(safe-area-inset-bottom))' : undefined
+        }}
+      >
+        {isNative && (
+          <div className="bg-gradient-to-b from-emerald-600 to-emerald-500 text-white">
+            <div className="px-4 py-4" style={{ paddingTop: 'calc(12px + env(safe-area-inset-top))' }}>
+              <div className="flex items-center justify-between">
+                <button onClick={() => router.back()} className="p-2 -ml-2 rounded-full hover:bg-white/20">
+                  <ArrowLeft className="h-6 w-6" />
+                </button>
+                <h1 className="text-lg font-bold flex-1 text-center">Compare Bids</h1>
+                <div className="w-10" />
+              </div>
+            </div>
+          </div>
+        )}
+        <div className="container mx-auto px-4 py-8 max-w-6xl">
+          {!isNative && (
+            <div className="flex items-center justify-between mb-6">
+              <h1 className="text-3xl font-bold text-slate-900">See Bids</h1>
+              <Link href="/dashboard/homeowner" className="px-4 py-2 text-emerald-600 hover:text-emerald-700 font-medium">
+                Back to Dashboard
+              </Link>
+            </div>
+          )}
+          <div className="bg-white border border-slate-200 rounded-2xl p-8 text-center shadow-sm">
+            <div className="w-16 h-16 mx-auto mb-4 bg-slate-100 rounded-full flex items-center justify-center">
+              <Clock className="h-8 w-8 text-slate-400" />
+            </div>
+            <h3 className="text-lg font-semibold text-slate-800 mb-2">No bids yet</h3>
+            <p className="text-slate-600">Contractors are reviewing your job. Check back soon!</p>
+          </div>
         </div>
       </div>
     )
@@ -205,64 +252,120 @@ export default function CompareBids() {
 
   return (
     <>
-      <div className="container mx-auto px-4 py-8 max-w-6xl">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className="text-3xl font-bold text-slate-900">See Bids</h1>
-            <p className="text-slate-600 mt-1">{job?.title}</p>
-          </div>
-          <Link href="/dashboard/homeowner" className="px-4 py-2 text-emerald-600 hover:text-emerald-700 font-medium">
-            Back to Dashboard
-          </Link>
-        </div>
-
-        <div className="space-y-4">
-          {bids.map((bid) => (
-            <div key={bid.id} className="bg-white border border-slate-200 rounded-lg p-6 shadow-sm">
-              <div className="flex items-start justify-between mb-4">
-                <div>
-                  <h3 className="text-xl font-semibold text-slate-900">
-                    {bid.contractor_business_name || bid.contractor_name || `Contractor ${bid.contractor_id.substring(0, 8)}`}
-                  </h3>
-                  <p className="text-sm text-slate-500 mt-1">Submitted {new Date(bid.created_at).toLocaleDateString()}</p>
-                </div>
-                <div className="text-right">
-                  <p className="text-3xl font-bold text-emerald-600">
-                    ${bid.bid_amount != null ? bid.bid_amount.toFixed(2) : '0.00'}
-                  </p>
-                  <p className="text-sm text-slate-500">Bid Amount</p>
-                </div>
-              </div>
-
-              {bid.message && (
-                <div className="mb-4 p-4 bg-slate-50 rounded-lg">
-                  <p className="text-sm font-medium text-slate-700 mb-1">Message:</p>
-                  <p className="text-slate-600">{bid.message}</p>
-                </div>
-              )}
-
+      <div
+        className="min-h-screen bg-slate-50"
+        style={{
+          paddingTop: isNative ? 'env(safe-area-inset-top)' : undefined,
+          paddingBottom: isNative ? 'calc(80px + env(safe-area-inset-bottom))' : undefined
+        }}
+      >
+        {/* iOS Native Header */}
+        {isNative && (
+          <div className="bg-gradient-to-b from-emerald-600 to-emerald-500 text-white sticky top-0 z-50">
+            <div className="px-4 py-4" style={{ paddingTop: 'calc(12px + env(safe-area-inset-top))' }}>
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className={`px-3 py-1 rounded-full text-sm font-medium ${bid.status === 'accepted' ? 'bg-green-100 text-green-700' :
-                      bid.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
-                        'bg-red-100 text-red-700'
-                    }`}>
-                    {bid.status.charAt(0).toUpperCase() + bid.status.slice(1)}
-                  </span>
+                <button onClick={() => router.back()} className="p-2 -ml-2 rounded-full hover:bg-white/20 active:bg-white/30">
+                  <ArrowLeft className="h-6 w-6" />
+                </button>
+                <div className="flex-1 text-center">
+                  <h1 className="text-lg font-bold">Compare Bids</h1>
+                  <p className="text-xs text-emerald-200 truncate">{job?.title}</p>
                 </div>
-
-                {bid.status === 'pending' && (
-                  <button
-                    onClick={() => handleAcceptBid(bid.id)}
-                    disabled={accepting === bid.id}
-                    className="px-6 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {accepting === bid.id ? 'Accepting...' : 'Accept Bid'}
-                  </button>
-                )}
+                <div className="w-10" />
               </div>
             </div>
-          ))}
+          </div>
+        )}
+
+        <div className="container mx-auto px-4 py-6 max-w-6xl">
+          {/* Web Header */}
+          {!isNative && (
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h1 className="text-3xl font-bold text-slate-900">See Bids</h1>
+                <p className="text-slate-600 mt-1">{job?.title}</p>
+              </div>
+              <Link href="/dashboard/homeowner" className="px-4 py-2 text-emerald-600 hover:text-emerald-700 font-medium">
+                Back to Dashboard
+              </Link>
+            </div>
+          )}
+
+          {/* Bids Summary - Mobile */}
+          {isNative && (
+            <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 mb-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-10 h-10 bg-emerald-100 rounded-full flex items-center justify-center">
+                    <DollarSign className="h-5 w-5 text-emerald-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-slate-500">{bids.length} bid{bids.length !== 1 ? 's' : ''}</p>
+                    <p className="font-semibold text-slate-900">
+                      ${Math.min(...bids.map(b => b.bid_amount || 0)).toFixed(0)} - ${Math.max(...bids.map(b => b.bid_amount || 0)).toFixed(0)}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div className="space-y-4">
+            {bids.map((bid) => (
+              <div key={bid.id} className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
+                <div className="flex items-start justify-between mb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center text-white font-bold text-lg">
+                      {(bid.contractor_name || bid.contractor_business_name || 'C').charAt(0).toUpperCase()}
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-semibold text-slate-900">
+                        {bid.contractor_business_name || bid.contractor_name || `Contractor`}
+                      </h3>
+                      <p className="text-sm text-slate-500">Submitted {new Date(bid.created_at).toLocaleDateString()}</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-2xl font-bold text-emerald-600">
+                      ${bid.bid_amount != null ? bid.bid_amount.toFixed(0) : '0'}
+                    </p>
+                    <p className="text-xs text-slate-500">Bid Amount</p>
+                  </div>
+                </div>
+
+                {bid.message && (
+                  <div className="mb-4 p-4 bg-slate-50 rounded-xl">
+                    <p className="text-sm font-medium text-slate-700 mb-1">Message:</p>
+                    <p className="text-slate-600 text-sm">{bid.message}</p>
+                  </div>
+                )}
+
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className={`px-3 py-1.5 rounded-full text-sm font-medium flex items-center gap-1.5 ${
+                      bid.status === 'accepted' ? 'bg-green-100 text-green-700' :
+                      bid.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
+                      'bg-red-100 text-red-700'
+                    }`}>
+                      {bid.status === 'accepted' && <CheckCircle className="h-4 w-4" />}
+                      {bid.status === 'pending' && <Clock className="h-4 w-4" />}
+                      {bid.status.charAt(0).toUpperCase() + bid.status.slice(1)}
+                    </span>
+                  </div>
+
+                  {bid.status === 'pending' && (
+                    <button
+                      onClick={() => handleAcceptBid(bid.id)}
+                      disabled={accepting === bid.id}
+                      className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-medium rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+                    >
+                      {accepting === bid.id ? 'Accepting...' : 'Accept Bid'}
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
 

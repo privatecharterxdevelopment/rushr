@@ -1,11 +1,12 @@
 'use client'
 import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { useParams } from 'next/navigation'
+import { useParams, useRouter } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import { useAuth } from '../../../contexts/AuthContext'
 import { supabase } from '../../../lib/supabaseClient'
 import QuickBidModal from '../../../components/QuickBidModal'
+import { Capacitor } from '@capacitor/core'
 import {
   ArrowLeft,
   MapPin,
@@ -24,10 +25,13 @@ const ProMap = dynamic(() => import('../../../components/ProMap'), { ssr: false 
 
 export default function JobDetail() {
   const { user, userProfile } = useAuth()
+  const router = useRouter()
   const { id } = useParams<{ id: string }>()
   const [openQB, setOpenQB] = useState(false)
   const [job, setJob] = useState<any>(null)
   const [loading, setLoading] = useState(true)
+
+  const isNative = typeof window !== 'undefined' && Capacitor.isNativePlatform()
 
   // Fetch job from database
   useEffect(() => {
@@ -167,25 +171,57 @@ export default function JobDetail() {
   }
 
   return (
-    <section className="section bg-slate-50">
-      <div className="container-max">
-        {/* Header */}
-        <div className="mb-6">
-          <Link
-            href="/jobs"
-            className="inline-flex items-center gap-2 text-slate-600 hover:text-emerald-600 font-medium transition-colors mb-4"
+    <section
+      className="min-h-screen bg-slate-50"
+      style={{
+        paddingTop: isNative ? 'env(safe-area-inset-top)' : undefined,
+        paddingBottom: isNative ? 'calc(80px + env(safe-area-inset-bottom))' : undefined
+      }}
+    >
+      {/* iOS Native Header */}
+      {isNative && (
+        <div className="bg-gradient-to-b from-emerald-600 to-emerald-500 text-white sticky top-0 z-50">
+          <div
+            className="px-4 py-4"
+            style={{ paddingTop: 'calc(12px + env(safe-area-inset-top))' }}
           >
-            <ArrowLeft className="h-4 w-4" />
-            Back to Jobs
-          </Link>
+            <div className="flex items-center justify-between">
+              <button
+                onClick={() => router.back()}
+                className="p-2 -ml-2 rounded-full hover:bg-white/20 active:bg-white/30 transition-colors"
+              >
+                <ArrowLeft className="h-6 w-6" />
+              </button>
+              <h1 className="text-lg font-bold flex-1 text-center">Job Details</h1>
+              <div className="w-10" />
+            </div>
+          </div>
+        </div>
+      )}
 
+      <div className="container-max section">
+        {/* Header - Web Version */}
+        {!isNative && (
+          <div className="mb-6">
+            <Link
+              href="/jobs"
+              className="inline-flex items-center gap-2 text-slate-600 hover:text-emerald-600 font-medium transition-colors mb-4"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Back to Jobs
+            </Link>
+          </div>
+        )}
+
+        {/* Job Title Section */}
+        <div className="mb-6">
           <div className="flex items-start justify-between gap-4 flex-wrap">
             <div>
               <div className="flex items-center gap-3 mb-2">
                 <span className="text-4xl">{categoryEmoji[job.category] || '📋'}</span>
-                <h1 className="text-3xl font-bold text-slate-900">{job.title}</h1>
+                <h1 className="text-2xl md:text-3xl font-bold text-slate-900">{job.title}</h1>
               </div>
-              <div className="flex items-center gap-3 flex-wrap">
+              <div className="flex items-center gap-2 md:gap-3 flex-wrap">
                 <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-medium border ${priorityConfig.color}`}>
                   <span>{priorityConfig.icon}</span>
                   {priorityConfig.label}
