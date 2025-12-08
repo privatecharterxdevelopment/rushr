@@ -134,7 +134,7 @@ export default function HomeownerDashboardPage() {
   // ALL HOOKS MUST BE CALLED FIRST - BEFORE ANY CONDITIONAL RETURNS
   const { user, userProfile, loading } = useAuth()
   // Always call the hook - it handles the user check internally
-  const { stats, jobs: realJobs, messages, loading: statsLoading, refreshStats } = useHomeownerStats()
+  const { stats, jobs: realJobs, loading: statsLoading, refreshStats } = useHomeownerStats()
 
 
   // Contractor tracking state

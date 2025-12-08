@@ -32,22 +32,10 @@ export interface HomeownerJob {
   requested_contractor_name?: string | null
 }
 
-export interface HomeownerMessage {
-  id: string
-  message_text: string
-  message_type: 'text' | 'image' | 'document' | 'system'
-  sender_type: 'homeowner' | 'contractor' | 'system'
-  is_read: boolean
-  created_at: string
-  job_id: string | null
-  contractor_id: string | null
-}
-
 export function useHomeownerStats() {
   const { user } = useAuth()
   const [stats, setStats] = useState<HomeownerStats | null>(null)
   const [jobs, setJobs] = useState<HomeownerJob[]>([])
-  const [messages, setMessages] = useState<HomeownerMessage[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -55,8 +43,8 @@ export function useHomeownerStats() {
     if (!user) return
 
     try {
-      // Parallelize all three queries to reduce load time
-      const [statsResult, jobsResult, messagesResult] = await Promise.all([
+      // Fetch stats and jobs in parallel
+      const [statsResult, jobsResult] = await Promise.all([
         supabase
           .from('homeowner_dashboard_stats')
           .select('*')
@@ -67,13 +55,7 @@ export function useHomeownerStats() {
           .select('*')
           .eq('homeowner_id', user.id)
           .order('created_at', { ascending: false })
-          .limit(10),
-        supabase
-          .from('homeowner_messages')
-          .select('*')
-          .eq('homeowner_id', user.id)
-          .order('created_at', { ascending: false })
-          .limit(20)
+          .limit(10)
       ])
 
       // Handle stats
@@ -101,44 +83,11 @@ export function useHomeownerStats() {
         setJobs(jobsResult.data || [])
       }
 
-      // Handle messages
-      if (messagesResult.error) {
-        console.error('Error fetching homeowner messages:', messagesResult.error.message || JSON.stringify(messagesResult.error))
-        setMessages([])
-      } else {
-        setMessages(messagesResult.data || [])
-      }
-
     } catch (err: any) {
       console.error('Error in fetchStats:', err?.message || JSON.stringify(err))
       setError(err?.message || 'Failed to load data')
     } finally {
       setLoading(false)
-    }
-  }
-
-  const markMessageAsRead = async (messageId: string) => {
-    try {
-      const { error } = await supabase.rpc('mark_message_read', {
-        p_message_id: messageId
-      })
-
-      if (error) {
-        console.error('Error marking message as read:', error)
-      } else {
-        // Update local state
-        setMessages(prev =>
-          prev.map(msg =>
-            msg.id === messageId
-              ? { ...msg, is_read: true }
-              : msg
-          )
-        )
-        // Refresh stats to update unread count
-        fetchStats()
-      }
-    } catch (err) {
-      console.error('Error marking message as read:', err)
     }
   }
 
@@ -188,7 +137,6 @@ export function useHomeownerStats() {
       // Reset state when no user
       setStats(null)
       setJobs([])
-      setMessages([])
       setLoading(false)
       return
     }
@@ -198,8 +146,8 @@ export function useHomeownerStats() {
       if (!user) return
 
       try {
-        // Parallelize all three queries to reduce load time
-        const [statsResult, jobsResult, messagesResult] = await Promise.all([
+        // Fetch stats and jobs in parallel
+        const [statsResult, jobsResult] = await Promise.all([
           supabase
             .from('homeowner_dashboard_stats')
             .select('*')
@@ -210,13 +158,7 @@ export function useHomeownerStats() {
             .select('*')
             .eq('homeowner_id', user.id)
             .order('created_at', { ascending: false })
-            .limit(10),
-          supabase
-            .from('homeowner_messages')
-            .select('*')
-            .eq('homeowner_id', user.id)
-            .order('created_at', { ascending: false })
-            .limit(20)
+            .limit(10)
         ])
 
         // Handle stats
@@ -241,14 +183,6 @@ export function useHomeownerStats() {
           setJobs([])
         } else {
           setJobs(jobsResult.data || [])
-        }
-
-        // Handle messages
-        if (messagesResult.error) {
-          console.error('Error fetching homeowner messages:', messagesResult.error.message || JSON.stringify(messagesResult.error))
-          setMessages([])
-        } else {
-          setMessages(messagesResult.data || [])
         }
       } catch (err: any) {
         console.error('Error loading initial data:', err?.message || JSON.stringify(err))
@@ -286,37 +220,17 @@ export function useHomeownerStats() {
       )
       .subscribe()
 
-    // Subscribe to message changes
-    const messagesSubscription = supabase
-      .channel('homeowner_messages_changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'homeowner_messages',
-          filter: `homeowner_id=eq.${user.id}`
-        },
-        () => {
-          debouncedRefresh()
-        }
-      )
-      .subscribe()
-
     return () => {
       if (debounceTimer) clearTimeout(debounceTimer)
       jobsSubscription.unsubscribe()
-      messagesSubscription.unsubscribe()
     }
   }, [user])
 
   return {
     stats,
     jobs,
-    messages,
     loading,
     error,
-    markMessageAsRead,
     updateJobStatus,
     addTrustedContractor,
     refreshStats: fetchStats

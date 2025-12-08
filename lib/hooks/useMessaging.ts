@@ -33,46 +33,26 @@ export function useConversations(userId?: string, role?: 'homeowner' | 'pro') {
     try {
       setLoading(true)
 
-      // Mock conversation data with welcome message
-      const welcomeConversation: Conversation = userRole === 'pro'
-        ? {
-            id: 'welcome-conv-pro-001',
-            homeowner_id: '00000000-0000-0000-0000-000000000000',
-            pro_id: user.id,
-            title: 'Welcome to Rushr Pro!',
-            status: 'active',
-            last_message_at: new Date().toISOString(),
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-            homeowner_name: 'Rushr Support',
-            homeowner_email: 'support@rushr.com',
-            pro_name: null,
-            pro_email: null,
-            message_count: 1,
-            unread_count: 1,
-            last_message_content: 'Welcome to Rushr Pro! Start accepting jobs from homeowners.'
-          }
-        : {
-            id: 'welcome-conv-001',
-            homeowner_id: user.id,
-            pro_id: '00000000-0000-0000-0000-000000000000',
-            title: 'Welcome to Rushr!',
-            status: 'active',
-            last_message_at: new Date().toISOString(),
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-            pro_name: 'Rushr Support',
-            pro_email: 'support@rushr.com',
-            homeowner_name: null,
-            homeowner_email: null,
-            message_count: 1,
-            unread_count: 1,
-            last_message_content: 'Welcome to Rushr! Get help from verified professionals.'
-          }
+      // Fetch real conversations from database
+      const realConversations = await MessagingAPI.getConversations(user.id)
 
-      const mockConversations: Conversation[] = [welcomeConversation]
+      // Transform to add display names for Rushr Support
+      const transformedConversations = realConversations.map(conv => {
+        // Check if this is a conversation with Rushr Support
+        const isRushrSupport = conv.pro_id === '00000000-0000-0000-0000-000000000000' ||
+                               conv.homeowner_id === '00000000-0000-0000-0000-000000000000'
 
-      setConversations(mockConversations)
+        if (isRushrSupport) {
+          return {
+            ...conv,
+            pro_name: conv.pro_id === '00000000-0000-0000-0000-000000000000' ? 'Rushr Support' : conv.pro_name,
+            homeowner_name: conv.homeowner_id === '00000000-0000-0000-0000-000000000000' ? 'Rushr Support' : conv.homeowner_name
+          }
+        }
+        return conv
+      })
+
+      setConversations(transformedConversations)
       setError(null)
     } catch (err) {
       console.error('Error loading conversations:', err)
@@ -149,97 +129,29 @@ export function useConversation(conversationId: string | null, userId?: string) 
     try {
       setLoading(true)
 
-      // Mock conversation data for homeowner welcome
-      if (conversationId === 'welcome-conv-001') {
-        const mockConversation: Conversation = {
-          id: 'welcome-conv-001',
-          homeowner_id: user.id,
-          pro_id: '00000000-0000-0000-0000-000000000000',
-          title: 'Welcome to Rushr!',
-          status: 'active',
-          last_message_at: new Date().toISOString(),
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-          pro_name: 'Rushr Support',
-          pro_email: 'support@rushr.com'
-        }
+      // Fetch real conversation from database
+      const result = await MessagingAPI.getConversation(conversationId, user.id)
 
-        const welcomeMessage: Message = {
-          id: 'msg-001',
-          conversation_id: conversationId,
-          sender_id: '00000000-0000-0000-0000-000000000000',
-          message_type: 'system',
-          content: `Welcome to Rushr! 🎉
-
-We're excited to help you get your home projects done quickly and reliably. Here's how it works:
-
-1. **Post a job** - Describe what you need help with
-2. **Get matched** - We'll connect you with qualified professionals
-3. **Get quotes** - Receive competitive quotes from verified pros
-4. **Choose & hire** - Select the best pro and get your project started
-
-If you have any questions or need help, just reply to this message and our support team will assist you.
-
-Thanks for choosing Rushr!
-The Rushr Team`,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        }
-
-        setConversation(mockConversation)
-        setMessages([welcomeMessage])
-        setError(null)
-      } else if (conversationId === 'welcome-conv-pro-001') {
-        // Pro welcome conversation
-        const mockConversation: Conversation = {
-          id: 'welcome-conv-pro-001',
-          homeowner_id: '00000000-0000-0000-0000-000000000000',
-          pro_id: user.id,
-          title: 'Welcome to Rushr Pro!',
-          status: 'active',
-          last_message_at: new Date().toISOString(),
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-          homeowner_name: 'Rushr Support',
-          homeowner_email: 'support@rushr.com',
-          pro_name: null,
-          pro_email: null
-        }
-
-        const welcomeMessage: Message = {
-          id: 'msg-pro-001',
-          conversation_id: conversationId,
-          sender_id: '00000000-0000-0000-0000-000000000000',
-          message_type: 'system',
-          content: `Welcome to Rushr Pro! 🚀
-
-Thank you for joining our network of trusted professionals! Here's how to get started:
-
-1. **Complete your profile** - Make sure all your details are up to date
-2. **Browse available jobs** - Check the Jobs tab for opportunities in your area
-3. **Send quotes** - Respond to job requests with competitive quotes
-4. **Get hired** - Build your reputation and grow your business
-
-**Tips for success:**
-• Respond quickly to job requests
-• Provide detailed, accurate quotes
-• Maintain high quality work
-• Build great relationships with clients
-
-If you have any questions or need assistance, our support team is here to help!
-
-Best of luck,
-The Rushr Team`,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        }
-
-        setConversation(mockConversation)
-        setMessages([welcomeMessage])
-        setError(null)
-      } else {
+      if (!result) {
         setError('Conversation not found')
+        setConversation(null)
+        setMessages([])
+        return
       }
+
+      // Transform Rushr Support conversation names
+      const isRushrSupport = result.conversation.pro_id === '00000000-0000-0000-0000-000000000000' ||
+                             result.conversation.homeowner_id === '00000000-0000-0000-0000-000000000000'
+
+      const transformedConversation = isRushrSupport ? {
+        ...result.conversation,
+        pro_name: result.conversation.pro_id === '00000000-0000-0000-0000-000000000000' ? 'Rushr Support' : result.conversation.pro_name,
+        homeowner_name: result.conversation.homeowner_id === '00000000-0000-0000-0000-000000000000' ? 'Rushr Support' : result.conversation.homeowner_name
+      } : result.conversation
+
+      setConversation(transformedConversation)
+      setMessages(result.messages)
+      setError(null)
     } catch (err) {
       console.error('Error loading conversation:', err)
       setError(err instanceof Error ? err.message : 'Failed to load conversation')
@@ -285,47 +197,24 @@ The Rushr Team`,
     if (!conversationId || !user?.id || !content.trim()) return
 
     try {
-      // Handle mock conversation differently
-      if (conversationId === 'welcome-conv-001') {
-        const newMessage: Message = {
-          id: `msg-${Date.now()}`,
-          conversation_id: conversationId,
-          sender_id: user.id,
-          message_type: 'text',
-          content: content.trim(),
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-          reply_to_id: replyToId
-        }
+      // Send message via API - real-time subscription will update the messages
+      await MessagingAPI.sendMessage(conversationId, user.id, content.trim(), replyToId)
 
-        // Add message to the local state immediately
-        setMessages(prev => [...prev, newMessage])
-
-        // Send to support system for admin panel
+      // Also send to support system if this is a Rushr Support conversation
+      if (conversation?.pro_id === '00000000-0000-0000-0000-000000000000' ||
+          conversation?.homeowner_id === '00000000-0000-0000-0000-000000000000') {
         SupportMessagesAPI.addMessage(
           user.id,
-          user.email || 'Unknown User',
-          user.email || '',
+          (user as any).email || 'Unknown User',
+          (user as any).email || '',
           content.trim()
         )
-
-        // Update last message time in conversation
-        setConversation(prev =>
-          prev ? {
-            ...prev,
-            last_message_at: new Date().toISOString()
-          } : prev
-        )
-        return
       }
-
-      await MessagingAPI.sendMessage(conversationId, user.id, content.trim(), replyToId)
-      // Message will be added via real-time subscription
     } catch (err) {
       console.error('Error sending message:', err)
       throw err
     }
-  }, [conversationId, user?.id])
+  }, [conversationId, user?.id, conversation])
 
   const sendMessageWithFiles = useCallback(async (
     content: string,
@@ -398,12 +287,6 @@ The Rushr Team`,
     if (!conversationId || !user?.id) return
 
     try {
-      // Handle mock conversation differently
-      if (conversationId === 'welcome-conv-001') {
-        // No need to call database for mock conversation
-        return
-      }
-
       await MessagingAPI.markAsRead(conversationId, user.id, messageId)
     } catch (err) {
       console.error('Error marking as read:', err)
