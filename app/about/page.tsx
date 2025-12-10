@@ -53,7 +53,7 @@ export default function AboutPage(){
 
               <div className="mt-5 grid gap-3 sm:grid-cols-2">
                 <ValueItem icon={<IconClock className="h-5 w-5 text-emerald-700" />} title="Lightning-fast response">
-                  Average 4-minute response time. Get help when emergencies can't wait.
+                  Pros respond within minutes. Get help when emergencies can't wait.
                 </ValueItem>
                 <ValueItem icon={<IconShieldCheck className="h-5 w-5 text-emerald-700" />} title="Verified professionals">
                   Background-checked, licensed pros ready for same-day service.
@@ -149,7 +149,7 @@ export default function AboutPage(){
 
                   <div className="mt-4 pt-3 border-t border-slate-200 dark:border-slate-700">
                     <div className="text-center">
-                      <div className="text-xs font-semibold text-emerald-700">Average response time: 4 minutes</div>
+                      <div className="text-xs font-semibold text-emerald-700">Most pros respond in under 10 minutes</div>
                     </div>
                   </div>
                 </div>
@@ -180,53 +180,17 @@ export default function AboutPage(){
               <h3 className="text-lg font-semibold text-ink dark:text-white">Trust and safety</h3>
             </div>
             <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 text-sm text-slate-700 dark:text-slate-300">
-              <Bullet>License and insurance visibility where applicable</Bullet>
-              <Bullet>Background check indicators where provided</Bullet>
-              <Bullet>Private in app messaging by default</Bullet>
-              <Bullet>Clear reporting and quick support follow up</Bullet>
-              <Bullet>Job history and document retention</Bullet>
-              <Bullet>Abuse prevention and moderation policies</Bullet>
+              <Bullet>Licensed and insured professionals</Bullet>
+              <Bullet>Background-checked and verified</Bullet>
+              <Bullet>Live GPS tracking for safety</Bullet>
+              <Bullet>Encrypted in-app messaging</Bullet>
+              <Bullet>24/7 support and incident reporting</Bullet>
+              <Bullet>Full job history and documentation</Bullet>
             </div>
           </div>
         </div>
       </section>
 
-      {/* ===== Coverage & Data (Nationwide at launch) ===== */}
-      <section className="bg-white">
-        <div className="container-max py-10 md:py-14">
-          <div className="grid gap-4 md:grid-cols-[1.2fr,0.8fr]">
-            <div className="rounded-2xl border bg-white p-6 shadow-soft dark:bg-slate-900 dark:border-slate-800">
-              <h3 className="text-lg font-semibold text-ink dark:text-white">Coverage and data</h3>
-              <p className="mt-2 text-sm text-slate-700 dark:text-slate-300">
-                Signals is nationwide at launch. We monitor inspections, permits, licenses, and
-                violations across supported sources and continue to expand depth over time.
-              </p>
-              <div className="mt-4 flex flex-wrap gap-2">
-                <Capsule>Inspections</Capsule>
-                <Capsule>Permits</Capsule>
-                <Capsule>Licenses</Capsule>
-                <Capsule>Violations</Capsule>
-                <Capsule>Planned: Utilities</Capsule>
-              </div>
-              <div className="mt-6 rounded-xl border bg-white p-4 dark:bg-slate-900 dark:border-slate-800">
-                <div className="text-xs font-medium text-slate-500">Signals coverage snapshot</div>
-                <CoverageBar full />
-                <div className="mt-2 text-xs text-slate-500">Nationwide at launch.</div>
-              </div>
-            </div>
-
-            <div className="rounded-2xl border bg-gradient-to-br from-emerald-50 to-white p-6 dark:from-emerald-900/20 dark:to-slate-900 dark:border-slate-800">
-              <h4 className="text-sm font-semibold text-emerald-800">Quick stats</h4>
-              <div className="mt-3 grid gap-3">
-                <StatRow label="Avg time to first response" value="~8 min" />
-                <StatRow label="Average pro rating" value="4.8★" />
-                <StatRow label="Jobs completed after hire" value="97%" />
-                <StatRow label="Signals coverage" value="Nationwide" />
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
 
       {/* ===== Testimonials (scroll) ===== */}
       <section className="section">
@@ -254,7 +218,7 @@ export default function AboutPage(){
         </div>
         <h3 className="mt-2 text-xl font-semibold text-ink dark:text-white">We're here to help</h3>
         <p className="mt-1 text-sm text-slate-700 dark:text-slate-300">
-          Questions about a job, quotes, or Signals? Reach the team directly.
+          Questions about a job, quotes, or the platform? Reach the team directly.
         </p>
       </div>
 
@@ -518,7 +482,7 @@ function PeekStrip(){
           <div className="mt-2 h-2 w-20 rounded bg-slate-200" />
         </div>
         <div className="rounded-lg border border-slate-200 bg-white px-3 py-2 dark:bg-slate-900 dark:border-slate-800">
-          <div className="text-[11px] font-semibold text-slate-500">Signals</div>
+          <div className="text-[11px] font-semibold text-slate-500">Tracking</div>
           <div className="mt-1 h-2 w-24 rounded bg-slate-200" />
           <div className="mt-1 h-2 w-28 rounded bg-slate-200" />
           <div className="mt-2 h-4 w-full rounded bg-emerald-100 dark:bg-emerald-950/40" />
@@ -596,7 +560,7 @@ const PRO_STEPS = [
 ]
 
 const HOMEOWNER_FAQ = [
-  { q: 'What is Rushr?', a: 'Rushr is an emergency response platform that connects you with verified local professionals when you need help fast. We average a 4-minute response time and operate 24/7 for urgent situations like burst pipes, lockouts, electrical issues, and more.' },
+  { q: 'What is Rushr?', a: 'Rushr is an emergency response platform that connects you with verified local professionals when you need help fast. Most pros respond within minutes and we operate 24/7 for urgent situations like burst pipes, lockouts, electrical issues, and more.' },
   { q: 'How fast will I actually get help?', a: 'Most homeowners see their first response within minutes—many in under 60 seconds. Our pros receive instant push notifications when you post, so help is on the way almost immediately.' },
   { q: 'Is this really available 24/7?', a: 'Yes! We have verified professionals ready to respond to emergencies around the clock, including nights, weekends, and holidays. When you have a 2am burst pipe, we have pros ready to help.' },
   { q: 'What types of emergencies do you cover?', a: 'We handle urgent home situations like plumbing leaks, gas odors, electrical hazards, no heat or AC in extreme weather, lockouts, storm damage, and more. If it cannot wait, we are here to help.' },
@@ -624,7 +588,7 @@ const CONTRACTOR_FAQ = [
 ]
 
 const TESTIMONIALS = [
-  { id:'t1', quote:'We had three quotes within an hour and picked the winner that afternoon.', name:'Lindsey R.', role:'Homeowner • Austin, TX' },
-  { id:'t2', quote:'The instant alerts are the difference between being first or being too late.', name:'Marco D.', role:'HVAC Pro • Jersey City, NJ' },
-  { id:'t3', quote:'Clear scope templates saved us so much back and forth.', name:'Priya K.', role:'Homeowner • Seattle, WA' },
+  { id:'t1', quote:'Our basement was flooding at 11pm. I posted on Rushr and had a plumber on the way within 8 minutes. Absolutely saved us.', name:'Sarah M.', role:'Homeowner • Austin, TX' },
+  { id:'t2', quote:'I respond to emergencies immediately and Rushr gets me there first. These instant alerts have doubled my emergency calls.', name:'Marco D.', role:'HVAC Pro • Jersey City, NJ' },
+  { id:'t3', quote:'Burst pipe on Christmas Eve. Three pros responded in under 10 minutes with quotes. This is what emergency service should be.', name:'James K.', role:'Homeowner • Seattle, WA' },
 ]
