@@ -37,14 +37,14 @@ export default function EarlyAccessPage() {
       }
 
       // Check for duplicate email
-      const { data: existing, error: checkError } = await supabase
+      const { data: existing } = await supabase
         .from('pro_early_access_waitlist')
         .select('email')
         .eq('email', email.toLowerCase().trim())
-        .single()
+        .maybeSingle()
 
       if (existing) {
-        toast.error('This email is already registered for early access')
+        toast.error('You\'re already on the list! We\'ll notify you when we launch.')
         setLoading(false)
         return
       }
