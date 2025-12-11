@@ -7,6 +7,7 @@ import { useAuth } from '../../../contexts/AuthContext'
 import { supabase } from '../../../lib/supabaseClient'
 import QuickBidModal from '../../../components/QuickBidModal'
 import { Capacitor } from '@capacitor/core'
+import { safeBack } from '../../../lib/safeBack'
 import {
   ArrowLeft,
   MapPin,
@@ -374,12 +375,12 @@ export default function JobDetail() {
           className="relative z-50 flex-shrink-0"
           style={{
             background: 'linear-gradient(135deg, #10b981, #059669)',
-            paddingTop: 'env(safe-area-inset-top, 44px)'
+            paddingTop: 'max(env(safe-area-inset-top, 59px), 59px)'
           }}
         >
           <div className="flex items-center px-4 py-3">
             <button
-              onClick={() => router.back()}
+              onClick={() => safeBack(router, '/')}
               className="flex items-center text-white active:opacity-60"
               style={{ WebkitTapHighlightColor: 'transparent' }}
             >

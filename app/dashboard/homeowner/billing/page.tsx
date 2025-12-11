@@ -218,16 +218,24 @@ function BillingPageContent() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <div className="bg-white border-b border-gray-200 px-6 py-4">
-        <div className="max-w-4xl mx-auto">
-          <div className="flex items-center gap-4 mb-2">
-            <Link href="/dashboard/homeowner" className="btn btn-outline">
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Dashboard
+      <div
+        className="relative z-20"
+        style={{
+          background: 'linear-gradient(135deg, #10b981, #059669)',
+          paddingTop: 'env(safe-area-inset-top, 44px)'
+        }}
+      >
+        <div className="px-5 py-4">
+          <div className="flex items-center gap-3 mb-3">
+            <Link
+              href="/dashboard/homeowner"
+              className="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center"
+            >
+              <ArrowLeft className="h-5 w-5 text-white" />
             </Link>
+            <h1 className="text-xl font-semibold text-white">Billing & Payments</h1>
           </div>
-          <h1 className="text-2xl font-bold text-gray-900">Billing & Payment Methods</h1>
-          <p className="text-gray-600 mt-1">Manage your payment methods for hiring contractors</p>
+          <p className="text-white/80 text-sm">Manage your payment methods for hiring contractors</p>
         </div>
       </div>
 

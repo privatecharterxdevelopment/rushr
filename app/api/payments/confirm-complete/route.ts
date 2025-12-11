@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { notifyPaymentCompleted } from '../../../../lib/emailService'
+import { sendWorkCompletedSMSHomeowner, sendWorkCompletedSMSContractor } from '../../../../lib/smsService'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -161,19 +162,58 @@ export async function POST(request: NextRequest) {
           .eq('id', paymentHold.contractor_id)
           .single()
 
+        const contractorName = contractor?.business_name || contractor?.name || 'Contractor'
+
+        // Send email notifications
         if (homeownerAuth?.user?.email && contractorAuth?.user?.email && job && homeowner && contractor) {
           await notifyPaymentCompleted({
             homeownerEmail: homeownerAuth.user.email,
             homeownerName: homeowner.name,
             contractorEmail: contractorAuth.user.email,
-            contractorName: contractor.business_name || contractor.name || 'Contractor',
+            contractorName: contractorName,
             jobTitle: job.title,
             amount: parseFloat(updated.contractor_payout)
           })
         }
+
+        // Send SMS notifications
+        if (homeowner && job) {
+          // Get phone numbers
+          const { data: homeownerProfile } = await supabase
+            .from('user_profiles')
+            .select('phone')
+            .eq('id', paymentHold.homeowner_id)
+            .single()
+
+          const { data: contractorProfile } = await supabase
+            .from('pro_contractors')
+            .select('phone')
+            .eq('id', paymentHold.contractor_id)
+            .single()
+
+          // SMS to homeowner
+          if (homeownerProfile?.phone) {
+            await sendWorkCompletedSMSHomeowner({
+              homeownerPhone: homeownerProfile.phone,
+              homeownerName: homeowner.name,
+              contractorName: contractorName,
+              jobTitle: job.title
+            })
+          }
+
+          // SMS to contractor
+          if (contractorProfile?.phone) {
+            await sendWorkCompletedSMSContractor({
+              contractorPhone: contractorProfile.phone,
+              contractorName: contractorName,
+              jobTitle: job.title,
+              homeownerName: homeowner.name
+            })
+          }
+        }
       } catch (emailError) {
-        console.error('Failed to send payment completion email:', emailError)
-        // Don't fail the request if email fails
+        console.error('Failed to send payment completion notifications:', emailError)
+        // Don't fail the request if notifications fail
       }
     }
 

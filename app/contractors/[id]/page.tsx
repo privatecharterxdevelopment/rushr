@@ -22,6 +22,7 @@ import {
   Calendar,
   MessageSquare
 } from 'lucide-react'
+import { safeBack } from '../../../lib/safeBack'
 
 interface ContractorProfile {
   id: string
@@ -146,7 +147,7 @@ export default function ContractorProfilePage() {
             <Link href="/find-pro" className="block w-full bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition-colors font-medium">
               Find Other Contractors
             </Link>
-            <button onClick={() => router.back()} className="block w-full bg-slate-100 text-slate-700 px-6 py-3 rounded-lg hover:bg-slate-200 transition-colors font-medium">
+            <button onClick={() => safeBack(router, '/find-pro')} className="block w-full bg-slate-100 text-slate-700 px-6 py-3 rounded-lg hover:bg-slate-200 transition-colors font-medium">
               Go Back
             </button>
           </div>

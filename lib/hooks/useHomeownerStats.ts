@@ -30,6 +30,7 @@ export interface HomeownerJob {
   updated_at: string
   requested_contractor_id?: string | null
   requested_contractor_name?: string | null
+  bids_count?: number
 }
 
 export function useHomeownerStats() {

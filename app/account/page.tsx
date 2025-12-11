@@ -68,16 +68,24 @@ function AccountPage(){
   const { toast, InlineBanner } = useToastSafe()
   const [tab, setTab] = useState<TabKey>('profile')
 
-  // Restore last tab
+  // Restore last tab or use URL param
   useEffect(()=>{
+    // Check URL params first (for iOS app deep linking)
+    const urlParams = new URLSearchParams(window.location.search)
+    const urlTab = urlParams.get('tab') as TabKey | null
+    if (urlTab && TABS.some(t=>t.key === urlTab)) {
+      setTab(urlTab)
+      return
+    }
+    // Fallback to localStorage
     const saved = localStorage.getItem('accountTab') as TabKey | null
     if (saved && TABS.some(t=>t.key === saved)) setTab(saved)
   },[])
   useEffect(()=>{ localStorage.setItem('accountTab', tab) },[tab])
 
   // normalize role to UI enums we use here
-  const roleUpper = ((state.user.role || 'homeowner').toString().toUpperCase()) as 'HOMEOWNER'|'CONTRACTOR'
-  const name = state.user.name || 'User'
+  const roleUpper = ((state?.user?.role || 'homeowner').toString().toUpperCase()) as 'HOMEOWNER'|'CONTRACTOR'
+  const name = state?.user?.name || 'User'
 
   // Tablist a11y
   const navRef = useRef<HTMLUListElement>(null)

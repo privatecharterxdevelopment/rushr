@@ -11,7 +11,7 @@ const config: CapacitorConfig = {
     cleartext: true
   },
   ios: {
-    contentInset: 'automatic',
+    contentInset: 'never', // Allow content to draw behind status bar for fullscreen map
     scheme: 'Rushr',
     backgroundColor: '#ffffff'
   }

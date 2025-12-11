@@ -44,11 +44,7 @@ export default function DashboardChooser() {
   }, [user, userProfile, contractorProfile, loading, router])
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <LoadingSpinner size="lg" text="Loading dashboard..." />
-      </div>
-    )
+    return <LoadingSpinner size="lg" text="Loading dashboard..." />
   }
 
   if (!user) {

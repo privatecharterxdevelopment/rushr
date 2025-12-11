@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import Stripe from 'stripe'
+import { notifyPaymentCompleted } from '../../../../lib/emailService'
+import { sendPaymentCompletedSMSHomeowner, sendPaymentCompletedSMSContractor } from '../../../../lib/smsService'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -95,6 +97,72 @@ export async function POST(request: NextRequest) {
       job_id: paymentHold.job_id,
       bid_id: paymentHold.bid_id
     })
+
+    // 6. Send email & SMS notifications to both parties (non-blocking)
+    try {
+      const { data: job } = await supabase
+        .from('homeowner_jobs')
+        .select('title')
+        .eq('id', paymentHold.job_id)
+        .single()
+
+      const { data: homeownerAuth } = await supabase.auth.admin.getUserById(paymentHold.homeowner_id)
+      const { data: contractorAuth } = await supabase.auth.admin.getUserById(paymentHold.contractor_id)
+
+      const { data: homeowner } = await supabase
+        .from('user_profiles')
+        .select('name, phone')
+        .eq('id', paymentHold.homeowner_id)
+        .single()
+
+      const { data: contractor } = await supabase
+        .from('pro_contractors')
+        .select('name, business_name, phone')
+        .eq('id', paymentHold.contractor_id)
+        .single()
+
+      const contractorName = contractor?.business_name || contractor?.name || 'Contractor'
+      const homeownerName = homeowner?.name || 'Homeowner'
+      const jobTitle = job?.title || 'Job'
+      const amount = parseFloat(paymentHold.amount)
+
+      // Send email notifications
+      if (homeownerAuth?.user?.email && contractorAuth?.user?.email && job && homeowner && contractor) {
+        await notifyPaymentCompleted({
+          homeownerEmail: homeownerAuth.user.email,
+          homeownerName: homeownerName,
+          contractorEmail: contractorAuth.user.email,
+          contractorName: contractorName,
+          jobTitle: jobTitle,
+          amount: amount
+        })
+      }
+
+      // Send SMS to homeowner
+      if (homeowner?.phone) {
+        await sendPaymentCompletedSMSHomeowner({
+          homeownerPhone: homeowner.phone,
+          homeownerName: homeownerName,
+          jobTitle: jobTitle,
+          amount: amount,
+          contractorName: contractorName
+        })
+      }
+
+      // Send SMS to contractor
+      if (contractor?.phone) {
+        await sendPaymentCompletedSMSContractor({
+          contractorPhone: contractor.phone,
+          contractorName: contractorName,
+          jobTitle: jobTitle,
+          amount: amount,
+          homeownerName: homeownerName
+        })
+      }
+    } catch (notificationError) {
+      console.error('Failed to send payment notifications:', notificationError)
+      // Don't fail the request if notifications fail
+    }
 
     return NextResponse.json({
       success: true,

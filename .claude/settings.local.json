@@ -13,7 +13,10 @@
       "Bash(tasklist:*)",
       "Bash(taskkill:*)",
       "Bash(open \"http://localhost:3001/pro/early-access\")",
-      "Bash(open \"http://localhost:3001\")"
+      "Bash(open \"http://localhost:3001\")",
+      "Bash(cd:*)",
+      "Bash(npx tsc:*)",
+      "Bash(curl:*)"
     ],
     "deny": [],
     "ask": []
