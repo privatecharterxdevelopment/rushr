@@ -50,6 +50,10 @@ export default function JobSuccessPage() {
 
   const isNative = typeof window !== 'undefined' && Capacitor.isNativePlatform()
 
+  // For native iOS, navigate to root which shows the native homeowner view
+  // For web, navigate to the web dashboard
+  const dashboardPath = isNative ? '/' : '/dashboard/homeowner'
+
   // Timer for waiting animation
   useEffect(() => {
     const timer = setInterval(() => {
@@ -190,12 +194,12 @@ export default function JobSuccessPage() {
         >
           <div className="flex items-center px-4 py-3">
             <button
-              onClick={() => router.push('/dashboard/homeowner')}
+              onClick={() => router.push(dashboardPath)}
               className="flex items-center text-white active:opacity-60"
               style={{ WebkitTapHighlightColor: 'transparent' }}
             >
               <ChevronLeft className="w-6 h-6" />
-              <span className="ml-1 font-medium">Dashboard</span>
+              <span className="ml-1 font-medium">Home</span>
             </button>
             <h1 className="flex-1 text-center text-white font-semibold text-lg pr-12">
               Job Submitted
@@ -345,7 +349,7 @@ export default function JobSuccessPage() {
             )}
 
             <Link
-              href="/dashboard/homeowner"
+              href={dashboardPath}
               className="w-full btn btn-outline flex items-center justify-center gap-2 py-4"
             >
               <Bell className="h-5 w-5" />
