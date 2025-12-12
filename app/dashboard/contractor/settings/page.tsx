@@ -5,6 +5,8 @@ import Link from 'next/link'
 import { useProAuth } from '../../../../contexts/ProAuthContext'
 import { useRouter } from 'next/navigation'
 import { supabase } from '../../../../lib/supabaseClient'
+import { Capacitor } from '@capacitor/core'
+import { safeBack } from '../../../../lib/safeBack'
 import {
   User,
   Mail,
@@ -25,6 +27,15 @@ import {
   Briefcase,
   LogOut
 } from 'lucide-react'
+
+// Hook to safely check if running in native app (avoids hydration mismatch)
+function useIsNative() {
+  const [isNative, setIsNative] = useState(false)
+  useEffect(() => {
+    setIsNative(Capacitor.isNativePlatform())
+  }, [])
+  return isNative
+}
 
 interface ContractorProfileData {
   name: string
@@ -62,6 +73,7 @@ const stateOptions = [
 export default function ContractorSettingsPage() {
   const { user, contractorProfile, refreshProfile, signOut } = useProAuth()
   const router = useRouter()
+  const isNative = useIsNative()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
@@ -206,28 +218,67 @@ export default function ContractorSettingsPage() {
     }
   }
 
-  return (
-    <div className="max-w-4xl mx-auto px-4 py-6">
-      {/* Header */}
-      <div className="mb-6">
-        <Link
-          href="/dashboard/contractor"
-          className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-800 mb-4"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Back to Dashboard
-        </Link>
+  // For native iOS, navigate back to root which shows native contractor view
+  const backPath = isNative ? '/' : '/dashboard/contractor'
 
-        <div className="flex items-center gap-3 mb-6">
-          <div className="p-3 rounded-xl bg-blue-100">
-            <Settings className="h-6 w-6 text-blue-600" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Contractor Settings</h1>
-            <p className="text-gray-600">Manage your business profile and service settings</p>
+  return (
+    <div
+      className="min-h-screen bg-gray-50"
+      style={{
+        paddingTop: isNative ? 'env(safe-area-inset-top)' : undefined,
+        paddingBottom: isNative ? 'calc(80px + env(safe-area-inset-bottom))' : undefined
+      }}
+    >
+      {/* iOS Native Header - Blue theme for contractor */}
+      {isNative && (
+        <div
+          className="sticky top-0 z-50"
+          style={{
+            background: 'linear-gradient(135deg, #3b82f6, #2563eb)',
+            paddingTop: 'max(env(safe-area-inset-top, 59px), 59px)'
+          }}
+        >
+          <div className="flex items-center px-4 py-3">
+            <button
+              onClick={() => safeBack(router, backPath)}
+              className="flex items-center text-white active:opacity-60"
+              style={{ WebkitTapHighlightColor: 'transparent' }}
+            >
+              <ArrowLeft className="w-6 h-6" />
+              <span className="ml-1 font-medium">Back</span>
+            </button>
+            <h1 className="flex-1 text-center text-white font-semibold text-lg pr-12">
+              Settings
+            </h1>
           </div>
         </div>
-      </div>
+      )}
+
+      {/* Web Header */}
+      {!isNative && (
+        <div
+          className="relative z-20"
+          style={{
+            background: 'linear-gradient(135deg, #3b82f6, #2563eb)'
+          }}
+        >
+          <div className="px-5 py-4">
+            <div className="flex items-center gap-3 mb-3">
+              <Link
+                href="/dashboard/contractor"
+                className="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center"
+              >
+                <ArrowLeft className="h-5 w-5 text-white" />
+              </Link>
+              <h1 className="text-xl font-semibold text-white">Contractor Settings</h1>
+            </div>
+            <p className="text-white/80 text-sm">Manage your business profile and service settings</p>
+          </div>
+        </div>
+      )}
+
+      {/* Content */}
+      <div className="max-w-4xl mx-auto px-4 py-6">
 
       {/* Status Messages */}
       {error && (
@@ -545,6 +596,7 @@ export default function ContractorSettingsPage() {
             {loading ? 'Saving...' : 'Save Settings'}
           </button>
         </div>
+      </div>
       </div>
     </div>
   )

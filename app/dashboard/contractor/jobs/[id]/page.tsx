@@ -4,10 +4,21 @@ import React, { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { useProAuth } from '../../../../../contexts/ProAuthContext'
 import { supabase } from '../../../../../lib/supabaseClient'
+import { Capacitor } from '@capacitor/core'
+import { safeBack } from '../../../../../lib/safeBack'
 import dynamic from 'next/dynamic'
 import LoadingSpinner from '../../../../../components/LoadingSpinner'
 import { ArrowLeft, MapPin, Clock, DollarSign, User, Phone, Mail, Navigation, CheckCircle, Send, MessageSquare, AlertCircle } from 'lucide-react'
 import Link from 'next/link'
+
+// Hook to safely check if running in native app (avoids hydration mismatch)
+function useIsNative() {
+  const [isNative, setIsNative] = useState(false)
+  useEffect(() => {
+    setIsNative(Capacitor.isNativePlatform())
+  }, [])
+  return isNative
+}
 
 // Dynamic imports
 const JobChat = dynamic(() => import('../../../../../components/JobChat'), { ssr: false })
@@ -16,6 +27,7 @@ const ContractorNavigationMap = dynamic(() => import('../../../../../components/
 export default function ContractorJobDetailsPage() {
   const params = useParams()
   const router = useRouter()
+  const isNative = useIsNative()
   const { user, contractorProfile } = useProAuth()
   const [job, setJob] = useState<any>(null)
   const [homeowner, setHomeowner] = useState<any>(null)
@@ -226,16 +238,66 @@ export default function ContractorJobDetailsPage() {
   const showChat = isJobActive && homeowner
   const showNavigation = isJobActive && job.latitude && job.longitude
 
+  // For native iOS, navigate back to root which shows native contractor view
+  const backPath = isNative ? '/' : '/dashboard/contractor'
+
   return (
-    <div className="container-max py-8 space-y-6">
-      {/* Back Button */}
-      <Link
-        href="/dashboard/contractor"
-        className="inline-flex items-center gap-2 text-slate-600 hover:text-slate-900 transition-colors"
-      >
-        <ArrowLeft className="w-4 h-4" />
-        Back to Dashboard
-      </Link>
+    <div
+      className="min-h-screen bg-gray-50"
+      style={{
+        paddingTop: isNative ? 'env(safe-area-inset-top)' : undefined,
+        paddingBottom: isNative ? 'calc(80px + env(safe-area-inset-bottom))' : undefined
+      }}
+    >
+      {/* iOS Native Header - Blue theme for contractor */}
+      {isNative && (
+        <div
+          className="sticky top-0 z-50"
+          style={{
+            background: 'linear-gradient(135deg, #3b82f6, #2563eb)',
+            paddingTop: 'max(env(safe-area-inset-top, 59px), 59px)'
+          }}
+        >
+          <div className="flex items-center px-4 py-3">
+            <button
+              onClick={() => safeBack(router, backPath)}
+              className="flex items-center text-white active:opacity-60"
+              style={{ WebkitTapHighlightColor: 'transparent' }}
+            >
+              <ArrowLeft className="w-6 h-6" />
+              <span className="ml-1 font-medium">Back</span>
+            </button>
+            <h1 className="flex-1 text-center text-white font-semibold text-lg pr-12">
+              Job Details
+            </h1>
+          </div>
+        </div>
+      )}
+
+      {/* Web Header */}
+      {!isNative && (
+        <div
+          className="relative z-20"
+          style={{
+            background: 'linear-gradient(135deg, #3b82f6, #2563eb)'
+          }}
+        >
+          <div className="px-5 py-4">
+            <div className="flex items-center gap-3">
+              <Link
+                href="/dashboard/contractor"
+                className="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center"
+              >
+                <ArrowLeft className="h-5 w-5 text-white" />
+              </Link>
+              <h1 className="text-xl font-semibold text-white">Job Details</h1>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Content */}
+      <div className="container-max py-8 space-y-6 px-4">
 
       {/* Job Header */}
       <div className="bg-white rounded-lg border border-slate-200 p-6">
@@ -583,6 +645,7 @@ export default function ContractorJobDetailsPage() {
           </div>
         </div>
       )}
+      </div>
     </div>
   )
 }

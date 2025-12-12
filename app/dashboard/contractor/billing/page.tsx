@@ -2,8 +2,11 @@
 
 import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { useProAuth } from '../../../../contexts/ProAuthContext'
 import { supabase } from '../../../../lib/supabaseClient'
+import { Capacitor } from '@capacitor/core'
+import { safeBack } from '../../../../lib/safeBack'
 import LoadingSpinner from '../../../../components/LoadingSpinner'
 import {
   ArrowLeft,
@@ -22,6 +25,15 @@ import {
   Wallet
 } from 'lucide-react'
 
+// Hook to safely check if running in native app (avoids hydration mismatch)
+function useIsNative() {
+  const [isNative, setIsNative] = useState(false)
+  useEffect(() => {
+    setIsNative(Capacitor.isNativePlatform())
+  }, [])
+  return isNative
+}
+
 interface Transaction {
   id: string
   job_id: string
@@ -35,6 +47,8 @@ interface Transaction {
 
 export default function ContractorBillingPage() {
   const { user, contractorProfile } = useProAuth()
+  const router = useRouter()
+  const isNative = useIsNative()
   const [loading, setLoading] = useState(true)
   const [stripeConnectStatus, setStripeConnectStatus] = useState<any>(null)
   const [transactions, setTransactions] = useState<Transaction[]>([])
@@ -148,23 +162,67 @@ export default function ContractorBillingPage() {
     )
   }
 
+  // For native iOS, navigate back to root which shows native contractor view
+  const backPath = isNative ? '/' : '/dashboard/contractor'
+
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Link
-            href="/dashboard/contractor"
-            className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
-          >
-            <ArrowLeft className="h-5 w-5 text-slate-600" />
-          </Link>
-          <div>
-            <h1 className="text-2xl font-bold text-slate-900">Billing & Payments</h1>
-            <p className="text-sm text-slate-600 mt-1">Manage your Stripe account and view transaction history</p>
+    <div
+      className="min-h-screen bg-gray-50"
+      style={{
+        paddingTop: isNative ? 'env(safe-area-inset-top)' : undefined,
+        paddingBottom: isNative ? 'calc(80px + env(safe-area-inset-bottom))' : undefined
+      }}
+    >
+      {/* iOS Native Header - Blue theme for contractor */}
+      {isNative && (
+        <div
+          className="sticky top-0 z-50"
+          style={{
+            background: 'linear-gradient(135deg, #3b82f6, #2563eb)',
+            paddingTop: 'max(env(safe-area-inset-top, 59px), 59px)'
+          }}
+        >
+          <div className="flex items-center px-4 py-3">
+            <button
+              onClick={() => safeBack(router, backPath)}
+              className="flex items-center text-white active:opacity-60"
+              style={{ WebkitTapHighlightColor: 'transparent' }}
+            >
+              <ArrowLeft className="w-6 h-6" />
+              <span className="ml-1 font-medium">Back</span>
+            </button>
+            <h1 className="flex-1 text-center text-white font-semibold text-lg pr-12">
+              Billing & Payments
+            </h1>
           </div>
         </div>
-      </div>
+      )}
+
+      {/* Web Header */}
+      {!isNative && (
+        <div
+          className="relative z-20"
+          style={{
+            background: 'linear-gradient(135deg, #3b82f6, #2563eb)'
+          }}
+        >
+          <div className="px-5 py-4">
+            <div className="flex items-center gap-3 mb-3">
+              <Link
+                href="/dashboard/contractor"
+                className="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center"
+              >
+                <ArrowLeft className="h-5 w-5 text-white" />
+              </Link>
+              <h1 className="text-xl font-semibold text-white">Billing & Payments</h1>
+            </div>
+            <p className="text-white/80 text-sm">Manage your Stripe account and view transaction history</p>
+          </div>
+        </div>
+      )}
+
+      {/* Content */}
+      <div className="max-w-4xl mx-auto px-4 py-6 space-y-6">
 
       {/* Stripe Connect Status */}
       <div className="bg-white rounded-2xl border border-blue-200 p-6 shadow-sm">
@@ -378,6 +436,7 @@ export default function ContractorBillingPage() {
             <span>You can update your bank account information in your Stripe dashboard</span>
           </li>
         </ul>
+      </div>
       </div>
     </div>
   )
