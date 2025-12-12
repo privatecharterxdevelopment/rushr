@@ -9,6 +9,7 @@ import { useProAuth, ContractorProfile } from '../contexts/ProAuthContext'
 import { supabase } from '../lib/supabaseClient'
 import IOSContractorRegistration from './IOSContractorRegistration'
 import IOSContractorTabBar, { ContractorTabId } from './IOSContractorTabBar'
+import { showGlobalToast } from './Toast'
 import { Haptics, ImpactStyle, NotificationType } from '@capacitor/haptics'
 import { StatusBar, Style } from '@capacitor/status-bar'
 import { App } from '@capacitor/app'
@@ -267,27 +268,8 @@ function VerificationBanner({ contractorProfile, stripeConnectStatus, loadingStr
     )
   }
 
-  // 4. Fully Verified - Green banner
-  if (kycStatus === 'completed' && status === 'approved' && stripeConnectStatus?.payoutsEnabled) {
-    return (
-      <div className="mx-4 mb-4 p-4 bg-emerald-50 rounded-2xl border border-emerald-200">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-emerald-100 rounded-full flex items-center justify-center flex-shrink-0">
-            <svg className="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-          </div>
-          <div className="flex-1">
-            <h3 className="text-[16px] font-semibold text-emerald-900">Verified & Ready!</h3>
-            <p className="text-[13px] text-emerald-700">
-              You're all set to receive and accept jobs.
-            </p>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
+  // 4. Fully Verified - No banner needed, contractor can use the app normally
+  // The banner disappears once verified so they can focus on jobs
   return null
 }
 
@@ -1163,6 +1145,69 @@ export default function IOSContractorHomeView({ onSwitchToHomeowner }: Props) {
     }
 
     checkStripeStatus()
+  }, [user])
+
+  // Subscribe to contractor profile changes (for admin approval notifications)
+  useEffect(() => {
+    if (!user) return
+
+    const channel = supabase
+      .channel('contractor-profile-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'pro_contractors',
+          filter: `id=eq.${user.id}`
+        },
+        async (payload) => {
+          console.log('Contractor profile updated:', payload)
+          // Refresh the profile to get latest status
+          await refreshProfile()
+
+          // Check if status changed to approved
+          const newStatus = payload.new?.status
+          const oldStatus = payload.old?.status
+          if (newStatus === 'approved' && oldStatus !== 'approved') {
+            // Show success haptic and toast notification
+            await triggerNotification(NotificationType.Success)
+            showGlobalToast('Your account has been approved! You can now accept jobs.', 'success', 5000)
+          }
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [user, refreshProfile])
+
+  // Subscribe to notifications for this contractor
+  useEffect(() => {
+    if (!user) return
+
+    const channel = supabase
+      .channel('contractor-notifications')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'notifications',
+          filter: `user_id=eq.${user.id}`
+        },
+        async (payload) => {
+          console.log('New notification:', payload)
+          // Trigger haptic feedback for new notification
+          await triggerNotification(NotificationType.Success)
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
   }, [user])
 
   // Handle Stripe Connect setup
