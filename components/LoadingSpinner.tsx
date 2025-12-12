@@ -9,7 +9,37 @@ interface LoadingSpinnerProps {
   color?: 'blue' | 'emerald'
 }
 
-// iOS Native Loading Component - Static R logo with circular spinner
+// Animated logo URL - consistent across the app
+const LOADING_LOGO_URL = 'https://jtrxdcccswdwlritgstp.supabase.co/storage/v1/object/public/contractor-logos/RushrLogoAnimation.gif'
+
+// Universal Full-Screen Loading Component - Pure white background with animated logo
+// Matches the iOS native splash screen exactly - no safe area padding to avoid colored gaps
+export function FullScreenLoading() {
+  return (
+    <div
+      style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundColor: '#FFFFFF',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 9999
+      }}
+    >
+      <img
+        src={LOADING_LOGO_URL}
+        alt="Loading..."
+        style={{ width: 64, height: 64, objectFit: 'contain' }}
+      />
+    </div>
+  )
+}
+
+// iOS Native Loading Component - Static R logo with circular spinner (legacy, kept for compatibility)
 function IOSNativeLoader({ size = 'lg' }: { size?: 'sm' | 'md' | 'lg' | 'xl' }) {
   const containerSizes = {
     sm: 'w-16 h-16',

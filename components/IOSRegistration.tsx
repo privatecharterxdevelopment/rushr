@@ -17,7 +17,11 @@ const triggerNotification = async (type: NotificationType) => {
   try { await Haptics.notification({ type }) } catch (e) {}
 }
 
-export default function IOSRegistration() {
+interface Props {
+  onSwitchToContractor?: () => void
+}
+
+export default function IOSRegistration({ onSwitchToContractor }: Props) {
   const { signIn, signUp } = useAuth()
 
   const [screen, setScreen] = useState<Screen>('splash')
@@ -178,6 +182,16 @@ export default function IOSRegistration() {
           >
             I already have an account
           </button>
+
+          {/* Switch to Contractor */}
+          {onSwitchToContractor && (
+            <button
+              onClick={onSwitchToContractor}
+              className="w-full text-center text-gray-500 text-sm mt-4 py-2"
+            >
+              Are you a pro? <span className="text-emerald-600 font-medium">Join as contractor</span>
+            </button>
+          )}
         </div>
       </div>
     )
@@ -206,11 +220,11 @@ export default function IOSRegistration() {
         <div
           className="flex-1 overflow-y-auto"
           style={{
-            paddingTop: 'calc(env(safe-area-inset-top, 44px) + 60px)',
+            paddingTop: 'calc(env(safe-area-inset-top, 44px) + 80px)',
             paddingBottom: 'calc(env(safe-area-inset-bottom, 20px) + 100px)'
           }}
         >
-          <div className="px-6">
+          <div className="px-6 pt-6">
             {/* Title */}
             <h1 className="text-[28px] font-bold text-gray-900 mb-2">Welcome back</h1>
             <p className="text-gray-500 text-[15px] mb-8">Sign in to continue</p>
@@ -299,11 +313,11 @@ export default function IOSRegistration() {
         <div
           className="flex-1 overflow-y-auto"
           style={{
-            paddingTop: 'calc(env(safe-area-inset-top, 44px) + 60px)',
+            paddingTop: 'calc(env(safe-area-inset-top, 44px) + 80px)',
             paddingBottom: 'calc(env(safe-area-inset-bottom, 20px) + 100px)'
           }}
         >
-          <div className="px-6">
+          <div className="px-6 pt-6">
             {/* Title */}
             <h1 className="text-[28px] font-bold text-gray-900 mb-2">Create account</h1>
             <p className="text-gray-500 text-[15px] mb-8">Get started in seconds</p>

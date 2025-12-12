@@ -16,6 +16,7 @@ import IOSTabBar, { TabId } from './IOSTabBar'
 import { Haptics, ImpactStyle } from '@capacitor/haptics'
 import { StatusBar, Style } from '@capacitor/status-bar'
 import { Keyboard } from '@capacitor/keyboard'
+import { App } from '@capacitor/app'
 import { getCurrentLocation as getNativeLocation, isNativePlatform } from '../lib/nativeLocation'
 import type { FindProMapboxHandle } from './FindProMapbox'
 import PaymentModal from './PaymentModal'
@@ -633,12 +634,26 @@ function HomeTab({ center, setCenter, filtered, fetchingLocation, setFetchingLoc
     setCurrentTranslate(0)
   }
 
-  // Get only the most recent pending job for HomeTab
-  // Once a job is confirmed/in_progress/completed, it moves to Jobs tab
-  const mostRecentPendingJob = useMemo(() => {
+  // Get the most relevant active job for HomeTab
+  // Priority: in_progress > confirmed > pending
+  // Only completed jobs are excluded from HomeTab
+  const activeJobForHome = useMemo(() => {
+    // First check for in_progress jobs (contractor on the way)
+    const inProgressJobs = jobs.filter(j => j.status === 'in_progress' || j.status === 'confirmed')
+    if (inProgressJobs.length > 0) return inProgressJobs[0]
+
+    // Then check for pending jobs (waiting for bids)
     const pendingJobs = jobs.filter(j => j.status === 'pending')
-    return pendingJobs.length > 0 ? pendingJobs[0] : null
+    if (pendingJobs.length > 0) return pendingJobs[0]
+
+    return null
   }, [jobs])
+
+  // Legacy alias for backward compatibility
+  const mostRecentPendingJob = activeJobForHome?.status === 'pending' ? activeJobForHome : null
+
+  // Check if we have an in-progress job to show tracking
+  const inProgressJob = activeJobForHome?.status === 'in_progress' || activeJobForHome?.status === 'confirmed' ? activeJobForHome : null
 
   const handleBookPro = async () => {
     await triggerHaptic(ImpactStyle.Medium)
@@ -1102,7 +1117,7 @@ function HomeTab({ center, setCenter, filtered, fetchingLocation, setFetchingLoc
           </button>
         </div>
 
-        {/* Single Pending Job with Live Bids */}
+        {/* Job State Content */}
         <div className="px-4 pb-4">
           {jobsLoading ? (
             // Loading skeleton
@@ -1115,8 +1130,65 @@ function HomeTab({ center, setCenter, filtered, fetchingLocation, setFetchingLoc
                 </div>
               </div>
             </div>
+          ) : inProgressJob ? (
+            // In-progress job - Contractor tracking view
+            <div className="bg-gradient-to-br from-emerald-50 to-emerald-100 rounded-2xl p-4 border border-emerald-200">
+              {/* Status Header */}
+              <div className="flex items-center gap-2 mb-4">
+                <div className="w-3 h-3 rounded-full bg-emerald-500 animate-pulse" />
+                <span className="text-emerald-700 font-semibold text-[15px]">Contractor On The Way</span>
+              </div>
+
+              {/* Contractor Info */}
+              <div className="flex items-center gap-4 mb-4">
+                <div className="w-16 h-16 rounded-full bg-emerald-200 flex items-center justify-center">
+                  <span className="text-emerald-700 font-bold text-2xl">
+                    {(inProgressJob.contractor_name || 'C')[0].toUpperCase()}
+                  </span>
+                </div>
+                <div className="flex-1">
+                  <p className="text-gray-900 font-semibold text-[17px]">{inProgressJob.contractor_name || 'Contractor'}</p>
+                  <p className="text-gray-600 text-[13px]">{inProgressJob.title}</p>
+                </div>
+              </div>
+
+              {/* ETA Display */}
+              <div className="bg-white rounded-xl p-4 mb-4 flex items-center justify-between">
+                <div>
+                  <p className="text-gray-500 text-[12px] uppercase tracking-wide">Estimated Arrival</p>
+                  <p className="text-gray-900 font-bold text-[24px]">
+                    {inProgressJob.eta_minutes ? `${inProgressJob.eta_minutes} min` : 'Calculating...'}
+                  </p>
+                </div>
+                <div className="w-12 h-12 rounded-full bg-emerald-100 flex items-center justify-center">
+                  <svg className="w-6 h-6 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-3">
+                <button
+                  onClick={() => router.push(`/jobs/${inProgressJob.id}`)}
+                  className="flex-1 py-3 rounded-xl font-semibold text-[15px] text-white active:scale-95 transition-transform"
+                  style={{ background: 'linear-gradient(135deg, #10b981, #059669)' }}
+                >
+                  View Details
+                </button>
+                <button
+                  onClick={() => router.push(`/messages/${inProgressJob.contractor_id}`)}
+                  className="w-14 h-12 rounded-xl bg-white border border-gray-200 flex items-center justify-center active:scale-95 transition-transform"
+                >
+                  <svg className="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                  </svg>
+                </button>
+              </div>
+            </div>
           ) : !mostRecentPendingJob ? (
-            // Empty state - no pending jobs
+            // Empty state - no active jobs, show Post a Job
             <div className="text-center py-8">
               <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
                 <svg className="w-8 h-8 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -2116,9 +2188,24 @@ function ProfileTab({
           }}
         >
           <div className="flex items-center gap-3 px-4 py-4">
-            <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center">
-              <span className="text-white font-bold text-lg">{firstName?.[0]?.toUpperCase() || 'U'}</span>
-            </div>
+            {/* Avatar - Tappable to change */}
+            <button
+              onClick={() => handleNavigation('/profile/avatar')}
+              className="relative w-12 h-12 rounded-full bg-white/20 flex items-center justify-center overflow-hidden active:scale-95 transition-transform"
+            >
+              {userProfile?.avatar_url ? (
+                <img src={userProfile.avatar_url} alt="Profile" className="w-full h-full object-cover" />
+              ) : (
+                <span className="text-white font-bold text-lg">{firstName?.[0]?.toUpperCase() || 'U'}</span>
+              )}
+              {/* Camera icon overlay */}
+              <div className="absolute bottom-0 right-0 w-4 h-4 bg-white rounded-full flex items-center justify-center shadow-sm">
+                <svg className="w-2.5 h-2.5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+              </div>
+            </button>
             <div className="flex-1">
               <p className="text-white font-semibold text-[16px]">{firstName || 'User'}</p>
               <p className="text-white/70 text-[13px]">{email}</p>
@@ -2177,14 +2264,24 @@ function ProfileTab({
         }}
       >
         <div className="flex items-center gap-3 px-4 py-4">
-          {/* Avatar */}
-          <div className="w-14 h-14 rounded-full bg-white/20 flex items-center justify-center overflow-hidden">
+          {/* Avatar - Tappable to change */}
+          <button
+            onClick={() => handleNavigation('/profile/avatar')}
+            className="relative w-14 h-14 rounded-full bg-white/20 flex items-center justify-center overflow-hidden active:scale-95 transition-transform"
+          >
             {userProfile?.avatar_url ? (
               <img src={userProfile.avatar_url} alt="Profile" className="w-full h-full object-cover" />
             ) : (
               <span className="text-white font-bold text-xl">{firstName?.[0]?.toUpperCase() || 'U'}</span>
             )}
-          </div>
+            {/* Camera icon overlay */}
+            <div className="absolute bottom-0 right-0 w-5 h-5 bg-white rounded-full flex items-center justify-center shadow-sm">
+              <svg className="w-3 h-3 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+            </div>
+          </button>
           {/* User Info */}
           <div className="flex-1">
             <p className="text-white font-semibold text-[17px]">Welcome, {firstName || 'User'}</p>
@@ -2577,7 +2674,11 @@ function ProfileTab({
   )
 }
 
-export default function IOSHomeView() {
+interface IOSHomeViewProps {
+  onSwitchToContractor?: () => void
+}
+
+export default function IOSHomeView({ onSwitchToContractor }: IOSHomeViewProps = {}) {
   const { state } = useApp()
   const { user, userProfile, loading: authLoading, signOut } = useAuth()
   const allContractors: any[] = Array.isArray((state as any)?.contractors)
@@ -2626,6 +2727,14 @@ export default function IOSHomeView() {
         })
       } catch (e) {
         // Keyboard plugin not available
+      }
+
+      try {
+        // Reset to home tab when app launches fresh (cold start)
+        // This ensures the app always opens to the Home tab
+        setActiveTab('home')
+      } catch (e) {
+        // App plugin not available
       }
     }
 
@@ -2843,7 +2952,7 @@ export default function IOSHomeView() {
 
   // Show registration/login screen if not authenticated
   if (!authLoading && !user) {
-    return <IOSRegistration />
+    return <IOSRegistration onSwitchToContractor={onSwitchToContractor} />
   }
 
   // Loading state with animated logo

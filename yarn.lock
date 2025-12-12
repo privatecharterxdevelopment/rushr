@@ -607,6 +607,11 @@
     "@babel/helper-string-parser" "^7.27.1"
     "@babel/helper-validator-identifier" "^7.28.5"
 
+"@capacitor/app@^7.1.1":
+  version "7.1.1"
+  resolved "https://registry.npmjs.org/@capacitor/app/-/app-7.1.1.tgz"
+  integrity sha512-H4rmMXlL6GEDs2Yds5JvYqZxz4mdp7R4XdGJ7p+oGV+YapuQ2kW38UabuhdP6qSrKfIeLde6qx+8FEX02krypA==
+
 "@capacitor/cli@^7.4.4":
   version "7.4.4"
   resolved "https://registry.npmjs.org/@capacitor/cli/-/cli-7.4.4.tgz"
