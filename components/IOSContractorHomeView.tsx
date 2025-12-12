@@ -180,6 +180,117 @@ const ListItem = ({
 // Divider component
 const Divider = () => <div className="h-px bg-gray-100 ml-14" />
 
+// Verification Banner Component for iOS
+interface VerificationBannerProps {
+  contractorProfile: ContractorProfile
+  stripeConnectStatus: { hasAccount: boolean; payoutsEnabled: boolean; chargesEnabled: boolean } | null
+  loadingStripe: boolean
+  onCompleteStripe: () => void
+}
+
+function VerificationBanner({ contractorProfile, stripeConnectStatus, loadingStripe, onCompleteStripe }: VerificationBannerProps) {
+  const kycStatus = contractorProfile.kyc_status
+  const status = contractorProfile.status
+
+  // 1. KYC Not Started - Need to complete wizard
+  if (kycStatus === 'not_started' || !kycStatus) {
+    return (
+      <div className="mx-4 mb-4 p-4 bg-blue-50 rounded-2xl border border-blue-200">
+        <div className="flex items-start gap-3">
+          <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+            <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <div className="flex-1">
+            <h3 className="text-[16px] font-semibold text-blue-900">Complete Verification</h3>
+            <p className="text-[13px] text-blue-700 mt-1">
+              Complete identity verification to start accepting jobs.
+            </p>
+            <button
+              onClick={() => window.open('https://www.userushr.com/pro/wizard', '_blank')}
+              className="mt-3 px-4 py-2 bg-blue-600 text-white text-[14px] font-medium rounded-xl active:scale-[0.98] transition-transform"
+            >
+              Start Verification
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // 2. KYC In Progress / Pending Approval
+  if (kycStatus === 'in_progress' || status === 'pending' || status === 'pending_approval') {
+    return (
+      <div className="mx-4 mb-4 p-4 bg-amber-50 rounded-2xl border border-amber-200">
+        <div className="flex items-start gap-3">
+          <div className="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center flex-shrink-0">
+            <svg className="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <div className="flex-1">
+            <h3 className="text-[16px] font-semibold text-amber-900">Pending Approval</h3>
+            <p className="text-[13px] text-amber-700 mt-1">
+              Your verification is under review. We'll notify you once approved (1-2 business days).
+            </p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // 3. KYC Completed but Stripe not set up
+  if (kycStatus === 'completed' && status === 'approved' && !loadingStripe && !stripeConnectStatus?.payoutsEnabled) {
+    return (
+      <div className="mx-4 mb-4 p-4 bg-amber-50 rounded-2xl border border-amber-200">
+        <div className="flex items-start gap-3">
+          <div className="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center flex-shrink-0">
+            <svg className="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <div className="flex-1">
+            <h3 className="text-[16px] font-semibold text-amber-900">Payment Setup Required</h3>
+            <p className="text-[13px] text-amber-700 mt-1">
+              Complete payment setup to receive payments and go online.
+            </p>
+            <button
+              onClick={onCompleteStripe}
+              className="mt-3 px-4 py-2 bg-amber-600 text-white text-[14px] font-medium rounded-xl active:scale-[0.98] transition-transform"
+            >
+              Complete Setup
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // 4. Fully Verified - Green banner
+  if (kycStatus === 'completed' && status === 'approved' && stripeConnectStatus?.payoutsEnabled) {
+    return (
+      <div className="mx-4 mb-4 p-4 bg-emerald-50 rounded-2xl border border-emerald-200">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 bg-emerald-100 rounded-full flex items-center justify-center flex-shrink-0">
+            <svg className="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <div className="flex-1">
+            <h3 className="text-[16px] font-semibold text-emerald-900">Verified & Ready!</h3>
+            <p className="text-[13px] text-emerald-700">
+              You're all set to receive and accept jobs.
+            </p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  return null
+}
+
 // Job interface
 interface Job {
   id: string
@@ -219,7 +330,10 @@ function HomeTab({
   jobsLoading,
   myBids,
   stats,
-  onBidJob
+  onBidJob,
+  stripeConnectStatus,
+  loadingStripe,
+  onCompleteStripe
 }: {
   contractorProfile: ContractorProfile
   jobs: Job[]
@@ -227,6 +341,9 @@ function HomeTab({
   myBids: Bid[]
   stats: any
   onBidJob: (job: Job) => void
+  stripeConnectStatus: { hasAccount: boolean; payoutsEnabled: boolean; chargesEnabled: boolean } | null
+  loadingStripe: boolean
+  onCompleteStripe: () => void
 }) {
   const router = useRouter()
   const [sheetExpanded, setSheetExpanded] = useState(false)
@@ -295,8 +412,13 @@ function HomeTab({
     [myBids]
   )
 
-  // Pending approval message
-  const isPending = contractorProfile.status === 'pending'
+  // Check if contractor is fully verified (KYC completed + approved + Stripe enabled)
+  const isFullyVerified = contractorProfile.kyc_status === 'completed' &&
+                          contractorProfile.status === 'approved' &&
+                          stripeConnectStatus?.payoutsEnabled === true
+
+  // Check if functionality should be disabled
+  const isDisabled = !isFullyVerified
 
   // Sheet height calculation
   let sheetHeight = '45%'
@@ -347,16 +469,16 @@ function HomeTab({
             </div>
           </div>
 
-          {/* Pending approval banner */}
-          {isPending && (
-            <div className="mt-3 p-3 bg-amber-400/20 rounded-xl">
-              <p className="text-white text-[13px] font-medium">
-                Your account is pending approval. You'll be notified once approved.
-              </p>
-            </div>
-          )}
         </div>
       </div>
+
+      {/* Verification Banner - shows different states based on KYC/Stripe status */}
+      <VerificationBanner
+        contractorProfile={contractorProfile}
+        stripeConnectStatus={stripeConnectStatus}
+        loadingStripe={loadingStripe}
+        onCompleteStripe={onCompleteStripe}
+      />
 
       {/* Bottom Sheet - matching homeowner structure */}
       <div
@@ -380,7 +502,7 @@ function HomeTab({
         </div>
 
         {/* Sheet Content */}
-        <div className="px-4 overflow-y-auto" style={{ height: 'calc(100% - 20px)' }}>
+        <div className={`px-4 overflow-y-auto ${isDisabled ? 'opacity-50 pointer-events-none' : ''}`} style={{ height: 'calc(100% - 20px)' }}>
           {/* Quick Stats */}
           <div className="grid grid-cols-3 gap-3 mb-4">
             <div className="bg-blue-50 rounded-xl p-3 text-center">
@@ -942,6 +1064,12 @@ export default function IOSContractorHomeView({ onSwitchToHomeowner }: Props) {
     rating: '5.0',
     response_time: '<1h'
   })
+  const [stripeConnectStatus, setStripeConnectStatus] = useState<{
+    hasAccount: boolean
+    payoutsEnabled: boolean
+    chargesEnabled: boolean
+  } | null>(null)
+  const [loadingStripe, setLoadingStripe] = useState(true)
 
   // Fetch available jobs
   const fetchJobs = useCallback(async () => {
@@ -1009,6 +1137,59 @@ export default function IOSContractorHomeView({ onSwitchToHomeowner }: Props) {
     } catch (e) {}
   }, [])
 
+  // Check Stripe Connect status
+  useEffect(() => {
+    const checkStripeStatus = async () => {
+      if (user) {
+        try {
+          const response = await fetch('/api/stripe/connect/check-status', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ contractorId: user.id })
+          })
+
+          if (response.ok) {
+            const data = await response.json()
+            setStripeConnectStatus(data)
+          }
+        } catch (error) {
+          console.error('Error checking Stripe status:', error)
+        } finally {
+          setLoadingStripe(false)
+        }
+      } else {
+        setLoadingStripe(false)
+      }
+    }
+
+    checkStripeStatus()
+  }, [user])
+
+  // Handle Stripe Connect setup
+  const handleCompleteStripeSetup = async () => {
+    if (!user) return
+    try {
+      const response = await fetch('/api/stripe/connect/onboarding-link', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contractorId: user.id })
+      })
+
+      const data = await response.json()
+
+      if (data.success && data.url) {
+        // Open Stripe hosted onboarding in external browser
+        window.open(data.url, '_blank')
+      } else {
+        await triggerNotification(NotificationType.Error)
+        console.error('Failed to generate onboarding link')
+      }
+    } catch (error) {
+      console.error('Error generating Stripe link:', error)
+      await triggerNotification(NotificationType.Error)
+    }
+  }
+
   // Handle bid submission
   const handleSubmitBid = async (jobId: string, amount: number, message: string) => {
     if (!user || !contractorProfile) throw new Error('Not authenticated')
@@ -1065,6 +1246,9 @@ export default function IOSContractorHomeView({ onSwitchToHomeowner }: Props) {
             myBids={myBids}
             stats={stats}
             onBidJob={handleBidJob}
+            stripeConnectStatus={stripeConnectStatus}
+            loadingStripe={loadingStripe}
+            onCompleteStripe={handleCompleteStripeSetup}
           />
         )}
         {activeTab === 'jobs' && (

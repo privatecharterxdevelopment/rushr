@@ -5,7 +5,7 @@ import type { CapacitorConfig } from '@capacitor/cli';
 const USE_LOCAL_DEV = false; // Set to true for simulator testing
 
 const config: CapacitorConfig = {
-  appId: 'com.rushr.app',
+  appId: 'com.spgrp.rushr',
   appName: 'Rushr',
   webDir: 'out',
   server: USE_LOCAL_DEV ? {
