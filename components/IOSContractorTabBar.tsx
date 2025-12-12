@@ -5,7 +5,7 @@
 import React from 'react'
 import { Haptics, ImpactStyle } from '@capacitor/haptics'
 
-export type ContractorTabId = 'home' | 'jobs' | 'messages' | 'earnings' | 'profile'
+export type ContractorTabId = 'home' | 'jobs' | 'myjobs' | 'messages' | 'profile'
 
 interface IOSContractorTabBarProps {
   activeTab: ContractorTabId
@@ -64,13 +64,13 @@ export default function IOSContractorTabBar({
       )
     },
     {
-      id: 'earnings',
-      label: 'Earnings',
+      id: 'myjobs',
+      label: 'My Jobs',
       icon: (active) => (
         <svg className="w-6 h-6" fill={active ? 'currentColor' : 'none'} stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={active ? 0 : 1.5} d={active
-            ? "M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-            : "M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"} />
+            ? "M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"
+            : "M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"} />
         </svg>
       )
     },
@@ -107,7 +107,7 @@ export default function IOSContractorTabBar({
       <div className="flex items-center justify-around pt-2 pb-1">
         {tabs.map((tab) => {
           const isActive = activeTab === tab.id
-          const badge = tab.id === 'messages' ? unreadMessages : tab.id === 'jobs' ? newJobs : 0
+          const badge = tab.id === 'messages' ? unreadMessages : (tab.id === 'jobs' || tab.id === 'myjobs') ? newJobs : 0
 
           return (
             <button

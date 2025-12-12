@@ -717,10 +717,23 @@ function MessagesTab({ conversations, loading }: { conversations: any[]; loading
   )
 }
 
-// ============= EARNINGS TAB =============
-function EarningsTab({ myBids, stats }: { myBids: Bid[]; stats: any }) {
-  const wonBids = useMemo(() => myBids.filter(b => b.status === 'accepted'), [myBids])
+// ============= MY JOBS TAB =============
+function MyJobsTab({ myBids, loading }: { myBids: Bid[]; loading: boolean }) {
+  const router = useRouter()
+
+  const acceptedJobs = useMemo(() => myBids.filter(b => b.status === 'accepted'), [myBids])
   const pendingBids = useMemo(() => myBids.filter(b => b.status === 'pending'), [myBids])
+  const rejectedBids = useMemo(() => myBids.filter(b => b.status === 'rejected'), [myBids])
+
+  const [activeFilter, setActiveFilter] = useState<'all' | 'accepted' | 'pending'>('all')
+
+  const filteredBids = useMemo(() => {
+    switch (activeFilter) {
+      case 'accepted': return acceptedJobs
+      case 'pending': return pendingBids
+      default: return myBids
+    }
+  }, [activeFilter, acceptedJobs, pendingBids, myBids])
 
   return (
     <div
@@ -735,56 +748,105 @@ function EarningsTab({ myBids, stats }: { myBids: Bid[]; stats: any }) {
           paddingTop: 'max(env(safe-area-inset-top, 59px), 59px)'
         }}
       >
-        <div className="px-4 pb-4">
-          <h1 className="text-white text-[20px] font-bold">Earnings</h1>
-          <div className="mt-4 p-4 bg-white/20 rounded-xl">
-            <p className="text-blue-100 text-[13px]">Total Earnings</p>
-            <p className="text-white text-[32px] font-bold">${stats?.earnings?.toFixed(2) || '0.00'}</p>
+        <div className="flex items-center justify-between px-4 py-3">
+          <p className="text-white font-semibold text-[16px]">My Jobs</p>
+          <div className="flex items-center gap-2">
+            <span className="px-2 py-1 bg-white/20 rounded-full text-[12px] text-white">
+              {acceptedJobs.length} Active
+            </span>
           </div>
         </div>
       </div>
 
-      {/* Earnings Content */}
-      <div className="flex-1 overflow-y-auto p-4">
-        {/* Stats Grid */}
-        <div className="grid grid-cols-2 gap-3 mb-6">
-          <IOSCard className="p-4 text-center">
-            <p className="text-[28px] font-bold text-green-600">{wonBids.length}</p>
-            <p className="text-[12px] text-gray-500">Jobs Won</p>
-          </IOSCard>
-          <IOSCard className="p-4 text-center">
-            <p className="text-[28px] font-bold text-blue-600">{pendingBids.length}</p>
-            <p className="text-[12px] text-gray-500">Active Bids</p>
-          </IOSCard>
+      {/* Filter Tabs */}
+      <div className="bg-white border-b border-gray-100 px-4 py-2">
+        <div className="flex gap-2">
+          {[
+            { id: 'all', label: 'All', count: myBids.length },
+            { id: 'accepted', label: 'Won', count: acceptedJobs.length },
+            { id: 'pending', label: 'Pending', count: pendingBids.length }
+          ].map((filter) => (
+            <button
+              key={filter.id}
+              onClick={() => setActiveFilter(filter.id as any)}
+              className={`px-3 py-1.5 rounded-full text-[13px] font-medium transition-colors ${
+                activeFilter === filter.id
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-100 text-gray-600'
+              }`}
+            >
+              {filter.label} ({filter.count})
+            </button>
+          ))}
         </div>
+      </div>
 
-        {/* My Bids Section */}
-        <h3 className="text-[15px] font-semibold text-gray-900 mb-3">My Bids</h3>
-        {myBids.length === 0 ? (
-          <IOSCard className="p-6 text-center">
-            <p className="text-gray-500 text-[14px]">No bids yet</p>
+      {/* Jobs List */}
+      <div className="flex-1 overflow-y-auto p-4">
+        {loading ? (
+          <div className="flex items-center justify-center py-12">
+            <LoadingLogo />
+          </div>
+        ) : filteredBids.length === 0 ? (
+          <IOSCard className="p-8 text-center">
+            <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+              </svg>
+            </div>
+            <h3 className="text-[16px] font-semibold text-gray-900 mb-1">
+              {activeFilter === 'accepted' ? 'No won jobs yet' :
+               activeFilter === 'pending' ? 'No pending bids' : 'No jobs yet'}
+            </h3>
+            <p className="text-[14px] text-gray-500">
+              {activeFilter === 'all' ? 'Start bidding on jobs to see them here' : 'Jobs will appear here when you bid'}
+            </p>
           </IOSCard>
         ) : (
-          <div className="space-y-2">
-            {myBids.slice(0, 10).map((bid) => (
+          <div className="space-y-3">
+            {filteredBids.map((bid) => (
               <IOSCard key={bid.id} className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-[14px] font-medium text-gray-900">
+                <div className="flex items-start justify-between mb-2">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className={`px-2 py-0.5 rounded text-[11px] font-medium ${
+                        bid.status === 'accepted' ? 'bg-green-100 text-green-700' :
+                        bid.status === 'rejected' ? 'bg-red-100 text-red-700' :
+                        'bg-amber-100 text-amber-700'
+                      }`}>
+                        {bid.status === 'accepted' ? 'WON' : bid.status === 'pending' ? 'PENDING' : 'REJECTED'}
+                      </span>
+                    </div>
+                    <h3 className="text-[16px] font-semibold text-gray-900">
                       {bid.homeowner_jobs?.title || 'Job'}
-                    </p>
-                    <p className="text-[12px] text-gray-500">
-                      ${bid.bid_amount}
-                    </p>
+                    </h3>
+                    <p className="text-[13px] text-gray-500">{bid.homeowner_jobs?.category}</p>
                   </div>
-                  <span className={`px-2 py-1 rounded text-[11px] font-medium ${
-                    bid.status === 'accepted' ? 'bg-green-100 text-green-700' :
-                    bid.status === 'rejected' ? 'bg-red-100 text-red-700' :
-                    'bg-amber-100 text-amber-700'
-                  }`}>
-                    {bid.status}
-                  </span>
+                  <div className="text-right">
+                    <p className="text-[16px] font-bold text-blue-600">${bid.bid_amount}</p>
+                    <p className="text-[11px] text-gray-400">Your bid</p>
+                  </div>
                 </div>
+
+                {bid.homeowner_jobs && (
+                  <div className="flex items-center gap-2 text-[13px] text-gray-500 mb-3">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                    <span>{bid.homeowner_jobs.city}, {bid.homeowner_jobs.state}</span>
+                  </div>
+                )}
+
+                {bid.status === 'accepted' && (
+                  <button
+                    onClick={() => router.push(`/dashboard/contractor/jobs/${bid.job_id}`)}
+                    className="w-full py-2.5 rounded-xl text-[14px] font-medium text-white active:scale-[0.98] transition-transform"
+                    style={{ background: 'linear-gradient(135deg, #3b82f6, #2563eb)' }}
+                  >
+                    View Job Details
+                  </button>
+                )}
               </IOSCard>
             ))}
           </div>
@@ -799,16 +861,20 @@ function ProfileTab({
   contractorProfile,
   user,
   stats,
+  myBids,
   onSignOut,
   onSwitchToHomeowner
 }: {
   contractorProfile: ContractorProfile
   user: any
   stats: any
+  myBids: Bid[]
   onSignOut: () => void
   onSwitchToHomeowner?: () => void
 }) {
   const router = useRouter()
+
+  const wonBids = useMemo(() => myBids.filter(b => b.status === 'accepted'), [myBids])
 
   const handleNavigation = async (href: string) => {
     await triggerHaptic()
@@ -855,12 +921,32 @@ function ProfileTab({
 
       {/* Profile Content */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        {/* Earnings Card */}
+        <IOSCard className="p-4">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-[15px] font-semibold text-gray-900">Earnings</h3>
+            <Link href="/dashboard/contractor/billing" className="text-blue-600 text-[13px] font-medium">
+              View All
+            </Link>
+          </div>
+          <div className="flex items-baseline gap-1">
+            <span className="text-[28px] font-bold text-gray-900">${stats?.earnings?.toFixed(2) || '0.00'}</span>
+            <span className="text-[13px] text-gray-500">total</span>
+          </div>
+          <div className="grid grid-cols-2 gap-3 mt-3">
+            <div className="bg-green-50 rounded-xl p-3 text-center">
+              <p className="text-[20px] font-bold text-green-600">{wonBids.length}</p>
+              <p className="text-[11px] text-gray-500">Jobs Won</p>
+            </div>
+            <div className="bg-blue-50 rounded-xl p-3 text-center">
+              <p className="text-[20px] font-bold text-blue-600">{stats?.completed_jobs || 0}</p>
+              <p className="text-[11px] text-gray-500">Completed</p>
+            </div>
+          </div>
+        </IOSCard>
+
         {/* Quick Stats */}
-        <div className="grid grid-cols-3 gap-3">
-          <IOSCard className="p-3 text-center">
-            <p className="text-[20px] font-bold text-gray-900">{stats?.completed_jobs || 0}</p>
-            <p className="text-[11px] text-gray-500">Completed</p>
-          </IOSCard>
+        <div className="grid grid-cols-2 gap-3">
           <IOSCard className="p-3 text-center">
             <p className="text-[20px] font-bold text-gray-900">{stats?.rating || '5.0'}</p>
             <p className="text-[11px] text-gray-500">Rating</p>
@@ -881,9 +967,9 @@ function ProfileTab({
           />
           <Divider />
           <ListItem
-            icon={<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" /></svg>}
-            title="Billing"
-            subtitle="Payment history, payouts"
+            icon={<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>}
+            title="Billing & Payouts"
+            subtitle="Payment history, bank account"
             href="/dashboard/contractor/billing"
           />
           <Divider />
@@ -1302,14 +1388,15 @@ export default function IOSContractorHomeView({ onSwitchToHomeowner }: Props) {
         {activeTab === 'messages' && (
           <MessagesTab conversations={conversations} loading={loadingConversations} />
         )}
-        {activeTab === 'earnings' && (
-          <EarningsTab myBids={myBids} stats={stats} />
+        {activeTab === 'myjobs' && (
+          <MyJobsTab myBids={myBids} loading={loadingJobs} />
         )}
         {activeTab === 'profile' && (
           <ProfileTab
             contractorProfile={contractorProfile}
             user={user}
             stats={stats}
+            myBids={myBids}
             onSignOut={signOut}
             onSwitchToHomeowner={onSwitchToHomeowner}
           />
