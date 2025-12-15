@@ -713,14 +713,201 @@ export async function sendEarlyAccessConfirmation(params: {
   const { email, name } = params
   const year = new Date().getFullYear().toString()
 
-  // Read the HTML template
-  const fs = await import('fs/promises')
-  const path = await import('path')
-  const templatePath = path.join(process.cwd(), 'supabase', 'early-access-confirmation.html')
-  let html = await fs.readFile(templatePath, 'utf-8')
+  // HTML template embedded directly (Vercel serverless doesn't support fs.readFile reliably)
+  const htmlTemplate = `<!doctype html>
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="x-apple-disable-message-reformatting">
+  <meta name="color-scheme" content="light dark">
+  <meta name="supported-color-schemes" content="light dark">
+  <title>You're on the Rushr Pro Early Access List!</title>
+  <!--[if mso]>
+  <noscript>
+    <xml>
+      <o:OfficeDocumentSettings>
+        <o:PixelsPerInch>96</o:PixelsPerInch>
+      </o:OfficeDocumentSettings>
+    </xml>
+  </noscript>
+  <![endif]-->
+  <style type="text/css">
+    body, table, td, a { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
+    table, td { mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
+    img { -ms-interpolation-mode: bicubic; border: 0; height: auto; line-height: 100%; outline: none; text-decoration: none; display: block; }
+    body { margin: 0; padding: 0; width: 100%; }
+    @media only screen and (max-width: 599px) {
+      .container { width: 100% !important; max-width: 100% !important; }
+      .mobile-padding { padding-left: 24px !important; padding-right: 24px !important; }
+      .mobile-text { font-size: 16px !important; line-height: 24px !important; }
+      .mobile-title { font-size: 26px !important; line-height: 34px !important; }
+    }
+    @media (prefers-color-scheme: dark) {
+      .dark-bg { background-color: #1a1a1a !important; }
+      .dark-card { background-color: #2d2d2d !important; }
+      .dark-text { color: #f0f0f0 !important; }
+      .dark-secondary { color: #b0b0b0 !important; }
+      .dark-border { border-color: #404040 !important; }
+      .dark-checklist { background-color: #1f1f1f !important; border-color: #404040 !important; }
+    }
+  </style>
+</head>
+<body style="margin: 0; padding: 0; background-color: #f6f6f9; font-family: -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+  <div style="display: none; max-height: 0; overflow: hidden; mso-hide: all; font-size: 1px; line-height: 1px; color: #f6f6f9;">
+    You're on the Rushr Pro Early Access list! Your exclusive benefits are locked in.
+  </div>
+  <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f6f6f9;" class="dark-bg">
+    <tr>
+      <td align="center" style="padding: 40px 16px;">
+        <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="600" style="max-width: 600px; width: 100%;" class="container">
+          <tr>
+            <td align="center" style="padding: 0 0 32px 0;">
+              <img src="https://i.ibb.co/GfqGJCS6/Whats-App-Image-2025-10-20-at-17-07-35-f45b0f4b.jpg" alt="Rushr Pro" width="180" style="display: block; max-width: 180px; width: 100%; height: auto; margin: 0 auto;">
+            </td>
+          </tr>
+          <tr>
+            <td>
+              <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #ffffff; border-radius: 12px; box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08); overflow: hidden;" class="dark-card">
+                <tr>
+                  <td style="background-color: #0066FF; height: 4px; line-height: 4px; font-size: 1px;">&nbsp;</td>
+                </tr>
+                <tr>
+                  <td style="padding: 56px 48px 8px 48px;" class="mobile-padding">
+                    <h1 style="margin: 0; font-size: 32px; line-height: 40px; font-weight: 700; color: #222222; font-family: -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; letter-spacing: -0.5px;" class="mobile-title dark-text">
+                      You're all set, {{user_name}}! &#127881;
+                    </h1>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding: 24px 48px 0 48px;" class="mobile-padding">
+                    <p style="margin: 0; font-size: 17px; line-height: 26px; color: #555555; font-family: -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;" class="mobile-text dark-secondary">
+                      Thank you for registering for Rushr Pro! You're now officially on our priority list and your exclusive benefits are locked in.
+                    </p>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding: 16px 48px 0 48px;" class="mobile-padding">
+                    <p style="margin: 0; font-size: 17px; line-height: 26px; color: #555555; font-family: -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;" class="mobile-text dark-secondary">
+                      We're working hard to bring Rushr Pro to life, and you'll be among the very first to know when we're ready to launch.
+                    </p>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding: 32px 48px 0 48px;" class="mobile-padding">
+                    <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f0f7ff; border: 1px solid #cce5ff; border-radius: 8px;" class="dark-checklist">
+                      <tr>
+                        <td style="padding: 24px;">
+                          <p style="margin: 0 0 20px 0; font-size: 16px; line-height: 20px; color: #222222; font-family: -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-weight: 600;" class="dark-text">
+                            &#127873; Your confirmed benefits
+                          </p>
+                          <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%">
+                            <tr>
+                              <td style="padding: 0 0 14px 0;">
+                                <p style="margin: 0; font-size: 15px; line-height: 22px; color: #222222; font-family: -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;" class="dark-text">
+                                  <strong>&#128181; 3 Months Free</strong><br>
+                                  <span style="color: #004085;">Get full access to Rushr Pro for 3 months at no cost</span>
+                                </p>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td style="padding: 0 0 14px 0;">
+                                <p style="margin: 0; font-size: 15px; line-height: 22px; color: #222222; font-family: -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;" class="dark-text">
+                                  <strong>&#128640; Priority Access</strong><br>
+                                  <span style="color: #004085;">Be the first to access the platform when we launch</span>
+                                </p>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td style="padding: 0;">
+                                <p style="margin: 0; font-size: 15px; line-height: 22px; color: #222222; font-family: -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;" class="dark-text">
+                                  <strong>&#128200; Lowered Fees</strong><br>
+                                  <span style="color: #004085;">Special reduced platform fees for life</span>
+                                </p>
+                              </td>
+                            </tr>
+                          </table>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding: 24px 48px 0 48px;" class="mobile-padding">
+                    <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f8f9fa; border: 1px solid #e6e6ea; border-radius: 8px;" class="dark-checklist">
+                      <tr>
+                        <td style="padding: 24px;">
+                          <p style="margin: 0 0 20px 0; font-size: 16px; line-height: 20px; color: #222222; font-family: -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-weight: 600;" class="dark-text">
+                            What happens next?
+                          </p>
+                          <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%">
+                            <tr>
+                              <td style="padding: 0 0 14px 0;">
+                                <p style="margin: 0; font-size: 15px; line-height: 22px; color: #222222; font-family: -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;" class="dark-text">
+                                  <strong>&#128231; Stay tuned for updates</strong><br>
+                                  <span style="color: #555555;">We'll keep you posted on our progress and launch date</span>
+                                </p>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td style="padding: 0 0 14px 0;">
+                                <p style="margin: 0; font-size: 15px; line-height: 22px; color: #222222; font-family: -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;" class="dark-text">
+                                  <strong>&#128640; Get early access</strong><br>
+                                  <span style="color: #555555;">You'll receive your invite before anyone else</span>
+                                </p>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td style="padding: 0;">
+                                <p style="margin: 0; font-size: 15px; line-height: 22px; color: #222222; font-family: -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;" class="dark-text">
+                                  <strong>&#128170; Start growing your business</strong><br>
+                                  <span style="color: #555555;">Connect with homeowners and take your business to the next level</span>
+                                </p>
+                              </td>
+                            </tr>
+                          </table>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding: 32px 48px 0 48px;" class="mobile-padding">
+                    <p style="margin: 0; font-size: 15px; line-height: 24px; color: #555555; font-family: -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;" class="mobile-text dark-secondary">
+                      Questions? Contact <a href="mailto:hello@userushr.com" style="color: #0066FF; text-decoration: none; font-weight: 500;">hello@userushr.com</a> or simply reply to this email.
+                    </p>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding: 32px 48px 56px 48px;" class="mobile-padding">
+                    <p style="margin: 0; font-size: 17px; line-height: 26px; color: #222222; font-family: -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; text-align: center;" class="mobile-text dark-text">
+                      Welcome to the Rushr Pro family! &#128170;
+                    </p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          <tr>
+            <td align="center" style="padding: 32px 16px 40px 16px;">
+              <p style="margin: 0 0 8px 0; font-size: 14px; line-height: 20px; color: #888888; font-family: -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; text-align: center;" class="dark-secondary">
+                Questions? Contact <a href="mailto:hello@userushr.com" style="color: #0066FF; text-decoration: none; font-weight: 500;">hello@userushr.com</a>
+              </p>
+              <p style="margin: 0; font-size: 12px; line-height: 18px; color: #888888; font-family: -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; text-align: center;" class="dark-secondary">
+                &copy; {{year}} Rushr. All rights reserved.
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`
 
   // Replace placeholders
-  html = html
+  const html = htmlTemplate
     .replace(/{{user_name}}/g, name)
     .replace(/{{year}}/g, year)
 
