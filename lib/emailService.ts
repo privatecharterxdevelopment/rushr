@@ -806,24 +806,21 @@ export async function sendEarlyAccessConfirmation(params: {
                             <tr>
                               <td style="padding: 0 0 14px 0;">
                                 <p style="margin: 0; font-size: 15px; line-height: 22px; color: #222222; font-family: -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;" class="dark-text">
-                                  <strong>&#128181; 3 Months Free</strong><br>
-                                  <span style="color: #004085;">Get full access to Rushr Pro for 3 months at no cost</span>
+                                  <strong>&#128181; 3 Months Free</strong> - <span style="color: #004085;">Get full access to Rushr Pro for 3 months at no cost</span>
                                 </p>
                               </td>
                             </tr>
                             <tr>
                               <td style="padding: 0 0 14px 0;">
                                 <p style="margin: 0; font-size: 15px; line-height: 22px; color: #222222; font-family: -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;" class="dark-text">
-                                  <strong>&#128640; Priority Access</strong><br>
-                                  <span style="color: #004085;">Be the first to access the platform when we launch</span>
+                                  <strong>&#128640; Priority Access</strong> - <span style="color: #004085;">Be the first to access the platform when we launch</span>
                                 </p>
                               </td>
                             </tr>
                             <tr>
                               <td style="padding: 0;">
                                 <p style="margin: 0; font-size: 15px; line-height: 22px; color: #222222; font-family: -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;" class="dark-text">
-                                  <strong>&#128200; Lowered Fees</strong><br>
-                                  <span style="color: #004085;">Special reduced platform fees for life</span>
+                                  <strong>&#128200; Lowered Fees</strong> - <span style="color: #004085;">Special reduced platform fees for life</span>
                                 </p>
                               </td>
                             </tr>
@@ -845,24 +842,21 @@ export async function sendEarlyAccessConfirmation(params: {
                             <tr>
                               <td style="padding: 0 0 14px 0;">
                                 <p style="margin: 0; font-size: 15px; line-height: 22px; color: #222222; font-family: -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;" class="dark-text">
-                                  <strong>&#128231; Stay tuned for updates</strong><br>
-                                  <span style="color: #555555;">We'll keep you posted on our progress and launch date</span>
+                                  <strong>&#128231; Stay tuned for updates</strong> - <span style="color: #555555;">We'll keep you posted on our progress and launch date</span>
                                 </p>
                               </td>
                             </tr>
                             <tr>
                               <td style="padding: 0 0 14px 0;">
                                 <p style="margin: 0; font-size: 15px; line-height: 22px; color: #222222; font-family: -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;" class="dark-text">
-                                  <strong>&#128640; Get early access</strong><br>
-                                  <span style="color: #555555;">You'll receive your invite before anyone else</span>
+                                  <strong>&#128640; Get early access</strong> - <span style="color: #555555;">You'll receive your invite before anyone else</span>
                                 </p>
                               </td>
                             </tr>
                             <tr>
                               <td style="padding: 0;">
                                 <p style="margin: 0; font-size: 15px; line-height: 22px; color: #222222; font-family: -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;" class="dark-text">
-                                  <strong>&#128170; Start growing your business</strong><br>
-                                  <span style="color: #555555;">Connect with homeowners and take your business to the next level</span>
+                                  <strong>&#128170; Start growing your business</strong> - <span style="color: #555555;">Connect with homeowners and take your business to the next level</span>
                                 </p>
                               </td>
                             </tr>
