@@ -764,7 +764,7 @@ export async function sendEarlyAccessConfirmation(params: {
         <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="650" style="max-width: 650px; width: 100%;" class="container">
           <tr>
             <td align="center" style="padding: 0 0 32px 0;">
-              <img src="https://i.ibb.co/0RL0Lw6v/Rushr-Pro-Wordmark.jpg" alt="Rushr Pro" width="180" style="display: block; max-width: 180px; width: 100%; height: auto; margin: 0 auto;">
+              <img src="https://www.userushr.com/rushr-logo.png" alt="Rushr" width="180" style="display: block; max-width: 180px; width: 100%; height: auto; margin: 0 auto;">
             </td>
           </tr>
           <tr>
