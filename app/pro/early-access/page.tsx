@@ -61,7 +61,12 @@ export default function EarlyAccessPage() {
 
       if (insertError) {
         console.error('Insert error:', insertError)
-        toast.error('Something went wrong. Please try again.')
+        // Check if it's a duplicate email error (code 23505 = unique violation)
+        if (insertError.code === '23505') {
+          toast.success("You're already on the waitlist! Please check your email.")
+        } else {
+          toast.error('Something went wrong. Please try again.')
+        }
         setLoading(false)
         return
       }
