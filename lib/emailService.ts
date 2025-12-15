@@ -711,7 +711,21 @@ export async function sendEarlyAccessConfirmation(params: {
   name: string
 }) {
   const { email, name } = params
-  const year = new Date().getFullYear()
+  const year = new Date().getFullYear().toString()
+
+  // Read the HTML template
+  const fs = await import('fs/promises')
+  const path = await import('path')
+  const templatePath = path.join(process.cwd(), 'supabase', 'early-access-confirmation.html')
+  let html = await fs.readFile(templatePath, 'utf-8')
+
+  // Replace placeholders
+  html = html
+    .replace(/{{user_name}}/g, name)
+    .replace(/{{year}}/g, year)
+
+  const subject = "You're on the Rushr Pro Early Access List!"
+  const textContent = `Hi ${name}, You're all set! Thank you for registering for Rushr Pro. Your exclusive benefits are locked in: 3 Months Free, Priority Access, and Lowered Fees for life. We'll notify you when we launch. Questions? Contact hello@userushr.com - The Rushr Team`
 
   const resendApiKey = process.env.RESEND_API_KEY
 
@@ -724,67 +738,9 @@ export async function sendEarlyAccessConfirmation(params: {
       const { data, error } = await resend.emails.send({
         from: 'Rushr Pro <hello@userushr.com>',
         to: email,
-        subject: "You're on the Rushr Pro Early Access List!",
-        html: `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta content="width=device-width" name="viewport" />
-  <meta content="text/html; charset=UTF-8" http-equiv="Content-Type" />
-</head>
-<body style="margin:0;padding:0;background-color:#f6f6f9;font-family:-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
-  <table width="100%" border="0" cellpadding="0" cellspacing="0" style="background-color:#f6f6f9;padding:40px 16px;">
-    <tr>
-      <td align="center">
-        <table width="600" border="0" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;">
-          <tr>
-            <td align="center" style="padding-bottom:24px;">
-              <img alt="Rushr Pro" height="49" src="https://i.ibb.co/GfqGJCS6/Whats-App-Image-2025-10-20-at-17-07-35-f45b0f4b.jpg" width="166" style="display:block;" />
-            </td>
-          </tr>
-          <tr>
-            <td style="background-color:#ffffff;border-radius:12px;box-shadow:0 4px 16px rgba(0,0,0,0.08);overflow:hidden;">
-              <div style="background-color:#0066FF;height:4px;"></div>
-              <div style="padding:48px;">
-                <h1 style="color:#222;font-size:28px;font-weight:700;margin:0 0 24px;">You're all set, ${name}! 🎉</h1>
-                <p style="color:#555;font-size:16px;line-height:26px;margin:0 0 16px;">
-                  Thank you for registering for Rushr Pro! You're now officially on our priority list and your exclusive benefits are locked in.
-                </p>
-                <p style="color:#555;font-size:16px;line-height:26px;margin:0 0 24px;">
-                  We're working hard to bring Rushr Pro to life, and you'll be among the very first to know when we're ready to launch.
-                </p>
-                <div style="background-color:#f0f7ff;border:1px solid #cce5ff;border-radius:8px;padding:24px;margin:24px 0;">
-                  <p style="color:#222;font-weight:600;font-size:16px;margin:0 0 20px;">🎁 Your confirmed benefits</p>
-                  <p style="margin:0 0 14px;color:#222;font-size:15px;line-height:22px;"><strong>💵 3 Months Free</strong><br><span style="color:#004085;">Get full access to Rushr Pro for 3 months at no cost</span></p>
-                  <p style="margin:0 0 14px;color:#222;font-size:15px;line-height:22px;"><strong>🚀 Priority Access</strong><br><span style="color:#004085;">Be the first to access the platform when we launch</span></p>
-                  <p style="margin:0;color:#222;font-size:15px;line-height:22px;"><strong>📈 Lowered Fees</strong><br><span style="color:#004085;">Special reduced platform fees for life</span></p>
-                </div>
-                <div style="background-color:#f8f9fa;border:1px solid #e6e6ea;border-radius:8px;padding:24px;margin:24px 0;">
-                  <p style="color:#222;font-weight:600;font-size:16px;margin:0 0 16px;">What happens next?</p>
-                  <p style="margin:0 0 14px;color:#222;font-size:15px;line-height:22px;"><strong>📧 Stay tuned for updates</strong><br><span style="color:#555;">We'll keep you posted on our progress and launch date</span></p>
-                  <p style="margin:0 0 14px;color:#222;font-size:15px;line-height:22px;"><strong>🚀 Get early access</strong><br><span style="color:#555;">You'll receive your invite before anyone else</span></p>
-                  <p style="margin:0;color:#222;font-size:15px;line-height:22px;"><strong>💪 Start growing your business</strong><br><span style="color:#555;">Connect with homeowners and take your business to the next level</span></p>
-                </div>
-                <p style="color:#555;font-size:15px;line-height:24px;margin:24px 0;">
-                  Questions? Contact <a href="mailto:hello@userushr.com" style="color:#0066FF;font-weight:500;">hello@userushr.com</a> or simply reply to this email.
-                </p>
-                <p style="text-align:center;color:#222;font-size:17px;margin:32px 0 0;">Welcome to the Rushr Pro family! 💪</p>
-              </div>
-            </td>
-          </tr>
-          <tr>
-            <td align="center" style="padding:24px 16px;">
-              <p style="color:#888;font-size:14px;margin:0 0 8px;">Questions? Contact <a href="mailto:hello@userushr.com" style="color:#0066FF;text-decoration:none;font-weight:500;">hello@userushr.com</a></p>
-              <p style="color:#888;font-size:12px;margin:0;">© ${year} Rushr. All rights reserved.</p>
-            </td>
-          </tr>
-        </table>
-      </td>
-    </tr>
-  </table>
-</body>
-</html>`,
-        text: `Hi ${name}, You're all set! Thank you for registering for Rushr Pro. Your exclusive benefits are locked in: 3 Months Free, Priority Access, and Lowered Fees for life. We'll notify you when we launch. Questions? Contact hello@userushr.com - The Rushr Team`
+        subject,
+        html,
+        text: textContent
       })
 
       if (error) {
@@ -805,27 +761,12 @@ export async function sendEarlyAccessConfirmation(params: {
 
   // Fallback to Supabase SMTP if no Resend key
   console.log('[EMAIL] ⚠️ No RESEND_API_KEY, falling back to Supabase SMTP')
-  const subject = "You're on the Rushr Pro Early Access List!"
-  const html = `
-    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-      <h2 style="color: #0066FF;">You're all set, ${name}! 🎉</h2>
-      <p>Thank you for registering for Rushr Pro! You're now officially on our priority list.</p>
-      <p><strong>Your confirmed benefits:</strong></p>
-      <ul>
-        <li>💵 3 Months Free - Full access at no cost</li>
-        <li>🚀 Priority Access - First to access when we launch</li>
-        <li>📈 Lowered Fees - Special reduced platform fees for life</li>
-      </ul>
-      <p>We'll notify you when we're ready to launch. Questions? Contact <a href="mailto:hello@userushr.com">hello@userushr.com</a></p>
-      <p style="color: #666; font-size: 12px; margin-top: 30px;">© ${year} Rushr. All rights reserved.</p>
-    </div>
-  `
 
   return sendEmail({
     to: email,
     subject,
     html,
-    text: `Hi ${name}, You're all set! Thank you for registering for Rushr Pro. Your exclusive benefits are locked in: 3 Months Free, Priority Access, and Lowered Fees for life. We'll notify you when we launch. Questions? Contact hello@userushr.com - The Rushr Team`
+    text: textContent
   })
 }
 
