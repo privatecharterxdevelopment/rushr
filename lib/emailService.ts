@@ -761,10 +761,10 @@ export async function sendEarlyAccessConfirmation(params: {
   <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f6f6f9;" class="dark-bg">
     <tr>
       <td align="center" style="padding: 40px 16px;">
-        <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="600" style="max-width: 600px; width: 100%;" class="container">
+        <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="650" style="max-width: 650px; width: 100%;" class="container">
           <tr>
             <td align="center" style="padding: 0 0 32px 0;">
-              <img src="https://i.ibb.co/vxH8hfF6/Rushr-Pro-Wordmark-2.jpg" alt="Rushr Pro" width="180" style="display: block; max-width: 180px; width: 100%; height: auto; margin: 0 auto;">
+              <img src="https://i.ibb.co/0RL0Lw6v/Rushr-Pro-Wordmark.jpg" alt="Rushr Pro" width="180" style="display: block; max-width: 180px; width: 100%; height: auto; margin: 0 auto;">
             </td>
           </tr>
           <tr>
@@ -774,28 +774,28 @@ export async function sendEarlyAccessConfirmation(params: {
                   <td style="background-color: #0066FF; height: 4px; line-height: 4px; font-size: 1px;">&nbsp;</td>
                 </tr>
                 <tr>
-                  <td style="padding: 56px 48px 8px 48px;" class="mobile-padding">
-                    <h1 style="margin: 0; font-size: 32px; line-height: 40px; font-weight: 700; color: #222222; font-family: -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; letter-spacing: -0.5px;" class="mobile-title dark-text">
+                  <td style="padding: 56px 40px 8px 40px;" class="mobile-padding">
+                    <h1 style="margin: 0; font-size: 26px; line-height: 34px; font-weight: 700; color: #222222; font-family: -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; letter-spacing: -0.5px; white-space: nowrap;" class="mobile-title dark-text">
                       You're all set, {{user_name}}! &#127881;
                     </h1>
                   </td>
                 </tr>
                 <tr>
-                  <td style="padding: 24px 48px 0 48px;" class="mobile-padding">
+                  <td style="padding: 24px 40px 0 40px;" class="mobile-padding">
                     <p style="margin: 0; font-size: 17px; line-height: 26px; color: #555555; font-family: -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;" class="mobile-text dark-secondary">
                       Thank you for registering for Rushr Pro! You're now officially on our priority list and your exclusive benefits are locked in.
                     </p>
                   </td>
                 </tr>
                 <tr>
-                  <td style="padding: 16px 48px 0 48px;" class="mobile-padding">
+                  <td style="padding: 16px 40px 0 40px;" class="mobile-padding">
                     <p style="margin: 0; font-size: 17px; line-height: 26px; color: #555555; font-family: -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;" class="mobile-text dark-secondary">
                       We're working hard to bring Rushr Pro to life, and you'll be among the very first to know when we're ready to launch.
                     </p>
                   </td>
                 </tr>
                 <tr>
-                  <td style="padding: 32px 48px 0 48px;" class="mobile-padding">
+                  <td style="padding: 32px 40px 0 40px;" class="mobile-padding">
                     <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f0f7ff; border: 1px solid #cce5ff; border-radius: 8px;" class="dark-checklist">
                       <tr>
                         <td style="padding: 24px;">
@@ -831,7 +831,7 @@ export async function sendEarlyAccessConfirmation(params: {
                   </td>
                 </tr>
                 <tr>
-                  <td style="padding: 24px 48px 0 48px;" class="mobile-padding">
+                  <td style="padding: 24px 40px 0 40px;" class="mobile-padding">
                     <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f8f9fa; border: 1px solid #e6e6ea; border-radius: 8px;" class="dark-checklist">
                       <tr>
                         <td style="padding: 24px;">
@@ -867,14 +867,14 @@ export async function sendEarlyAccessConfirmation(params: {
                   </td>
                 </tr>
                 <tr>
-                  <td style="padding: 32px 48px 0 48px;" class="mobile-padding">
+                  <td style="padding: 32px 40px 0 40px;" class="mobile-padding">
                     <p style="margin: 0; font-size: 15px; line-height: 24px; color: #555555; font-family: -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;" class="mobile-text dark-secondary">
                       Questions? Contact <a href="mailto:hello@userushr.com" style="color: #0066FF; text-decoration: none; font-weight: 500;">hello@userushr.com</a> or simply reply to this email.
                     </p>
                   </td>
                 </tr>
                 <tr>
-                  <td style="padding: 32px 48px 56px 48px;" class="mobile-padding">
+                  <td style="padding: 32px 40px 56px 40px;" class="mobile-padding">
                     <p style="margin: 0; font-size: 17px; line-height: 26px; color: #222222; font-family: -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; text-align: center;" class="mobile-text dark-text">
                       Welcome to the Rushr Pro family! &#128170;
                     </p>
