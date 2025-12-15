@@ -739,7 +739,7 @@ export async function sendEarlyAccessConfirmation(params: {
         <table width="600" border="0" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;">
           <tr>
             <td align="center" style="padding-bottom:24px;">
-              <img alt="Rushr Pro" height="49" src="https://resend-attachments.s3.amazonaws.com/hUV19em8PwJib8k" width="166" style="display:block;" />
+              <img alt="Rushr Pro" height="49" src="https://i.ibb.co/GfqGJCS6/Whats-App-Image-2025-10-20-at-17-07-35-f45b0f4b.jpg" width="166" style="display:block;" />
             </td>
           </tr>
           <tr>
