@@ -44,7 +44,7 @@ export default function EarlyAccessPage() {
         .maybeSingle()
 
       if (existing) {
-        toast.error('You\'re already on the list! We\'ll notify you when we launch.')
+        toast.success('You\'re already on the waitlist! Please check your email.')
         setLoading(false)
         return
       }
